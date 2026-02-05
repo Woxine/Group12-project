@@ -1,4 +1,4 @@
-﻿package com.group12.backend.dto;
+package com.group12.backend.dto;
 
 public class RegisterResponse {
     private String userId;

@@ -1,4 +1,4 @@
-﻿package com.group12.backend.service;
+package com.group12.backend.service;
 
 import com.group12.backend.dto.LoginRequest;
 
