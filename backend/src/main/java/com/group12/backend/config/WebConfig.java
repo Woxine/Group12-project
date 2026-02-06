@@ -1,11 +1,33 @@
 package com.group12.backend.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import com.group12.backend.interceptor.AuthenticationInterceptor;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    @Autowired
+    private AuthenticationInterceptor authenticationInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authenticationInterceptor)
+                .addPathPatterns("/api/v1/**") // 拦截所有 API
+                .excludePathPatterns(
+                    // 放行白名单
+                    "/api/v1/auth/login",
+                    "/api/v1/users",        // 注册接口
+                    "/api/v1/scooters",     // 获取滑板车列表（假设公开）
+                    "/api/v1/scooters/**/location", // 获取特定车辆位置（假设公开）
+                    "/error" // Spring Boot 默认错误路径
+                );
+    }
+
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
