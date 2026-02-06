@@ -1,7 +1,8 @@
 package com.group12.backend.service;
 
-import com.group12.backend.dto.RegisterRequest;
 import java.util.List;
+
+import com.group12.backend.dto.RegisterRequest;
 
 public interface UserService {
     Object register(RegisterRequest request);
