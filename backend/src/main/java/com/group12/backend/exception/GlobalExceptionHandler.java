@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
                     "timestamp", LocalDateTime.now(),
                     "status", 500,
                     "error", "Internal Server Error",
-                    "message", "系统繁忙，请稍后再试"
+                    "message", e.getClass().getName() + ": " + e.getMessage() // Show actual error for debugging
                 ));
     }
 }

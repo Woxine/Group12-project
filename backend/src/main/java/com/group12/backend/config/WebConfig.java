@@ -24,7 +24,12 @@ public class WebConfig implements WebMvcConfigurer {
                     "/api/v1/users",        // 注册接口
                     "/api/v1/scooters",     // 获取滑板车列表（假设公开）
                     "/api/v1/scooters/**/location", // 获取特定车辆位置（假设公开）
-                    "/error" // Spring Boot 默认错误路径
+                    "/error", // Spring Boot 默认错误路径
+                    
+                    // Swagger UI 放行路径
+                    "/v3/api-docs/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**"
                 );
     }
 

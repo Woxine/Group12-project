@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.FeedbackRequest;
+import com.group12.backend.dto.FeedbackResponse;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
 import com.group12.backend.entity.Scooter;
@@ -15,6 +16,7 @@ import com.group12.backend.service.FeedbackService;
 
 @Service
 public class FeedbackServiceImpl implements FeedbackService {
+
 
     @Autowired
     private FeedbackRepository feedbackRepository;
@@ -45,7 +47,8 @@ public class FeedbackServiceImpl implements FeedbackService {
         // Note: User is not set because we don't have user info in request currently.
         // Ideally we would get it from SecurityContext.
 
-        return feedbackRepository.save(feedback);
+        Feedback saved = feedbackRepository.save(feedback);
+        return mapToDTO(saved);
     }
 
     @Override
@@ -66,9 +69,21 @@ public class FeedbackServiceImpl implements FeedbackService {
             // But Feedback entity currently doesn't have a 'note' field based on my read.
             // So we just save the status.
             
-            return feedbackRepository.save(feedback);
+            Feedback saved = feedbackRepository.save(feedback);
+            return mapToDTO(saved);
         } else {
             throw new RuntimeException("Feedback not found with id: " + feedbackId);
         }
+    }
+
+    private FeedbackResponse mapToDTO(Feedback feedback) {
+        return new FeedbackResponse(
+            feedback.getId(),
+            (feedback.getUser() != null) ? feedback.getUser().getId() : null,
+            (feedback.getScooter() != null) ? feedback.getScooter().getId() : null,
+            feedback.getContent(),
+            feedback.getPriority(),
+            feedback.getResolved()
+        );
     }
 }

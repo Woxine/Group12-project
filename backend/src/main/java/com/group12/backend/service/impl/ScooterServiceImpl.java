@@ -1,11 +1,11 @@
 package com.group12.backend.service.impl;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.group12.backend.dto.ScooterResponse;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.ScooterService;
@@ -33,13 +33,15 @@ public class ScooterServiceImpl implements ScooterService {
             return scooters.stream()
                     .skip(skip)
                     .limit(limit)
-                    // 强转泛型，为了匹配 List<Object>
-                    .map(s -> (Object) s) 
+                    .map(this::mapToDTO)
+                    .map(dto -> (Object) dto)
                     .toList();
         }
 
-        // 强转类型
-        return (List<Object>)(List<?>) scooters;
+        return scooters.stream()
+                .map(this::mapToDTO)
+                .map(dto -> (Object) dto)
+                .toList();
     }
 
     @Override
@@ -48,12 +50,19 @@ public class ScooterServiceImpl implements ScooterService {
         Scooter scooter = scooterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Scooter not found"));
         
-        // 返回包含经纬度的 Map
-        return Map.of(
-            "id", scooter.getId(),
-            "lat", scooter.getLocationLat() != null ? scooter.getLocationLat() : 0.0,
-            "lng", scooter.getLocationLng() != null ? scooter.getLocationLng() : 0.0,
-            "status", scooter.getStatus()
+        // Return DTO instead of Map or Entity
+        return mapToDTO(scooter);
+    }
+
+    private ScooterResponse mapToDTO(Scooter scooter) {
+        String locName = (scooter.getLocationPoint() != null) ? scooter.getLocationPoint().getName() : "Unknown";
+        return new ScooterResponse(
+            scooter.getId(),
+            scooter.getStatus(),
+            scooter.getLocationLat(),
+            scooter.getLocationLng(),
+            scooter.getHourRate(),
+            locName
         );
     }
 }
