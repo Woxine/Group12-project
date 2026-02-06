@@ -2,7 +2,10 @@ package com.group12.backend.exception;
 
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,6 +27,25 @@ public class GlobalExceptionHandler {
                     "status", 400,
                     "error", "Business Error",
                     "message", e.getMessage()
+                ));
+    }
+
+    /**
+     * 处理参数校验异常 (MethodArgumentNotValidException)
+     * 当 @Valid 校验失败时触发
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Object> handleValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getAllErrors().stream()
+                .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "timestamp", LocalDateTime.now(),
+                    "status", 400,
+                    "error", "Validation Error",
+                    "message", message
                 ));
     }
 

@@ -1,8 +1,15 @@
 package com.group12.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CreateBookingRequest {
+    @NotBlank(message = "Scooter ID is required")
     private String scooter_id;
+
+    @NotBlank(message = "User ID is required")
     private String user_id;
+
+    @NotBlank(message = "Duration is required")
     private String duration; // 1H, 4H, 1D, 1W
 
     public String getScooter_id() { return scooter_id; }

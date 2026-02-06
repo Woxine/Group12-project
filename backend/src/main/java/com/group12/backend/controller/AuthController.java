@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.group12.backend.dto.LoginRequest;
 import com.group12.backend.service.AuthService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -26,7 +28,7 @@ public class AuthController {
      * 验证用户凭据并返回登录信息
      */
     @PostMapping("/login")
-    public ResponseEntity<Object> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(Map.of("data", authService.login(request)));
     }
 

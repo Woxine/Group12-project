@@ -1,8 +1,14 @@
 package com.group12.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class FeedbackRequest {
+    @NotBlank(message = "Scooter ID is required")
     private String scooter_id;
+
+    @NotBlank(message = "Description is required")
     private String description;
+    
     private String location;
 
     // Getters Setters

@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.group12.backend.dto.RegisterRequest;
 import com.group12.backend.service.UserService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -28,7 +30,7 @@ public class UserController {
      * 创建新的用户账户
      */
     @PostMapping
-    public ResponseEntity<Object> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", userService.register(request)));
     }
 

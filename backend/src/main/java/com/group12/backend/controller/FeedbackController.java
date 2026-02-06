@@ -16,6 +16,8 @@ import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.service.FeedbackService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/feedbacks")
 public class FeedbackController {
@@ -29,7 +31,7 @@ public class FeedbackController {
      * 用户提交关于行程或车辆的反馈
      */
     @PostMapping
-    public ResponseEntity<Object> submit(@RequestBody FeedbackRequest request) {
+    public ResponseEntity<Object> submit(@Valid @RequestBody FeedbackRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", feedbackService.submitFeedback(request)));
     }
 

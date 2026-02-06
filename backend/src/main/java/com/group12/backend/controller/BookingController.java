@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.service.BookingService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/bookings")
 public class BookingController {
@@ -28,7 +30,7 @@ public class BookingController {
      * 提交新的用车预订请求
      */
     @PostMapping
-    public ResponseEntity<Object> create(@RequestBody CreateBookingRequest request) {
+    public ResponseEntity<Object> create(@Valid @RequestBody CreateBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createBooking(request)));
     }
 
