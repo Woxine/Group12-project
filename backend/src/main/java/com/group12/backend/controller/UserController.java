@@ -41,5 +41,15 @@ public class UserController {
     public ResponseEntity<Object> getHistory(@PathVariable String userId) {
         return ResponseEntity.ok(Map.of("data", userService.getUserBookings(userId)));
     }
+
+    // API-012
+    /**
+     * 获取用户个人资料
+     * 用于前端展示用户详情（头像、角色等）
+     */
+    @GetMapping("/{userId}/profile")
+    public ResponseEntity<Object> getProfile(@PathVariable String userId) {
+        return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));
+    }
 }
 
