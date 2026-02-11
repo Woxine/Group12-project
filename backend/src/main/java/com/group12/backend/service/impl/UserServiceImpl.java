@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.BookingResponse;
@@ -24,6 +25,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private BookingRepository bookingRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public Object register(RegisterRequest request) {
         // 1. 检查邮箱是否已存在
@@ -34,7 +38,8 @@ public class UserServiceImpl implements UserService {
         // 2. 创建用户实体
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword()); // TODO: 实际生产中必须使用 BCrypt 加密
+        // 使用 BCrypt 加密密码
+        user.setPassword(passwordEncoder.encode(request.getPassword())); 
         user.setRole("CUSTOMER"); // 默认角色
         
         // 3. 保存入库

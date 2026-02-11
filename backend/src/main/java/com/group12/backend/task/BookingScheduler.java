@@ -23,7 +23,8 @@ public class BookingScheduler {
 
     /**
      * Check for expired bookings every minute
-     * If current time > booking.endTime, modify booking status to COMPLETED and scooter status to AVAILABLE
+     * If current time > booking.endTime, modify booking status to 
+     * COMPLETED and scooter status to AVAILABLE
      */
     @Scheduled(fixedRate = 60000) // Executed once every minute
     @Transactional

@@ -3,6 +3,7 @@ package com.group12.backend.service.impl;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.LoginRequest;
@@ -21,15 +22,17 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public Object login(LoginRequest request) {
         // 1. 查找用户
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. 验证密码 (简单比对)
-        // TODO: 生产环境应使用 BCryptPasswordEncoder.matches()
-        if (!user.getPassword().equals(request.getPassword())) {
+        // 2. 验证密码 (使用 BCrypt 匹配)
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
