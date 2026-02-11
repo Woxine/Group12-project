@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService {
         return new RegisterResponse(
             String.valueOf(savedUser.getId()), 
             savedUser.getEmail(), 
-            request.getName() // 注意：User实体目前可能没有 name 字段，这里直接返回请求中的 name
+            request.getName() // 注意：User目前可能没有 name 字段，直接返回请求中的 name
         );
     }
 

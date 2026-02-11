@@ -25,7 +25,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // 去掉 "Bearer " 前缀
+            String token = authHeader.substring(7); 
+            // 去掉 "Bearer " 前缀
 
             try {
                 if (jwtUtil.validateToken(token)) {
@@ -43,7 +44,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             }
         }
 
-        // 验证失败
+        // 验证失败后处理，返回 401 Unauthorized
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write("{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Access denied. Invalid or missing token.\"}");

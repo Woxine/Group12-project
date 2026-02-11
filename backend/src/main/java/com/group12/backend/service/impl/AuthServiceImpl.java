@@ -28,12 +28,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public Object login(LoginRequest request) {
         // 1. 查找用户
+        // SECURITY: Do not reveal whether user exists or not explicitly.
+        // But for internal logic we need to find it.
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElse(null);
 
         // 2. 验证密码 (使用 BCrypt 匹配)
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+        // SECURITY: Use 'Invalid email or password' for both cases to prevent user enumeration
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+             // Simulate computation time if user not found to prevent timing attacks? 
+             // (Advanced, usually relying on framework, but logic should be generic)
+             if (user == null) {
+                 // Dummy check to consume time similar to BCrypt check
+                 passwordEncoder.matches(request.getPassword(), "$2a$10$............................................................");
+             }
+             throw new RuntimeException("Invalid email or password");
         }
 
         // 3. 生成真实 JWT Token
