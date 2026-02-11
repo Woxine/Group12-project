@@ -1,0 +1,28 @@
+{
+  "version": "1",
+  "env": {
+    "compiler_version": "4.87"
+  },
+  "files": {
+    "index.kt": {
+      "md5": "025b3f7d573bdce08829dbfa5f4e837b64f3fef7",
+      "class": ""
+    },
+    "pages/bikelist/bikelist.kt": {
+      "class": "GenPagesBikelistBikelist",
+      "md5": "d5ad585c64f4c9bf249c9a33f2d1ebfba9a63be4"
+    },
+    "pages/register/register.kt": {
+      "class": "GenPagesRegisterRegister",
+      "md5": "fe3afeb68056efd74d7fcaeb80381275ac1b6e5e"
+    },
+    "pages/index/index.kt": {
+      "md5": "7c24e0947c4a61a032aa12ca365d0ecfcc104855",
+      "class": "GenPagesIndexIndex"
+    },
+    "pages/login/login.kt": {
+      "class": "GenPagesLoginLogin",
+      "md5": "ebf058fe66295b9b536f293535bc015e37fc66ac"
+    }
+  }
+}

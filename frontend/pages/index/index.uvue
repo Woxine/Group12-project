@@ -1,0 +1,270 @@
+<template>
+	<view class="slogan1">
+		<text class="text1">We offer you a variety of options.</text>
+	</view>
+	
+	<view class="span1">
+		<view class="span1_left"><image src="/static/broadcast.png" mode="aspectFill" class="icon1"></image></view>
+		<swiper class="swiper1" vertical="true" autoplay="true" circular interval="2000" duration="1000">
+			<swiper-item><text class="text2">Before cycling, please check the brakes, seat, pedals and other components.</text></swiper-item>
+			<swiper-item><text class="text2">Remember to return the bike when the ride is over.</text></swiper-item>
+		</swiper>
+	</view>
+	
+	<swiper class="swiper2" :indicator-dots="true" :autoplay="true" :interval="2000" :duration="1000"
+	indicator-color="rgba(255,255,255,0.3)" indicator-active-color="#c0c0c0" circular>
+		<swiper-item><image src="/static/MeiTuanbike.jpg" class="swipic1"></image></swiper-item>
+		<swiper-item><image src="/static/HelloBike.jpg" class="swipic2"></image></swiper-item>
+		<swiper-item><image src="/static/Scooter.jpg" class="swipic3"></image></swiper-item>
+		<swiper-item><image src="/static/EleBike.jpg" class="swipic4"></image></swiper-item>
+	</swiper>
+	
+	<!--
+	<view class="span2">------</view>
+	-->
+
+	<view class="map_container">
+		<map id="mainMap" class="map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
+	</view>
+	
+	<!-- 预约按钮 -->
+	<view class="booking-section">
+		<button class="booking-button" @click="goToBikeList">
+			appoint
+		</button>
+	</view>
+	
+	<view class="bottom">
+		<view class="bottom_left">
+			<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
+			<view class="left_down"><text class="text3">Home</text></view>
+		</view>
+		<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" hover-class="navigator-hover" class="bottom_center">
+			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
+			<view class="center_down"><text class="text3">Bike</text></view>
+		</navigator>
+		<navigator url="/pages/login/login" open-type="reLaunch" hover-class="navigator-hover" class="bottom_right">
+			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
+			<view class="right_down"><text class="text3">Me</text></view>
+		</navigator>
+	</view>
+</template>
+
+
+<script setup lang="uts">
+	import { ref, onMounted, getCurrentInstance } from 'vue'
+	
+	const longitude = ref(116.392325)
+	const latitude = ref(40.01811)
+	const scale = ref(16)
+	const markers = ref([] as Marker[])
+	const mapContext = ref(null as MapContext | null)
+	
+	const getCurrentLocation = () => {
+	  uni.getLocation({
+	    type: 'gcj02',
+	    success: (res) => {
+	      const { longitude: lng, latitude: lat } = res
+	      longitude.value = lng
+	      latitude.value = lat
+	      const temp = JSON.parse<Marker[]>(JSON.stringify([{
+	        id: 1,
+	        longitude: lng,
+	        latitude: lat,
+	        title: '我的位置',
+	        iconPath: '/static/location.png',
+	        width: 32,
+	        height: 32,
+	        anchor: { x: 0.5, y: 1 }
+	      }]))!
+	      markers.value = temp
+	      mapContext.value?.moveToLocation({ latitude: lat, longitude: lng })
+	    },
+	    fail: (err) => {
+	      console.error('定位失败', err)
+	      uni.showToast({ title: '定位失败，请开启权限', icon: 'none' })
+	    }
+	  })
+	}
+	
+	onMounted(() => {
+	  const instance = getCurrentInstance()
+	  if (instance != null && instance.proxy != null) {
+	    mapContext.value = uni.createMapContext('mainMap', instance.proxy!)
+	  } else {
+	    mapContext.value = uni.createMapContext('mainMap')
+	  }
+	  getCurrentLocation()
+	})
+	
+	// 跳转到单车列表页面
+	const goToBikeList = () => {
+		uni.navigateTo({
+			url: '/pages/bikelist/bikelist'
+		});
+	}
+</script>
+
+<style lang="scss">
+	.slogan1{
+		display: flex;
+		align-items: center;
+		height: 20px;
+		//border: 1px solid red;
+	}
+	
+	.span1{
+		width: 100%;
+		height: 20px;
+		//background-color: beige;
+		.span1_left{
+			position: absolute;
+			left: 1%;
+			height: 100%;
+			width: 5%;
+			background-color: aliceblue;
+			.icon1{
+				width: 100%;
+				height: 100%;
+			}
+		}
+		.swiper1{
+			position: absolute;
+			left: 6%;
+			height: 100%;
+			width: 94%;
+			//background-color: aquamarine;
+			.text2{
+				margin: auto;
+				font-size: 9px;
+			}
+		}
+	}
+	
+	.swiper2{
+		width: 100%;
+		height: 200px;
+		//border: 1px solid blue;
+		.swipic1{
+			width: 100%;
+		}
+		.swipic2{
+			width: 100%;
+		}
+		.swipic3{
+			width: 100%;
+		}
+		.swipic4{
+			width: 100%;
+		}
+	}
+	
+	.span2{
+		//border: 1px solid red;
+	}
+	
+	.map{
+		width: 100%;
+		height: 300px;
+		//border: 1px solid red;
+	}
+	
+	.booking-section {
+		width: 90%;
+		margin: 20px auto;
+		display: flex;
+		justify-content: center;
+		
+		.booking-button {
+			width: 100%;
+			height: 45px;
+			background-color: #4CAF50;
+			color: white;
+			border: none;
+			border-radius: 8px;
+			font-size: 16px;
+			font-weight: bold;
+		}
+	}
+	
+	.bottom{
+		width: 100%;
+		height: 8%;
+		background: #E3E1E1;
+		position: absolute;
+		bottom: 0px;
+		border-radius: 25px 25px 0px 0px;
+		.bottom_left{
+			border-radius: 0px;
+			width: 20%;
+			height: 100%;
+			//background: #373C3299;
+			margin-left: 5%;
+			.icon2{
+				position: absolute;
+				left: 20%;
+				width: 60%;
+				height: 60%;
+			}
+			.left_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				position: absolute;
+				bottom: 0%;
+				width: 100%;
+				height: 40%;
+				//background: white;
+			}
+		}
+		.bottom_center{
+			position: absolute;
+			left: 40%;
+			border-radius: 0px;
+			width: 20%;
+			height: 100%;
+			//background: burlywood;
+			.bike_icon{
+				position: absolute;
+				left: 25%;
+				width: 50%;
+				height: 60%;
+			}
+			.center_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				position: absolute;
+				bottom: 0%;
+				width: 100%;
+				height: 40%;
+				//background: white;
+			}
+		}
+		.bottom_right{
+			position: absolute;
+			right: 0%;
+			border-radius: 0px;
+			width: 20%;
+			height: 100%;
+			//background: bisque;
+			margin-right: 5%;
+			.icon2{
+				position: absolute;
+				left: 20%;
+				width: 60%;
+				height: 60%;
+			}
+			.right_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				position: absolute;
+				bottom: 0%;
+				width: 100%;
+				height: 40%;
+				//background: white;
+			}
+		}
+	}
+</style>
