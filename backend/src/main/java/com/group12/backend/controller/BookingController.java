@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.group12.backend.annotation.LogAction;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.service.BookingService;
 
@@ -29,6 +30,7 @@ public class BookingController {
      * 创建预订
      * 提交新的用车预订请求
      */
+    @LogAction(action = "CREATE_BOOKING", entityName = "Booking")
     @PostMapping
     public ResponseEntity<Object> create(@Valid @RequestBody CreateBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createBooking(request)));
