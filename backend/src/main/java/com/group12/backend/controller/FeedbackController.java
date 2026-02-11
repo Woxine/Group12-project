@@ -41,7 +41,7 @@ public class FeedbackController {
      * 管理员更新反馈的处理状态
      */
     @PutMapping("/{feedbackId}")
-    public ResponseEntity<Object> handle(@PathVariable String feedbackId, @RequestBody UpdateFeedbackRequest request) {
+    public ResponseEntity<Object> handle(@PathVariable String feedbackId, @Valid @RequestBody UpdateFeedbackRequest request) {
         return ResponseEntity.ok(Map.of("data", feedbackService.updateFeedback(feedbackId, request)));
     }
 }

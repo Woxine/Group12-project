@@ -1,6 +1,9 @@
 package com.group12.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class UpdateFeedbackRequest {
+    @NotBlank(message = "Status is required")
     private String status;
     private String note;
     
