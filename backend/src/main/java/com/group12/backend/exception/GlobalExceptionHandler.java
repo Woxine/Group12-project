@@ -79,19 +79,5 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    /**
-     * 处理系统未知异常 (Exception)
-     * 例如：数据库连接失败、空指针等
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleException(Exception e) {
-        e.printStackTrace(); // 打印堆栈以便后台调试
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "timestamp", LocalDateTime.now(),
-                    "status", 500,
-                    "error", "Internal Server Error",
-                    "message", e.getClass().getName() + ": " + e.getMessage() // Show actual error for debugging
-                ));
-    }
+
 }

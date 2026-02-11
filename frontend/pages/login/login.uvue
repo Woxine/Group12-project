@@ -88,7 +88,7 @@ const onSubmit = () => {
 	isSubmitting.value = true;
 
 	uni.request({
-		url: 'http://192.168.16.2:8080/api/v1/auth/login', // 请求的 API 地址
+		url: 'http://192.168.31.246:8080/api/v1/auth/login', // 请求的 API 地址
 		method: 'POST',
 		data: {
 			email: userInfo.email,
@@ -100,37 +100,67 @@ const onSubmit = () => {
 		success: (res) => {
 			console.log('Login API Response:', res.data);
 			
-			// 根据实际后端返回的结构来判断登录是否成功
-			// 假设成功时返回 code: 0 或者有 token
+			// 后端返回结构为 { "data": { "token": "...", "userId": "...", "role": "..." } }
 			const ret = res.data as UTSJSONObject
-			if (res.statusCode === 200 && ret['success'] != null && (ret['success'] as boolean)) { // 示例判断条件，请根据实际API调整
-				const token = ret['token'] as string | null
-				if (token != null) {
-					uni.setStorage({
-						key: 'token',
-						data: token
-					})
-				}
-				uni.showToast({
-					title: 'Login successful!',
-					icon: 'success'
-				});
+			
+			// 只要状态码是 200，且 data 字段存在，就认为成功
+			if (res.statusCode === 200) {
+				// 检查是一层结构还是两层结构
+				// 如果后端直接返回对象，或者包了一层 'data'
+				let loginData: UTSJSONObject | null = null;
 				
-				// 可以在这里跳转到首页或其他页面
-				uni.reLaunch({ url: '/pages/index/index' }); // 如果需要跳转回首页
-				
-			} else {
-				// 后端返回数据可能是任意结构，先转成 UTSJSONObject 再安全取值
-				const ret = res.data as UTSJSONObject
-				let msg = 'Login failed. Please check your credentials.'
-				if (ret['message'] != null) {
-					msg = ret['message'] as string
+				if (ret['data'] != null) {
+					loginData = ret['data'] as UTSJSONObject;
+				} else {
+					// 兼容性尝试：也许直接返回了字段
+					loginData = ret;
 				}
-				uni.showToast({
-					title: msg,
-					icon: 'none'
-				});
+				
+				if (loginData != null) {
+					const token = loginData['token'] as string | null
+					if (token != null) {
+						uni.setStorage({
+							key: 'token',
+							data: token
+						})
+						
+						uni.showToast({
+							title: 'Login successful!',
+							icon: 'success'
+						});
+						
+						// 跳转到首页
+						setTimeout(() => {
+							uni.reLaunch({ url: '/pages/index/index' });
+						}, 1500);
+						return;
+					}
+				}
+			} 
+			
+			// 失败流程
+			const retObj = res.data as UTSJSONObject
+			// 默认错误消息
+			let msg = 'Login failed. Please check your credentials.';
+			
+			// 尝试提取后端详细错误信息
+			// 后端通常返回 { "message": "...", "error": "..." }
+			const backendMsg = retObj['message'];
+			const backendErr = retObj['error'];
+			
+			if (backendMsg != null) {
+				msg = backendMsg as string;
+			} else if (backendErr != null) {
+				msg = `Error: ${backendErr}`;
 			}
+			
+			console.error('Login failed. Status:', res.statusCode, 'Response:', JSON.stringify(retObj));
+			
+			uni.showToast({
+				title: msg,
+				icon: 'none',
+				duration: 3000
+			});
 		},
 		fail: (err) => {
 			console.error('Login request failed:', err);

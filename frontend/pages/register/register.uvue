@@ -89,7 +89,7 @@ const confirmPassword = ref('');
 const isSubmitting = ref(false);
 
 // Server configuration - fixed value
-const serverUrl = 'http://192.168.16.2:8080/api/v1/users';
+const serverUrl = 'http://192.168.31.246:8080/api/v1/users';
 
 // --- Computed Properties ---
 
@@ -182,11 +182,23 @@ const handleRegister = async (): Promise<void> => {
 
 				if (response.statusCode >= 200 && response.statusCode < 300) {
 					// Handle the response data without type assertion
-					const result = response.data as UTSJSONObject; // This is now of type UTSJSONObject
-					console.log('Registration successful:', result);
+					const resultObj = response.data as UTSJSONObject; // This is now of type UTSJSONObject
+					console.log('Registration successful:', resultObj);
+					
+					// 兼容 { "data": { "name": "..." } } 和直接返回 { "name": "..." }
+					let regData: UTSJSONObject | null = null;
+					if (resultObj['data'] != null) {
+						regData = resultObj['data'] as UTSJSONObject;
+					} else {
+						regData = resultObj;
+					}
+					
 					// Access the response properties dynamically if they exist
-					const nameValue = result['name']
-					const welcomeName = (nameValue != null) ? nameValue.toString() : formData.value.name; // Fallback to entered name
+					let welcomeName = formData.value.name;
+					if (regData != null && regData['name'] != null) {
+						welcomeName = regData['name'] as string;
+					}
+					
 					showToast('Registration successful! Welcome, ' + welcomeName + '!');
 					
 					// Optionally navigate to login page
