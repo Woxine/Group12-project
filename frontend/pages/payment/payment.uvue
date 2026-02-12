@@ -1,0 +1,728 @@
+<template>
+	<view class="back">
+		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
+		
+		<!-- 支付页面标题 -->
+		<view class="payment_title">
+			<text class="title_text" style="text-align: center;">💳 Payment</text>
+		</view>
+		
+		<!-- 订单信息卡片 -->
+		<view class="order_info">
+			<view class="order_header">
+				<text class="order_label">Order Summary</text>
+			</view>
+			<view class="order_item">
+				<text class="label">Order Total:</text>
+				<text class="amount">£{{ orderAmount.toFixed(2) }}</text>
+			</view>
+		</view>
+		
+		<!-- 支付表单容器 -->
+		<scroll-view scroll-y="true" class="payment_scroll">
+			<view class="payment_container">
+				<!-- 支付方式选择 -->
+				<view class="form_group">
+					<text class="label">Payment Method</text>
+					<view class="picker_view" @click="showPaymentMethodPicker">
+						<text class="picker_text">{{ paymentMethods[paymentMethodIndex] }}</text>
+						<text class="arrow_text">▼</text>
+					</view>
+				</view>
+				
+				<view class="span1"></view>
+				
+				<!-- 银行卡支付表单 -->
+				<view v-if="paymentMethodIndex === 0" class="payment_form">
+					<!-- 选择银行 -->
+					<view class="form_group">
+						<text class="label">Bank</text>
+						<view class="picker_view" @click="showBankPicker">
+							<text class="picker_text">{{ banks[bankIndex] }}</text>
+							<text class="arrow_text">▼</text>
+						</view>
+					</view>
+					
+					<view class="span1"></view>
+					
+					<!-- 卡号输入 -->
+					<view class="form_group">
+						<text class="label">Card Number</text>
+						<input 
+							v-model="paymentInfo.cardNumber" 
+							type="number" 
+							placeholder="1234 5678 9012 3456" 
+							maxlength="16"
+							confirm-type="next" 
+							class="input"
+							@input="formatCardNumber"
+						/>
+					</view>
+					
+					<view class="span1"></view>
+					
+					<!-- 密码输入 -->
+					<view class="form_group">
+						<text class="label">Password</text>
+						<input 
+							v-model="paymentInfo.cardPassword" 
+							type="password" 
+							placeholder="Enter payment password" 
+							confirm-type="done" 
+							class="input"
+						/>
+					</view>
+					
+				</view>
+				
+				<!-- 支付宝支付表单 -->
+				<view v-else-if="paymentMethodIndex === 1" class="payment_form">
+					<view class="form_section_title">
+						<text class="section_title_text">Alipay Account</text>
+					</view>
+					
+					<view class="form_group">
+						<text class="label">Alipay Account</text>
+						<input 
+							v-model="paymentInfo.alipayAccount" 
+							type="text" 
+							placeholder="Enter phone number or email" 
+							confirm-type="next" 
+							class="input"
+						/>
+					</view>
+					<view class="span1"></view>
+					<view class="form_group">
+						<text class="label">Password</text>
+						<input 
+							v-model="paymentInfo.alipayPassword" 
+							type="password" 
+							placeholder="Enter payment password" 
+							confirm-type="done" 
+							class="input"
+						/>
+					</view>
+				</view>
+				
+				<!-- 微信支付表单 -->
+				<view v-else-if="paymentMethodIndex === 2" class="payment_form">
+					<view class="info_box">
+						<text class="info_text">WeChat Pay</text>
+						<view class="qr_code_placeholder">
+							<text class="qr_hint">QR Code</text>
+						</view>
+						<text class="info_desc">Scan the QR code with WeChat to complete payment</text>
+					</view>
+				</view>
+				
+				<view class="span2"></view>
+				
+				<!-- 支付按钮 -->
+				<button 
+					@click="onPayment" 
+					size="default" 
+					:disabled="isPaymentProcessing" 
+					class="payment_button"
+					:class="{ processing: isPaymentProcessing }"
+					style="background-color: #4CAF50; color: white; border: none;"
+				>
+					{{ isPaymentProcessing ? 'Processing...' : `Pay £${orderAmount.toFixed(2)}` }}
+				</button>
+				
+				<view class="span3"></view>
+				
+				<!-- 返回按钮 -->
+				<button 
+					@click="onCancel" 
+					size="default" 
+					class="cancel_button"
+				>
+					Cancel
+				</button>
+			</view>
+		</scroll-view>
+	</view>
+	
+	<!-- 底部导航 -->
+	<view class="bottom">
+		<navigator url="/pages/index/index" open-type="reLaunch" hover-class="navigator-hover" class="bottom_left">
+			<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
+			<view class="left_down"><text class="text3">Home</text></view>
+		</navigator>
+		<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" hover-class="navigator-hover" class="bottom_center">
+			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
+			<view class="center_down"><text class="text3">Bike</text></view>
+		</navigator>
+		<navigator url="/pages/orders/orders" open-type="reLaunch" hover-class="navigator-hover" class="bottom_right">
+			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
+			<view class="right_down"><text class="text3">Me</text></view>
+		</navigator>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { reactive, ref } from 'vue';
+
+// 支付方式列表
+const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay'];
+const paymentMethodIndex = ref(0);
+
+// 银行列表
+const banks = ['ICBC', 'ABC', 'BOC', 'CCB', 'BCM'];
+const bankIndex = ref(0);
+
+// 订单金额 - 从本地存储获取或使用默认值
+let storedAmount = uni.getStorageSync('totalPrice');
+const orderAmount = ref<number>(storedAmount != null && storedAmount != '' ? parseFloat(storedAmount as string) : 1.0);
+
+// 支付信息对象
+type PaymentInfo = {
+	cardNumber: string
+	cardPassword: string
+	alipayAccount: string
+	alipayPassword: string
+}
+
+const paymentInfo = reactive<PaymentInfo>({
+	cardNumber: '',
+	cardPassword: '',
+	alipayAccount: '',
+	alipayPassword: ''
+});
+
+// 支付处理状态
+const isPaymentProcessing = ref(false);
+
+// 显示支付方式选择器
+const showPaymentMethodPicker = () => {
+	uni.showActionSheet({
+		itemList: paymentMethods,
+		success: (res) => {
+			paymentMethodIndex.value = res.tapIndex;
+		}
+	});
+};
+
+// 显示银行选择器
+const showBankPicker = () => {
+	uni.showActionSheet({
+		itemList: banks,
+		success: (res) => {
+			bankIndex.value = res.tapIndex;
+		}
+	});
+};
+
+// 格式化卡号（添加空格）
+const formatCardNumber = (e: UTSJSONObject) => {
+	const detail = e['detail'] as UTSJSONObject | null;
+	if (detail == null) return;
+	
+	let value = detail['value'] as string | null;
+	if (value == null) return;
+	
+	// 移除所有空格
+	value = value.replace(/\s/g, '');
+	
+	// 限制为16位数字
+	if (value.length > 16) {
+		value = value.substring(0, 16);
+	}
+	
+	paymentInfo.cardNumber = value;
+};
+
+// 验证支付信息
+const validatePaymentInfo = (): boolean => {
+	const method = paymentMethodIndex.value;
+	
+	if (method === 0) {
+		// 银行卡验证
+		const cardNum = paymentInfo.cardNumber.replace(/\s/g, '');
+		if (cardNum == '' || cardNum.length !== 16) {
+			uni.showToast({
+				title: 'Please enter a valid 16-digit card number',
+				icon: 'none'
+			});
+			return false;
+		}
+		
+		if (paymentInfo.cardPassword == '' || paymentInfo.cardPassword.length < 6) {
+			uni.showToast({
+				title: 'Please enter payment password (at least 6 characters)',
+				icon: 'none'
+			});
+			return false;
+		}
+	} else if (method === 1) {
+		// 支付宝验证
+		if (paymentInfo.alipayAccount == '' || paymentInfo.alipayAccount.trim().length == 0) {
+			uni.showToast({
+				title: 'Please enter Alipay account',
+				icon: 'none'
+			});
+			return false;
+		}
+		
+		if (paymentInfo.alipayPassword == '' || paymentInfo.alipayPassword.length < 6) {
+			uni.showToast({
+				title: 'Please enter Alipay password (at least 6 characters)',
+				icon: 'none'
+			});
+			return false;
+		}
+	} else if (method === 2) {
+		// 微信支付不需要验证，直接可以支付
+		return true;
+	}
+	
+	return true;
+};
+
+// 支付处理
+const onPayment = () => {
+	if (isPaymentProcessing.value) return;
+	
+	if (!validatePaymentInfo()) return;
+	
+	isPaymentProcessing.value = true;
+	
+	// 模拟支付请求
+	setTimeout(() => {
+		const method = paymentMethods[paymentMethodIndex.value];
+		uni.showToast({
+			title: `Payment successful via ${method}!`,
+			icon: 'success',
+			duration: 2000
+		});
+		
+		isPaymentProcessing.value = false;
+		
+		// 支付成功后跳转到首页
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 2000);
+	}, 2000);
+};
+
+// 取消支付
+const onCancel = () => {
+	uni.showModal({
+		title: 'Cancel Payment',
+		content: 'Are you sure you want to cancel this payment?',
+		success: (res) => {
+			if (res.confirm) {
+				uni.navigateBack();
+			}
+		}
+	});
+};
+</script>
+
+<style scoped>
+.back {
+	position: relative;
+	width: 100%;
+	height: 100vh;
+	background-color: #f5f5f5;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	box-sizing: border-box;
+	padding-bottom: 8%;
+}
+
+.backpic {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 0;
+	opacity: 0.25;
+}
+
+.payment_title {
+	position: relative;
+	z-index: 1;
+	margin-top: 20px;
+	margin-bottom: 10px;
+	flex-shrink: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.title_text {
+	font-size: 24px;
+	font-weight: bold;
+	color: rgba(60, 60, 60, 0.95);
+	font-family: Arial, sans-serif;
+	letter-spacing: 0.5px;
+	text-align: center;
+}
+
+.order_info {
+	position: relative;
+	z-index: 1;
+	margin: 0 20px 10px 20px;
+	padding: 12px 15px;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.8);
+	flex-shrink: 0;
+}
+
+.order_header {
+	margin-bottom: 8px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.order_label {
+	font-size: 13px;
+	color: #666;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+}
+
+.order_item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.order_item .label {
+	font-size: 13px;
+	color: #666;
+	font-weight: 600;
+}
+
+.order_item .amount {
+	font-size: 22px;
+	color: #4CAF50;
+	font-weight: bold;
+	letter-spacing: 0.3px;
+}
+
+.payment_scroll {
+	position: relative;
+	z-index: 1;
+	flex: 1;
+	overflow-y: scroll;
+	-webkit-overflow-scrolling: touch;
+	height: 0;
+	min-height: 0;
+	width: 100%;
+	/* 确保可以滚动到底部 */
+	scroll-behavior: smooth;
+}
+
+.payment_container {
+	margin: 0 20px;
+	padding: 20px;
+	padding-bottom: 500px;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.8);
+	box-sizing: border-box;
+}
+
+.form_group {
+	margin-bottom: 15px;
+}
+
+.form_group .label {
+	display: block;
+	font-size: 14px;
+	color: #333;
+	font-weight: 600;
+	margin-bottom: 10px;
+	letter-spacing: 0.3px;
+}
+
+.form_section_title {
+	margin-bottom: 15px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #e8e8e8;
+}
+
+.section_title_text {
+	font-size: 16px;
+	color: #4CAF50;
+	font-weight: bold;
+	letter-spacing: 0.5px;
+}
+
+.form_row {
+	display: flex;
+	gap: 15px;
+	justify-content: space-between;
+}
+
+.form_group_half {
+	flex: 1;
+}
+
+.form_group_half .label {
+	display: block;
+	font-size: 14px;
+	color: #333;
+	font-weight: 600;
+	margin-bottom: 10px;
+	letter-spacing: 0.3px;
+}
+
+.input {
+	width: 100%;
+	padding: 12px 15px;
+	border: 2px solid #e0e0e0;
+	border-radius: 8px;
+	font-size: 15px;
+	box-sizing: border-box;
+	background-color: #fafafa;
+	transition: all 0.3s ease;
+}
+
+.input:focus {
+	border-color: #4CAF50;
+	outline: none;
+	background-color: #fff;
+	box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.picker_view {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 12px;
+	background-color: #fafafa;
+	border: 2px solid #e0e0e0;
+	border-radius: 8px;
+	min-height: 36px;
+	transition: all 0.3s ease;
+}
+
+.picker_view:active {
+	background-color: #f0f0f0;
+	border-color: #4CAF50;
+}
+
+.picker_text {
+	font-size: 13px;
+	color: #333;
+	font-weight: 500;
+}
+
+.arrow_text {
+	font-size: 10px;
+	color: #999;
+}
+
+.payment_form {
+	margin-top: 0;
+	padding-top: 0;
+}
+
+.info_box {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 50px 20px;
+	background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
+	border-radius: 12px;
+	margin-top: 15px;
+	border: 2px dashed #e0e0e0;
+}
+
+.info_text {
+	font-size: 20px;
+	color: #4CAF50;
+	font-weight: bold;
+	margin-bottom: 20px;
+	letter-spacing: 0.5px;
+}
+
+.qr_code_placeholder {
+	width: 180px;
+	height: 180px;
+	background-color: #f0f0f0;
+	border: 2px dashed #ccc;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 20px;
+}
+
+.qr_hint {
+	font-size: 14px;
+	color: #999;
+}
+
+.info_desc {
+	font-size: 13px;
+	color: #666;
+	text-align: center;
+	line-height: 1.6;
+}
+
+.span1 {
+	height: 10px;
+}
+
+.span2 {
+	height: 15px;
+}
+
+.span3 {
+	height: 10px;
+}
+
+.payment_button {
+	width: 100%;
+	height: 50px;
+	background-color: #4CAF50 !important;
+	color: white !important;
+	border: none !important;
+	border-radius: 10px;
+	font-size: 17px;
+	font-weight: bold;
+	letter-spacing: 0.5px;
+	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+	transition: all 0.3s ease;
+}
+
+.payment_button:active {
+	transform: scale(0.98);
+	box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.payment_button.processing {
+	background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+	opacity: 0.8;
+}
+
+.payment_button[disabled] {
+	background: #cccccc;
+	box-shadow: none;
+	opacity: 0.6;
+}
+
+.cancel_button {
+	width: 100%;
+	height: 50px;
+	background-color: rgba(255, 255, 255, 0.9);
+	color: #666;
+	border: 2px solid #e0e0e0;
+	border-radius: 10px;
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	transition: all 0.3s ease;
+}
+
+.cancel_button:active {
+	background-color: #f5f5f5;
+	border-color: #ccc;
+	transform: scale(0.98);
+}
+
+/* 底部导航 */
+.bottom {
+	width: 100%;
+	height: 8%;
+	background: #E3E1E1;
+	position: absolute;
+	bottom: 0px;
+	border-radius: 25px 25px 0px 0px;
+	z-index: 100;
+}
+
+.bottom_left {
+	border-radius: 0px;
+	width: 20%;
+	height: 100%;
+	margin-left: 5%;
+	position: absolute;
+	left: 0;
+}
+
+.bottom_left .icon2 {
+	position: absolute;
+	left: 20%;
+	width: 60%;
+	height: 60%;
+}
+
+.bottom_left .left_down {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	position: absolute;
+	bottom: 0%;
+	width: 100%;
+	height: 40%;
+}
+
+.bottom_center {
+	position: absolute;
+	left: 40%;
+	border-radius: 0px;
+	width: 20%;
+	height: 100%;
+}
+
+.bottom_center .bike_icon {
+	position: absolute;
+	left: 25%;
+	width: 50%;
+	height: 60%;
+}
+
+.bottom_center .center_down {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	position: absolute;
+	bottom: 0%;
+	width: 100%;
+	height: 40%;
+}
+
+.bottom_right {
+	position: absolute;
+	right: 0%;
+	border-radius: 0px;
+	width: 20%;
+	height: 100%;
+	margin-right: 5%;
+}
+
+.bottom_right .icon2 {
+	position: absolute;
+	left: 20%;
+	width: 60%;
+	height: 60%;
+}
+
+.bottom_right .right_down {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	position: absolute;
+	bottom: 0%;
+	width: 100%;
+	height: 40%;
+}
+
+.text3 {
+	font-size: 12px;
+	margin-top: 4px;
+}
+</style>

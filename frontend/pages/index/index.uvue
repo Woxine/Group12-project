@@ -43,7 +43,7 @@
 			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
 			<view class="center_down"><text class="text3">Bike</text></view>
 		</navigator>
-		<navigator url="/pages/login/login" open-type="reLaunch" hover-class="navigator-hover" class="bottom_right">
+		<navigator url="/pages/me/me" open-type="reLaunch" hover-class="navigator-hover" class="bottom_right">
 			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
 			<view class="right_down"><text class="text3">Me</text></view>
 		</navigator>
@@ -53,6 +53,25 @@
 
 <script setup lang="uts">
 	import { ref, onMounted, getCurrentInstance } from 'vue'
+	
+	// Define types
+	type AnchorPoint = {
+		x: number
+		y: number
+	}
+	
+	type Marker = {
+		id: number
+		longitude: number
+		latitude: number
+		title: string
+		iconPath: string
+		width: number
+		height: number
+		anchor: AnchorPoint
+	}
+	
+	type MapContext = any
 	
 	const longitude = ref(116.392325)
 	const latitude = ref(40.01811)
@@ -78,7 +97,6 @@
 	        anchor: { x: 0.5, y: 1 }
 	      }]))!
 	      markers.value = temp
-	      mapContext.value?.moveToLocation({ latitude: lat, longitude: lng })
 	    },
 	    fail: (err) => {
 	      console.error('定位失败', err)

@@ -55,7 +55,7 @@
 	</view>
 </template>
 
-<script setup>
+<script setup lang="uts">
 import { reactive, ref } from 'vue';
 
 // 响应式数据对象，用于存储用户输入
@@ -88,7 +88,7 @@ const onSubmit = () => {
 	isSubmitting.value = true;
 
 	uni.request({
-		url: 'http://192.168.31.246:8080/api/v1/auth/login', // 请求的 API 地址
+		url: 'http://192.168.16.2:8080/api/v1/auth/login', // 请求的 API 地址
 		method: 'POST',
 		data: {
 			email: userInfo.email,
@@ -100,7 +100,7 @@ const onSubmit = () => {
 		success: (res) => {
 			console.log('Login API Response:', res.data);
 			
-			// 后端返回结构为 { "data": { "token": "...", "userId": "...", "role": "..." } }
+			// 后端返回结构为 { "data": { "token": "...", "userId": "...", "role": "...", "name": "...", "email": "..." } }
 			const ret = res.data as UTSJSONObject
 			
 			// 只要状态码是 200，且 data 字段存在，就认为成功
@@ -116,13 +116,63 @@ const onSubmit = () => {
 					loginData = ret;
 				}
 				
+				console.log('Login Data:', JSON.stringify(loginData));
+				
+				// 打印所有可能的字段
+				if (loginData != null) {
+					console.log('id field:', loginData['id']);
+					console.log('userId field:', loginData['userId']);
+					console.log('name field:', loginData['name']);
+					console.log('email field:', loginData['email']);
+					console.log('token field:', loginData['token']);
+				}
+				
 				if (loginData != null) {
 					const token = loginData['token'] as string | null
 					if (token != null) {
-						uni.setStorage({
-							key: 'token',
-							data: token
-						})
+						// 保存 token（使用同步方法确保立即保存）
+						try {
+							uni.setStorageSync('token', token)
+							console.log('Token saved successfully')
+						} catch (e) {
+							console.error('Failed to save token:', e)
+						}
+						
+						// 保存用户ID（优先使用登录返回的 id / userId，其次使用已有的本地 userId，最后才退回到 email）
+						const existingUserId = uni.getStorageSync('userId')
+						let userIdToSave: string = ''
+						const rawLoginId = loginData['id'] != null ? loginData['id'] : loginData['userId']
+						if (rawLoginId != null) {
+							userIdToSave = '' + rawLoginId
+						} else if (existingUserId != null && existingUserId != '') {
+							userIdToSave = '' + existingUserId
+						} else {
+							userIdToSave = userInfo.email
+						}
+						
+						try {
+							uni.setStorageSync('userId', userIdToSave)
+							console.log('User ID saved:', userIdToSave)
+						} catch (e) {
+							console.error('Failed to save user ID:', e)
+						}
+					
+						// 保存用户信息
+						const userName = loginData['name'] != null ? loginData['name'] as string : userInfo.email
+						const userEmail = userInfo.email
+						
+						const userInfoData = {
+							name: userName,
+							email: userEmail
+						}
+						
+						try {
+							const userInfoStr = JSON.stringify(userInfoData)
+							uni.setStorageSync('userInfo', userInfoStr)
+							console.log('User info saved:', userInfoStr)
+						} catch (e) {
+							console.error('Failed to save user info:', e)
+						}
 						
 						uni.showToast({
 							title: 'Login successful!',
@@ -253,81 +303,75 @@ const onSubmit = () => {
 	
 	.bottom{
 		width: 100%;
-		height: 8%;
+		height: 80px;
 		background: #E3E1E1;
-		position: absolute;
-		bottom: 0px;
 		border-radius: 25px 25px 0px 0px;
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		flex-shrink: 0;
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		z-index: 10;
 		.bottom_left{
 			border-radius: 0px;
-			width: 20%;
+			width: 33.33%;
 			height: 100%;
-			//background: #373C3299;
-			margin-left: 5%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
 			.icon2{
-				position: absolute;
-				left: 20%;
-				width: 60%;
-				height: 60%;
+				width: 30px;
+				height: 30px;
 			}
 			.left_down{
 				display: flex;
 				justify-content: center;
 				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
 				height: 40%;
-				//background: white;
+				width: 100%;
 			}
 		}
 		.bottom_center{
-			position: absolute;
-			left: 40%;
 			border-radius: 0px;
-			width: 20%;
+			width: 33.33%;
 			height: 100%;
-			//background: burlywood;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
 			.bike_icon{
-				position: absolute;
-				left: 25%;
-				width: 50%;
-				height: 60%;
+				width: 30px;
+				height: 30px;
 			}
 			.center_down{
 				display: flex;
 				justify-content: center;
 				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
 				height: 40%;
-				//background: white;
+				width: 100%;
 			}
 		}
 		.bottom_right{
-			position: absolute;
-			right: 0%;
 			border-radius: 0px;
-			width: 20%;
+			width: 33.33%;
 			height: 100%;
-			//background: bisque;
-			margin-right: 5%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
 			.icon2{
-				position: absolute;
-				left: 20%;
-				width: 60%;
-				height: 60%;
+				width: 30px;
+				height: 30px;
 			}
 			.right_down{
 				display: flex;
 				justify-content: center;
 				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
 				height: 40%;
-				//background: white;
+				width: 100%;
 			}
 		}
 	}

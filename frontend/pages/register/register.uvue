@@ -24,16 +24,16 @@
 			<view class="span2"></view>
 			
 			<view class="validation-info">
-				<text :class="{'valid': isNameValid, 'invalid': formData.name != '' && !isNameValid}">
+				<text class="validation-message" :class="{'valid': isNameValid, 'invalid': formData.name != '' && !isNameValid}">
 					{{ formData.name != '' ? (isNameValid ? '✓ Name is valid' : '✗ Name cannot be empty') : 'Name required' }}
 				</text>
-				<text :class="{'valid': isEmailValid, 'invalid': formData.email != '' && !isEmailValid}">
+				<text class="validation-message" :class="{'valid': isEmailValid, 'invalid': formData.email != '' && !isEmailValid}">
 					{{ formData.email != '' ? (isEmailValid ? '✓ Valid email format' : '✗ Invalid email format') : 'Email required' }}
 				</text>
-				<text :class="{'valid': isPasswordValid, 'invalid': formData.password != '' && !isPasswordValid}">
+				<text class="validation-message" :class="{'valid': isPasswordValid, 'invalid': formData.password != '' && !isPasswordValid}">
 					{{ formData.password != '' ? (isPasswordValid ? '✓ Password meets requirements' : '✗ Password must be at least 6 characters') : 'Password required' }}
 				</text>
-				<text :class="{'valid': passwordsMatch, 'invalid': confirmPassword != '' && !passwordsMatch}">
+				<text class="validation-message" :class="{'valid': passwordsMatch, 'invalid': confirmPassword != '' && !passwordsMatch}">
 					{{ confirmPassword != '' ? (passwordsMatch ? '✓ Passwords match' : '✗ Passwords do not match') : 'Confirm password' }}
 				</text>
 			</view>
@@ -67,7 +67,7 @@
 	</view>
 </template>
 
-<script setup lang="ts">
+<script setup lang="uts">
 import { ref, computed } from 'vue';
 
 // --- Types ---
@@ -89,7 +89,7 @@ const confirmPassword = ref('');
 const isSubmitting = ref(false);
 
 // Server configuration - fixed value
-const serverUrl = 'http://192.168.31.246:8080/api/v1/users';
+const serverUrl = 'http://192.168.16.2:8080/api/v1/users';
 
 // --- Computed Properties ---
 
@@ -185,12 +185,24 @@ const handleRegister = async (): Promise<void> => {
 					const resultObj = response.data as UTSJSONObject; // This is now of type UTSJSONObject
 					console.log('Registration successful:', resultObj);
 					
-					// 兼容 { "data": { "name": "..." } } 和直接返回 { "name": "..." }
+					// 兼容 { "data": { "id": "...", "name": "..." } } 和直接返回 { "id": "...", "name": "..." }
 					let regData: UTSJSONObject | null = null;
 					if (resultObj['data'] != null) {
 						regData = resultObj['data'] as UTSJSONObject;
 					} else {
 						regData = resultObj;
+					}
+					
+					// 从注册返回中读取用户 id 并保存到本地，用于后续预订接口
+					if (regData != null && regData['id'] != null) {
+						const rawRegId = regData['id'];
+						const registeredId = '' + rawRegId; // 统一转成字符串，兼容 number/string
+						try {
+							uni.setStorageSync('userId', registeredId);
+							console.log('Saved userId from register:', registeredId);
+						} catch (e) {
+							console.error('Failed to save userId from register:', e);
+						}
 					}
 					
 					// Access the response properties dynamically if they exist
@@ -346,22 +358,21 @@ const handleRegister = async (): Promise<void> => {
 			padding: 10px;
 			background-color: rgba(0, 0, 0, 0.1);
 			border-radius: 5px;
-			
-			text {
-				display: block;
-				font-size: 12px;
-				margin-bottom: 5px;
-				
-				&.valid {
-					color: #2ecc71; // Green color
-					font-weight: bold;
-				}
-				
-				&.invalid {
-					color: #e74c3c; // Red color
-					font-weight: bold;
-				}
-			}
+		}
+
+		.validation-message {
+			font-size: 12px;
+			margin-bottom: 5px;
+		}
+
+		.validation-message.valid {
+			color: #2ecc71; // Green color
+			font-weight: bold;
+		}
+
+		.validation-message.invalid {
+			color: #e74c3c; // Red color
+			font-weight: bold;
 		}
 		
 		.server-config {
@@ -371,7 +382,6 @@ const handleRegister = async (): Promise<void> => {
 			border-radius: 8px;
 			
 			.config-label {
-				display: block;
 				color: white;
 				font-size: 14px;
 				margin-bottom: 5px;

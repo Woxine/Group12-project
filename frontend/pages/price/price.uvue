@@ -1,94 +1,373 @@
 <template>
 	<view class="container">
-		<view class="title">
-			<text class="title-text">选择预订时长</text>
-		</view>
-		
-		<view class="duration-cards">
-			<view 
-				v-for="(duration, index) in durations" 
-				:key="index" 
-				class="card"
-				:class="{ selected: selectedIndex === index }"
-				@click="selectDuration(index)"
-			>
-				<view class="card-header">
-					<text class="duration">{{ duration.time }}</text>
-				</view>
-				<view class="card-body">
-					<text class="price">£{{ duration.price }}</text>
+		<scroll-view scroll-y="true" class="scroll-area">
+			<view class="title">
+				<text class="title-text">Select Booking Duration</text>
+			</view>
+			
+			<view class="duration-cards">
+				<view 
+					v-for="(duration, index) in durations" 
+					:key="index" 
+					class="card"
+				>
+					<view class="card-header">
+						<text class="duration">{{ duration.time }}</text>
+					</view>
+					<view class="card-body">
+						<text class="price">£{{ duration.price }}</text>
+					</view>
 				</view>
 			</view>
-		</view>
-		
-		<view class="button-group">
-			<button class="confirm-btn" @click="confirm">确定</button>
-			<button class="cancel-btn" @click="cancel">取消</button>
-		</view>
+
+			<!-- Start Time Selection -->
+			<view class="time-section">
+				<view class="section-title">
+					<text class="section-title-text">Start Time</text>
+				</view>
+				<view class="time-input" @click="selectStartTime">
+					<text class="time-label">Select Start Time</text>
+					<text class="time-value">{{ startTime.length > 0 ? startTime : 'Not Selected' }}</text>
+				</view>
+			</view>
+
+			<!-- End Time Selection -->
+			<view class="time-section">
+				<view class="section-title">
+					<text class="section-title-text">End Time</text>
+				</view>
+				<view class="time-input" @click="selectEndTime">
+					<text class="time-label">Select End Time</text>
+					<text class="time-value">{{ endTime.length > 0 ? endTime : 'Not Selected' }}</text>
+				</view>
+			</view>
+			
+			<view class="button-group">
+				<button class="confirm-btn" @click="confirm">Confirm</button>
+				<button class="cancel-btn" @click="cancel">Cancel</button>
+			</view>
+		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
 import { ref } from 'vue';
 
-// 定义类型
+// Define types
 type DurationItem = {
 	time: string;
 	price: number;
 }
 
-// 预订时长数据
+type UserInfo = {
+	name: string;
+	email: string;
+}
+
+// Booking duration data
 const durations = ref<DurationItem[]>([
-	{ time: '1小时', price: 1 },
-	{ time: '4小时', price: 1 },
-	{ time: '1天', price: 1 },
-	{ time: '1周', price: 1 }
+	{ time: '1 Hour', price: 1 },
+	{ time: '4 Hours', price: 1 },
+	{ time: '1 Day', price: 1 },
+	{ time: '1 Week', price: 1 }
 ]);
 
-// 当前选中的索引
-const selectedIndex = ref<number>(-1);
+// Start and end time
+const startTime = ref<string>('');
+const endTime = ref<string>('');
+const durationCode = ref<string>(''); // Store duration code (1H, 4H, 1D, 1W)
 
-// 选择时长
-const selectDuration = (index: number) => {
-	selectedIndex.value = index;
+// Select start time
+const selectStartTime = () => {
+	const now = new Date();
+	const currentHour = now.getHours().toString().padStart(2, '0');
+	const currentMinute = now.getMinutes().toString().padStart(2, '0');
+	const currentDate = now.getFullYear() + '-' + 
+		(now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+		now.getDate().toString().padStart(2, '0');
+	
+	uni.showActionSheet({
+		itemList: ['Start Now', '1 Hour Later', '2 Hours Later', '3 Hours Later'],
+		success: (res) => {
+			if (res.tapIndex === 0) {
+				// Start Now
+				startTime.value = currentDate + ' ' + currentHour + ':' + currentMinute;
+			} else if (res.tapIndex === 1) {
+				// 1 Hour Later
+				const time1 = new Date(now.getTime() + 60 * 60 * 1000);
+				const hour1 = time1.getHours().toString().padStart(2, '0');
+				const minute1 = time1.getMinutes().toString().padStart(2, '0');
+				startTime.value = currentDate + ' ' + hour1 + ':' + minute1;
+			} else if (res.tapIndex === 2) {
+				// 2 Hours Later
+				const time2 = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+				const hour2 = time2.getHours().toString().padStart(2, '0');
+				const minute2 = time2.getMinutes().toString().padStart(2, '0');
+				startTime.value = currentDate + ' ' + hour2 + ':' + minute2;
+			} else if (res.tapIndex === 3) {
+				// 3 Hours Later
+				const time3 = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+				const hour3 = time3.getHours().toString().padStart(2, '0');
+				const minute3 = time3.getMinutes().toString().padStart(2, '0');
+				startTime.value = currentDate + ' ' + hour3 + ':' + minute3;
+			}
+		}
+	})
 };
 
-// 确认选择
-const confirm = () => {
-	if (selectedIndex.value !== -1) {
-		const selectedDuration = durations.value[selectedIndex.value];
-		console.log('选择了', selectedDuration.time, '费用', selectedDuration.price, '英镑');
+// Select end time
+const selectEndTime = () => {
+	if (startTime.value == '') {
 		uni.showToast({
-			title: `已选择${selectedDuration.time}`,
-			icon: 'success'
-		});
-	} else {
-		uni.showToast({
-			title: '请选择预订时长',
+			title: 'Please select start time first',
 			icon: 'none'
 		});
+		return;
 	}
+
+	const now = new Date();
+	const currentDate = now.getFullYear() + '-' + 
+		(now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+		now.getDate().toString().padStart(2, '0');
+	
+	uni.showActionSheet({
+		itemList: ['1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
+		success: (res) => {
+			let endDateTime: Date | null = null;
+			let duration: string = '';
+			
+			if (res.tapIndex === 0) {
+				endDateTime = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+				duration = '1H';
+			} else if (res.tapIndex === 1) {
+				endDateTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+				duration = '4H';
+			} else if (res.tapIndex === 2) {
+				endDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+				duration = '1D';
+			} else if (res.tapIndex === 3) {
+				endDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+				duration = '1W';
+			}
+			
+			if (endDateTime != null) {
+				const endDate = endDateTime.getFullYear() + '-' + 
+					(endDateTime.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+					endDateTime.getDate().toString().padStart(2, '0');
+				const endHour = endDateTime.getHours().toString().padStart(2, '0');
+				const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
+				endTime.value = endDate + ' ' + endHour + ':' + endMinute;
+				durationCode.value = duration;
+			}
+		}
+	})
 };
 
-// 取消选择
+// Confirm selection
+const confirm = () => {
+	if (startTime.value == '') {
+		uni.showToast({
+			title: 'Please select start time',
+			icon: 'none'
+		});
+		return;
+	}
+	
+	if (endTime.value == '') {
+		uni.showToast({
+			title: 'Please select end time',
+			icon: 'none'
+		});
+		return;
+	}
+
+	// Get user info and token
+	const userInfoStr = uni.getStorageSync('userInfo')
+	const token = uni.getStorageSync('token')
+	const userIdStorage = uni.getStorageSync('userId')
+	
+	let userId: string = '';
+	let userName: string = '';
+	
+	// Prefer userId saved in storage
+	if (userIdStorage != null && userIdStorage != '') {
+		userId = '' + userIdStorage;
+	}
+	
+	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
+		try {
+			const userInfo = JSON.parse<UserInfo>(userInfoStr)!!
+			if (userInfo != null) {
+				const nameValue = userInfo['name'] as string
+				userName = nameValue.length > 0 ? nameValue : 'Guest';
+			}
+		} catch (e) {
+			console.error('Failed to parse user info:', e);
+		}
+	}
+	
+	if (token == null || token == '') {
+		uni.showToast({
+			title: 'Please login first',
+			icon: 'none'
+		});
+		return;
+	}
+	
+	console.log('Token:', token);
+	console.log('User ID:', userId);
+	console.log('User Name:', userName);
+	
+	// Get selected scooter ID (frontend stores code like SC001, backend needs numeric ID)
+	const selectedScooterId = uni.getStorageSync('selectedScooterId')
+	let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
+	// Extract numeric part as backend ID, e.g., SC002 -> 2
+	let numericScooterId: string = '';
+	for (let i = 0; i < scooterId.length; i++) {
+		const ch = scooterId.charAt(i);
+		if (ch >= '0' && ch <= '9') {
+			numericScooterId += ch;
+		}
+	}
+	if (numericScooterId.length == 0) {
+		numericScooterId = scooterId; // Fallback: if no numbers, use original string
+	}
+	
+	// Calculate booking duration (hours)
+	const startDate = new Date(startTime.value);
+	const endDate = new Date(endTime.value);
+	const durationMs = endDate.getTime() - startDate.getTime();
+	const durationHours = durationMs / (1000 * 60 * 60);
+	
+	// Calculate total price (assume £1/hour)
+	const totalPrice = durationHours * 1;
+	
+	console.log('Start Time:', startTime.value);
+	console.log('End Time:', endTime.value);
+	console.log('Duration Hours:', durationHours);
+	console.log('Total Price:', totalPrice);
+	
+	// If still cannot get userId, prompt user to login again
+	if (userId == null || userId == '') {
+		uni.showToast({
+			title: 'User information missing, please login again before booking',
+			icon: 'none'
+		});
+		return;
+	}
+	
+	// Prepare request data: include both user_id and userId for backend compatibility; scooter_id uses numeric ID
+	const bookingData = {
+		user_id: userId,
+		userId: userId,
+		scooter_id: numericScooterId,
+		start_time: startTime.value,
+		end_time: endTime.value,
+		duration: durationCode.value,
+		total_price: totalPrice,
+		status: 'CONFIRMED'
+	};
+	
+	console.log('Booking info:', bookingData);	console.log('User ID value:', userId, 'Type:', typeof userId);
+	console.log('Scooter ID value:', scooterId, 'Type:', typeof scooterId);
+	console.log('Total Price value:', totalPrice, 'Type:', typeof totalPrice);	
+	// Call backend API to save booking (backend not fully implemented, so navigate to payment page regardless of result)
+	uni.request({
+		url: 'http://192.168.16.2:8080/api/v1/bookings',
+		method: 'POST',
+		data: bookingData,
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			console.log('Booking API Response:', res);
+			console.log('Status Code:', res.statusCode);
+			console.log('Response Data:', res.data);
+			
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				console.log('Booking successfully saved to database');
+				uni.showToast({
+					title: 'Booking successful, proceed to payment',
+					icon: 'success'
+				});
+				
+				setTimeout(() => {
+					uni.navigateTo({
+						url: '/pages/payment/payment'
+					});
+				}, 1000);
+			} else {
+				// Handle error response
+				console.error('Booking failed:', res.statusCode);
+				const errorData = res.data as UTSJSONObject | null;
+				let errorMessage = 'Booking failed. Please try again.';
+				
+				if (errorData != null) {
+					console.error('Error details:', JSON.stringify(errorData));
+					
+					// Try to extract error message from response
+					if (errorData['message'] != null) {
+						errorMessage = errorData['message'] as string;
+					} else if (errorData['error'] != null) {
+						errorMessage = errorData['error'] as string;
+					} else if (errorData['msg'] != null) {
+						errorMessage = errorData['msg'] as string;
+					}
+				}
+				
+				uni.showToast({
+					title: errorMessage,
+					icon: 'none',
+					duration: 3000
+				});
+				
+				// Don't navigate to payment page on error
+			}
+		},
+		fail: (error) => {
+			console.error('Network error during booking:', error);
+			
+			uni.showToast({
+				title: 'Network error. Please check your connection and try again.',
+				icon: 'none',
+				duration: 3000
+			});
+			
+			// Don't navigate to payment page on network error
+		}
+	});
+};
+
+// Cancel selection
 const cancel = () => {
-	selectedIndex.value = -1;
+	startTime.value = '';
+	endTime.value = '';
 	uni.showToast({
-		title: '已取消',
+		title: 'Cancelled',
 		icon: 'none'
 	});
-	// 返回首页
+	// Return to home page
 	uni.reLaunch({
 		url: '/pages/index/index'
 	});
 };
 </script>
 
-<style>
+<style lang="scss">
 	.container {
 		width: 100%;
 		height: 100%;
 		background-color: #f5f5f5;
+		padding: 0;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.scroll-area {
+		flex: 1;
+		width: 100%;
 		padding: 20px;
 		box-sizing: border-box;
 	}
@@ -107,6 +386,7 @@ const cancel = () => {
 	.duration-cards {
 		display: flex;
 		flex-direction: column;
+		margin-bottom: 30px;
 	}
 
 	.card {
@@ -146,11 +426,52 @@ const cancel = () => {
 		color: #4CAF50;
 	}
 
+	.time-section {
+		background-color: white;
+		border-radius: 12px;
+		padding: 20px;
+		margin-bottom: 20px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.section-title {
+		margin-bottom: 12px;
+		text-align: left;
+	}
+
+	.section-title-text {
+		font-size: 14px;
+		font-weight: bold;
+		color: #666;
+	}
+
+	.time-input {
+		background-color: #f9f9f9;
+		border: 1px solid #ddd;
+		border-radius: 8px;
+		padding: 12px 15px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.time-label {
+		font-size: 12px;
+		color: #999;
+	}
+
+	.time-value {
+		font-size: 14px;
+		color: #333;
+		font-weight: bold;
+	}
+
 	.button-group {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		margin-top: 40px;
+		margin-top: 20px;
+		margin-bottom: 20px;
 	}
 
 	.confirm-btn {
