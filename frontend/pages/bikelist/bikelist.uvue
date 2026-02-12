@@ -1,30 +1,36 @@
 <template>
-	<view class="container">
-		<!-- 电动滑板车选择卡片 -->
-		<view class="scooter-card">
-			<image src="/static/bikelist.jpg" mode="aspectFit" class="scooter-image"></image>
-			<view class="card-content">
-				<text class="scooter-id">ID: {{ scooterId }}</text>
-			</view>
-			<view class="checkbox-container" @click="toggleSelection">
-				<view class="checkbox" :class="{ selected: isSelected }">
-					<text v-if="isSelected" class="checkmark">✓</text>
+	<view class="page-wrapper">
+		<!-- 可滚动的内容区域 -->
+		<scroll-view class="scroll-container" scroll-y="true">
+			<!-- 电动滑板车选择卡片列表 -->
+			<view v-for="(scooter, index) in scooterList" :key="index" class="scooter-card">
+				<image src="/static/bikelist.jpg" mode="aspectFit" class="scooter-image"></image>
+				<view class="card-content">
+					<text class="scooter-id">ID: {{ scooter.id }}</text>
+					<text class="scooter-status">Battery: {{ scooter.battery }}%</text>
+					<text class="scooter-location">Location: {{ scooter.location }}</text>
+				</view>
+				<view class="checkbox-container" @click="toggleSelection(index)">
+					<view class="checkbox" :class="{ selected: selectedIndex === index }">
+						<text v-if="selectedIndex === index" class="checkmark">✓</text>
+					</view>
 				</view>
 			</view>
-		</view>
-		
-		<!-- 预订按钮 -->
-		<view class="booking-section">
-			<navigator url="/pages/price/price">
-				<button 
-					:class="['booking-button', { disabled: !isSelected }]" 
-					:disabled="!isSelected"
-					@click="bookScooter"
-				>
-					appoint
-				</button>
-			</navigator>
-		</view>
+			
+			<!-- 预订按钮 -->
+			<view class="booking-section">
+				<navigator url="/pages/price/price">
+					<button 
+						class="booking-button"
+						:class="{ disabled: selectedIndex === -1 }"
+						:disabled="selectedIndex === -1"
+						@click="bookScooter"
+					>
+						appoint
+					</button>
+				</navigator>
+			</view>
+		</scroll-view>
 		
 		<!-- 底部导航栏 -->
 		<view class="bottom">
@@ -36,7 +42,7 @@
 				<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
 				<view class="center_down"><text class="text3">Bike</text></view>
 			</view>
-			<navigator url="/pages/login/login" class="bottom_right" open-type="reLaunch">
+			<navigator url="/pages/me/me" class="bottom_right" open-type="reLaunch">
 				<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
 				<view class="right_down"><text class="text3">Me</text></view>
 			</navigator>
@@ -44,26 +50,52 @@
 	</view>
 </template>
 
-<script setup>
+<script setup lang="uts">
 import { ref } from 'vue';
 
-// 选择状态
-const isSelected = ref(false);
-// 滑板车ID
-const scooterId = ref('SC001');
+type Scooter = {
+	id: string
+	battery: number
+	location: string
+}
+
+// 滑板车列表（id 从 1 到 5，对应后端 scooters 表中的主键）
+const scooterList = ref<Scooter[]>([
+	{ id: '1', battery: 95, location: 'Market St' },
+	{ id: '2', battery: 87, location: 'Central Park' },
+	{ id: '3', battery: 72, location: 'Main Ave' },
+	{ id: '4', battery: 88, location: 'Station Plaza' },
+	{ id: '5', battery: 91, location: 'City Center' }
+]);
+
+// 选中的滑板车索引
+const selectedIndex = ref<number>(-1);
 
 // 切换选择状态
-const toggleSelection = () => {
-	isSelected.value = !isSelected.value;
+const toggleSelection = (index: number) => {
+	if (selectedIndex.value === index) {
+		selectedIndex.value = -1;
+	} else {
+		selectedIndex.value = index;
+	}
 };
 
 // 预订滑板车
 const bookScooter = () => {
-	if (isSelected.value) {
-		console.log('预订滑板车 ID:', scooterId.value);
-		// 这里可以添加预订逻辑
+	if (selectedIndex.value !== -1) {
+		const selectedScooter = scooterList.value[selectedIndex.value]
+		console.log('预订滑板车 ID:', selectedScooter.id);
+		
+		// 保存选中的自行车ID到本地存储
+		try {
+			uni.setStorageSync('selectedScooterId', selectedScooter.id)
+			console.log('Selected scooter ID saved:', selectedScooter.id)
+		} catch (e) {
+			console.error('Failed to save selected scooter ID:', e)
+		}
+		
 		uni.showToast({
-			title: 'appoint successfully',
+			title: 'appoint ' + selectedScooter.id + ' successfully',
 			icon: 'success'
 		});
 	}
@@ -71,11 +103,21 @@ const bookScooter = () => {
 </script>
 
 <style lang="scss">
+	.page-wrapper {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		background-color: #f5f5f5;
+	}
+	
+	.scroll-container {
+		flex: 1;
+		width: 100%;
+	}
+	
 	.container {
 		width: 100%;
-		height: 100%; /* 使用100%替代100vh */
-		padding-bottom: 8%; /* 为底部导航留出空间 */
-		box-sizing: border-box;
 		background-color: #f5f5f5;
 	}
 	
@@ -88,154 +130,174 @@ const bookScooter = () => {
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		display: flex;
 		align-items: center;
+	}
+
+	.scooter-card .scooter-image {
+		width: 100px;
+		height: 100px;
+		border-radius: 8px;
+		margin-right: 15px;
+	}
 		
-		/* 使用margin替代gap */
-		.scooter-image {
-			width: 100px;
-			height: 100px;
-			border-radius: 8px;
-			margin-right: 15px;
-		}
+	.card-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.card-content .scooter-id {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 5px;
+	}
+	
+	.card-content .scooter-status {
+		font-size: 14px;
+		color: #666;
+		margin-bottom: 5px;
+	}
+	
+	.card-content .scooter-location {
+		font-size: 12px;
+		color: #999;
+	}
 		
-		.card-content {
-			flex: 1;
-			
-			.scooter-id {
-				font-size: 18px;
-				font-weight: bold;
-				color: #333;
-			}
-		}
-		
-		.checkbox-container {
-			width: 30px;
-			height: 30px;
-			
-			.checkbox {
-				width: 100%;
-				height: 100%;
-				border: 2px solid #ccc;
-				border-radius: 4px;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				background-color: white;
-				
-				&.selected {
-					background-color: #4CAF50;
-					border-color: #4CAF50;
-				}
-				
-				.checkmark {
-					color: white;
-					font-size: 16px;
-					font-weight: bold;
-				}
-			}
-		}
+	.checkbox-container {
+		width: 30px;
+		height: 30px;
+	}
+	
+	.checkbox-container .checkbox {
+		width: 100%;
+		height: 100%;
+		border: 2px solid #ccc;
+		border-radius: 4px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background-color: white;
+	}
+	
+	.checkbox-container .checkbox.selected {
+		background-color: #4CAF50;
+		border-color: #4CAF50;
+	}
+	
+	.checkbox-container .checkbox .checkmark {
+		color: white;
+		font-size: 16px;
+		font-weight: bold;
 	}
 	
 	.booking-section {
 		width: 90%;
 		margin: 20px auto;
+		margin-bottom: 20px;
 		display: flex;
 		justify-content: center;
-		
-		.booking-button {
-			width: 100%;
-			height: 45px;
-			background-color: #4CAF50;
-			color: white;
-			border: none;
-			border-radius: 8px;
-			font-size: 16px;
-			font-weight: bold;
-			
-			&.disabled {
-				background-color: #cccccc;
-				color: #666666;
-			}
-		}
+	}
+	
+	.booking-section .booking-button {
+		width: 100%;
+		height: 45px;
+		background-color: #4CAF50;
+		color: white;
+		border: none;
+		border-radius: 8px;
+		font-size: 16px;
+		font-weight: bold;
+	}
+	
+	.booking-section .booking-button.disabled {
+		background-color: #cccccc;
+		color: #666666;
 	}
 	
 	.bottom{
 		width: 100%;
 		height: 8%;
 		background: #E3E1E1;
-		position: absolute;
-		bottom: 0px;
 		border-radius: 25px 25px 0px 0px;
-		.bottom_left{
-			border-radius: 0px;
-			width: 20%;
-			height: 100%;
-			//background: #373C3299;
-			margin-left: 5%;
-			.icon2{
-				position: absolute;
-				left: 20%;
-				width: 60%;
-				height: 60%;
-			}
-			.left_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
-				height: 40%;
-				//background: white;
-			}
-		}
-		.bottom_center{
-			position: absolute;
-			left: 40%;
-			border-radius: 0px;
-			width: 20%;
-			height: 100%;
-			//background: burlywood;
-			.bike_icon{
-				position: absolute;
-				left: 25%;
-				width: 50%;
-				height: 60%;
-			}
-			.center_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
-				height: 40%;
-				//background: white;
-			}
-		}
-		.bottom_right{
-			position: absolute;
-			right: 0%;
-			border-radius: 0px;
-			width: 20%;
-			height: 100%;
-			//background: bisque;
-			margin-right: 5%;
-			.icon2{
-				position: absolute;
-				left: 20%;
-				width: 60%;
-				height: 60%;
-			}
-			.right_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				position: absolute;
-				bottom: 0%;
-				width: 100%;
-				height: 40%;
-				//background: white;
-			}
-		}
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		flex-shrink: 0;
+	}
+	
+	.bottom_left{
+		border-radius: 0px;
+		width: 20%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.bottom_left .icon2{
+		width: 30px;
+		height: 30px;
+	}
+	
+	.bottom_left .left_down{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 40%;
+		width: 100%;
+	}
+	
+	.bottom_center{
+		position: relative;
+		border-radius: 0px;
+		width: 20%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.bottom_center .bike_icon{
+		width: 30px;
+		height: 30px;
+	}
+	
+	.bottom_center .center_down{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 40%;
+		width: 100%;
+	}
+	
+	.bottom_right{
+		position: relative;
+		border-radius: 0px;
+		width: 20%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.bottom_right .icon2{
+		width: 30px;
+		height: 30px;
+	}
+	
+	.bottom_right .right_down{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 40%;
+		width: 100%;
+	}
+
+	.text3 {
+		font-size: 12px;
+		margin-top: 4px;
 	}
 </style>
