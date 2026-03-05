@@ -38,6 +38,7 @@ public class UserServiceImpl implements UserService {
         // 2. 创建用户实体
         User user = new User();
         user.setEmail(request.getEmail());
+        user.setName(request.getName());
         // 使用 BCrypt 加密密码
         user.setPassword(passwordEncoder.encode(request.getPassword())); 
         user.setRole("CUSTOMER"); // 默认角色
@@ -49,7 +50,7 @@ public class UserServiceImpl implements UserService {
         return new RegisterResponse(
             String.valueOf(savedUser.getId()), 
             savedUser.getEmail(), 
-            request.getName() // 注意：User目前可能没有 name 字段，直接返回请求中的 name
+            savedUser.getName()
         );
     }
 
@@ -79,6 +80,7 @@ public class UserServiceImpl implements UserService {
         return java.util.Map.of(
             "id", user.getId(),
             "email", user.getEmail(),
+            "name", user.getName(),
             "role", user.getRole(),
             "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false
         );
