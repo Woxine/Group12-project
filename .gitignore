@@ -22,3 +22,21 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Frontend build outputs and local cache (uni-app / HBuilderX)
+frontend/unpackage/
+frontend/demo/unpackage/
+
+# Node/Vite cache
+**/node_modules/
+**/.vite/
+**/.tsbuildinfo
+
+# Backend Java build output
+backend/target/
+
+# OS/editor temp files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
