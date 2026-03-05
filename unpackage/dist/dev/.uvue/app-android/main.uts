@@ -1,0 +1,60 @@
+import 'D:/BrowserDownload/HBuilderX.4.87.2025121004/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-console/src/runtime/app/index.ts';
+import App from './App.uvue';
+import { createSSRApp } from 'vue';
+export function createApp(): UTSJSONObject {
+    const app = createSSRApp(App);
+    return {
+        app
+    };
+}
+export function main(app: IApp) {
+    definePageRoutes();
+    defineAppConfig();
+    (createApp()['app'] as VueApp).mount(app, GenUniApp());
+}
+export class UniAppConfig extends io.dcloud.uniapp.appframe.AppConfig {
+    override name: string = "demo";
+    override appid: string = "__UNI__E6393FD";
+    override versionName: string = "1.0.0";
+    override versionCode: string = "100";
+    override uniCompilerVersion: string = "4.87";
+    constructor() { super(); }
+}
+import GenPagesIndexIndexClass from './pages/index/index.uvue';
+import GenPagesBikelistBikelistClass from './pages/bikelist/bikelist.uvue';
+import GenPagesLoginLoginClass from './pages/login/login.uvue';
+import GenPagesRegisterRegisterClass from './pages/register/register.uvue';
+import GenPagesPricePriceClass from './pages/price/price.uvue';
+import GenPagesMeMeClass from './pages/me/me.uvue';
+import GenPagesOrdersOrdersClass from './pages/orders/orders.uvue';
+import GenPagesFeedbackFeedbackClass from './pages/feedback/feedback.uvue';
+import GenPagesPaymentPaymentClass from './pages/payment/payment.uvue';
+import GenPagesAdminModifyClass from './pages/admin/modify.uvue';
+import GenPagesAdminHomeClass from './pages/admin/home.uvue';
+import GenPagesAdminRevenueClass from './pages/admin/revenue.uvue';
+function definePageRoutes() {
+    __uniRoutes.push({ path: "pages/index/index", component: GenPagesIndexIndexClass, meta: { isQuit: true } as UniPageMeta, style: _uM([["navigationBarTitleText", "uni-app x"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/bikelist/bikelist", component: GenPagesBikelistBikelistClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "bikelist"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/login/login", component: GenPagesLoginLoginClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "login"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/register/register", component: GenPagesRegisterRegisterClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "register"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/price/price", component: GenPagesPricePriceClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "price"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/me/me", component: GenPagesMeMeClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "me"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/orders/orders", component: GenPagesOrdersOrdersClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "orders"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/feedback/feedback", component: GenPagesFeedbackFeedbackClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "feedback"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/payment/payment", component: GenPagesPaymentPaymentClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "payment"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/admin/modify", component: GenPagesAdminModifyClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/admin/home", component: GenPagesAdminHomeClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/admin/revenue", component: GenPagesAdminRevenueClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
+}
+const __uniTabBar: Map<string, any | null> | null = null;
+const __uniLaunchPage: Map<string, any | null> = _uM([["url", "pages/index/index"], ["style", _uM([["navigationBarTitleText", "uni-app x"]])]]);
+function defineAppConfig() {
+    __uniConfig.entryPagePath = '/pages/index/index';
+    __uniConfig.globalStyle = _uM([["navigationBarTextStyle", "black"], ["navigationBarTitleText", "uni-app x"], ["navigationBarBackgroundColor", "#F8F8F8"], ["backgroundColor", "#F8F8F8"]]);
+    __uniConfig.getTabBarConfig = (): Map<string, any> | null => null;
+    __uniConfig.tabBar = __uniConfig.getTabBarConfig();
+    __uniConfig.conditionUrl = '';
+    __uniConfig.uniIdRouter = _uM();
+    __uniConfig.ready = true;
+}
+//# sourceMappingURL=main.uts.map

@@ -1,0 +1,537 @@
+<template>
+	<view class="container">
+		<!-- Not Logged In -->
+		<view v-if="!isLoggedIn" class="login-prompt">
+			<image src="/static/me.png" mode="aspectFit" class="icon-large"></image>
+			<text class="prompt-text">Please log in to view your bookings</text>
+			<navigator url="/pages/login/login" open-type="navigate">
+				<button class="login-btn">Go to Login</button>
+			</navigator>
+		</view>
+
+		<!-- Logged In：scroll-view 用窗口高度，内容超出即可滚动 -->
+		<view v-else class="scroll-wrap" :style="{ height: scrollWrapHeight + 'px' }">
+			<scroll-view class="scroll-area" direction="vertical" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }" refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onPullRefresh">
+				<view class="title-section">
+				<text class="title-text">My Bookings</text>
+			</view>
+
+			<!-- Loading -->
+			<view v-if="isLoading" class="loading-section">
+				<text class="loading-text">Loading bookings...</text>
+			</view>
+
+			<!-- Error -->
+			<view v-else-if="loadError.length > 0" class="error-section">
+				<text class="error-text">{{ loadError }}</text>
+				<button class="retry-btn" @click="fetchBookings(false)">Retry</button>
+			</view>
+
+			<!-- Empty -->
+			<view v-else-if="bookings.length == 0" class="empty-section">
+				<text class="empty-text">No bookings yet</text>
+				<text class="empty-hint">Go to Bike to make your first booking</text>
+				<navigator url="/pages/bikelist/bikelist" open-type="reLaunch">
+					<button class="explore-btn">Explore Bikes</button>
+				</navigator>
+			</view>
+
+			<!-- Bookings List -->
+			<view v-else class="bookings-list">
+				<view
+					v-for="(booking, index) in bookings"
+					:key="booking.id != null ? booking.id : index"
+					class="booking-card"
+				>
+					<view class="card-header">
+						<text class="booking-id">#{{ booking.id != null ? booking.id : index + 1 }}</text>
+						<text :class="['status-badge', 'status-' + formatStatus(booking.status)]">{{ formatStatus(booking.status) }}</text>
+					</view>
+					<view class="card-body">
+						<view class="detail-row">
+							<text class="label">Bike</text>
+							<text class="value">{{ formatBikeId(booking.scooterId) }}</text>
+						</view>
+						<view class="detail-row">
+							<text class="label">Duration</text>
+							<text class="value">{{ booking.duration }}</text>
+						</view>
+						<view class="detail-row">
+							<text class="label">Start</text>
+							<text class="value">{{ booking.startTime }}</text>
+						</view>
+						<view class="detail-row">
+							<text class="label">End</text>
+							<text class="value">{{ booking.endTime }}</text>
+						</view>
+						<view class="detail-row">
+							<text class="label">Total</text>
+							<text class="value">£{{ booking.price }}</text>
+						</view>
+						<view v-if="canCancel(booking.status)" class="card-actions">
+							<button class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Order</button>
+						</view>
+					</view>
+				</view>
+			</view>
+			</scroll-view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { BASE_URL } from '../../common/api.uts'
+
+type Booking = {
+	id: string | null
+	scooterId: string
+	duration: string
+	startTime: string
+	endTime: string
+	price: number
+	status: string
+}
+
+const isLoggedIn = ref(false)
+const isLoading = ref(false)
+const loadError = ref('')
+const bookings = ref<Booking[]>([])
+const scrollWrapHeight = ref(600)
+const scrollViewHeight = ref(560)
+const isRefreshing = ref(false)
+
+const formatStatus = (status: string | null): string => {
+	if (status == null || status.length == 0) return 'Unknown'
+	const s = status.toUpperCase()
+	if (s == 'CONFIRMED') return 'Confirmed'
+	if (s == 'PENDING') return 'Pending'
+	if (s == 'CANCELLED') return 'Cancelled'
+	if (s == 'COMPLETED') return 'Completed'
+	return status
+}
+
+const formatBikeId = (scooterId: string | null): string => {
+	if (scooterId == null || scooterId.length == 0) return '-'
+	if (scooterId.startsWith('SC')) return scooterId
+	return 'SC' + scooterId.padStart(3, '0')
+}
+
+const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
+	const rawId = item['id']
+	const id = rawId != null ? ('' + rawId) : null
+	const rawScooterId = item['scooter_id'] != null ? item['scooter_id'] : item['scooterId']
+	const scooterId = rawScooterId != null ? ('' + rawScooterId) : ''
+	const rawDuration = item['duration'] != null ? item['duration'] : '1H'
+	const duration = '' + rawDuration
+	const rawStart = item['start_time'] != null ? item['start_time'] : item['startTime']
+	const startTime = rawStart != null ? ('' + rawStart) : '-'
+	const rawEnd = item['end_time'] != null ? item['end_time'] : item['endTime']
+	const endTime = rawEnd != null ? ('' + rawEnd) : '-'
+	const rawPrice = item['total_price'] != null ? item['total_price'] : item['price']
+	const price = rawPrice != null ? (rawPrice as number) : 0
+	const rawStatus = item['status']
+	const statusVal = rawStatus != null ? ('' + rawStatus) : 'Unknown'
+	return {
+		id: id,
+		scooterId: scooterId,
+		duration: duration,
+		startTime: startTime,
+		endTime: endTime,
+		price: price,
+		status: statusVal
+	}
+}
+
+const fetchBookings = (fromPullRefresh: boolean) => {
+	const userIdStorage = uni.getStorageSync('userId')
+	const tokenStorage = uni.getStorageSync('token')
+	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
+	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+
+	if (userId == null || userId.length == 0) {
+		isLoggedIn.value = false
+		return
+	}
+
+	if (token == null || token.length == 0) {
+		loadError.value = 'Please log in again'
+		isLoggedIn.value = true
+		isLoading.value = false
+		isRefreshing.value = false
+		return
+	}
+
+	isLoggedIn.value = true
+	if (fromPullRefresh === false) {
+		isLoading.value = true
+	}
+	loadError.value = ''
+
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const responseData = res.data
+				if (responseData != null && typeof responseData === 'object') {
+					const obj = responseData as UTSJSONObject
+					let arr: any[] = []
+					if (obj['data'] != null && Array.isArray(obj['data'])) {
+						arr = obj['data'] as any[]
+					} else if (Array.isArray(responseData)) {
+						arr = responseData as any[]
+					}
+					const list: Booking[] = []
+					for (let i = 0; i < arr.length; i++) {
+						const item = arr[i] as UTSJSONObject
+						list.push(parseApiBooking(item, i))
+					}
+					bookings.value = list
+				} else {
+					bookings.value = []
+				}
+			} else {
+				loadError.value = 'Failed to load bookings (HTTP ' + res.statusCode + ')'
+			}
+		},
+		fail: (error) => {
+			loadError.value = 'Network error. Please check your connection.'
+			console.error('Fetch bookings failed:', error)
+		},
+		complete: () => {
+			isLoading.value = false
+			isRefreshing.value = false
+		}
+	})
+}
+
+const onPullRefresh = () => {
+	isRefreshing.value = true
+	fetchBookings(true)
+}
+
+const canCancel = (status: string | null): boolean => {
+	if (status == null || status.length === 0) return true
+	const s = status.toUpperCase()
+	if (s === 'CANCELLED' || s === 'COMPLETED') return false
+	return true
+}
+
+const cancelOrder = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length === 0) {
+		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		return
+	}
+	const tokenRaw = uni.getStorageSync('token')
+	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
+	if (token === '') {
+		uni.showToast({ title: 'Please login again', icon: 'none' })
+		return
+	}
+	uni.showModal({
+		title: 'Cancel Order',
+		content: 'Are you sure you want to cancel this booking?',
+		success: (res) => {
+			const confirm = res.confirm === true
+			if (confirm) {
+				uni.request({
+					url: BASE_URL + '/api/v1/bookings/' + bid,
+					method: 'DELETE',
+					header: {
+						'Content-Type': 'application/json',
+						'Authorization': 'Bearer ' + token
+					},
+					success: (resp) => {
+						if (resp.statusCode >= 200 && resp.statusCode < 300) {
+							uni.showToast({ title: 'Order cancelled', icon: 'success' })
+							fetchBookings(false)
+						} else {
+							let msg = 'Failed to cancel'
+							const data = resp.data as UTSJSONObject | null
+							if (data !== null && data['message'] !== null) {
+								msg = '' + data['message']
+							}
+							uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+						}
+					},
+					fail: (err) => {
+						uni.showToast({ title: 'Network error', icon: 'none' })
+						console.error('Cancel booking failed:', err)
+					}
+				})
+			}
+		}
+	})
+}
+
+const setScrollHeight = () => {
+	try {
+		const sys = uni.getSystemInfoSync()
+		const h = sys.windowHeight != null ? sys.windowHeight : 600
+		scrollWrapHeight.value = h
+		scrollViewHeight.value = h - 40
+	} catch (e) {
+		scrollWrapHeight.value = 600
+		scrollViewHeight.value = 560
+	}
+}
+
+onMounted(() => {
+	setScrollHeight()
+	const userId = uni.getStorageSync('userId')
+	const hasUser = userId != null && userId != '' && typeof userId === 'string'
+	if (hasUser) {
+		fetchBookings(false)
+	} else {
+		isLoggedIn.value = false
+	}
+})
+
+onShow(() => {
+	setScrollHeight()
+	const userId = uni.getStorageSync('userId')
+	const hasUser = userId != null && userId != '' && typeof userId === 'string'
+	if (hasUser) {
+		fetchBookings(false)
+	}
+})
+</script>
+
+<style lang="scss">
+.container {
+	width: 100%;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	background-color: #f5f5f5;
+	box-sizing: border-box;
+}
+
+.login-prompt {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 24px;
+}
+
+.icon-large {
+	width: 80px;
+	height: 80px;
+	opacity: 0.6;
+	margin-bottom: 24px;
+}
+
+.prompt-text {
+	font-size: 16px;
+	color: #666;
+	margin-bottom: 24px;
+	text-align: center;
+}
+
+.login-btn {
+	width: 200px;
+	height: 44px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: bold;
+}
+
+.scroll-wrap {
+	width: 100%;
+}
+
+.scroll-area {
+	width: 100%;
+	padding: 20px;
+	padding-bottom: 40px;
+	box-sizing: border-box;
+}
+
+.title-section {
+	margin-bottom: 20px;
+}
+
+.title-text {
+	font-size: 22px;
+	font-weight: bold;
+	color: #333;
+}
+
+.loading-section,
+.error-section {
+	padding: 40px 20px;
+	text-align: center;
+}
+
+.loading-text {
+	font-size: 14px;
+	color: #999;
+}
+
+.error-text {
+	font-size: 14px;
+	color: #f44336;
+	display: block;
+	margin-bottom: 16px;
+}
+
+.retry-btn {
+	padding: 10px 24px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.empty-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 24px;
+	background-color: white;
+	border-radius: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.empty-text {
+	font-size: 18px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+.empty-hint {
+	font-size: 14px;
+	color: #999;
+	margin-bottom: 24px;
+	text-align: center;
+}
+
+.explore-btn {
+	padding: 12px 32px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.bookings-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.booking-card {
+	background-color: white;
+	border-radius: 12px;
+	padding: 16px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+	padding-bottom: 10px;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #eee;
+}
+
+.booking-id {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+}
+
+.status-badge {
+	font-size: 12px;
+	padding: 4px 10px;
+	border-radius: 6px;
+	font-weight: bold;
+}
+
+.status-Confirmed {
+	background-color: #4CAF50;
+	color: white;
+}
+
+.status-Pending {
+	background-color: #FFC107;
+	color: #333;
+}
+
+.status-Cancelled {
+	background-color: #f44336;
+	color: white;
+}
+
+.status-Completed {
+	background-color: #2196F3;
+	color: white;
+}
+
+.status-Unknown {
+	background-color: #9E9E9E;
+	color: white;
+}
+
+.card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.card-actions {
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #eee;
+}
+
+.cancel-order-btn {
+	width: 100%;
+	padding: 10px 16px;
+	background-color: #f44336;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.detail-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	font-size: 14px;
+}
+
+.detail-row .label {
+	color: #999;
+}
+
+.detail-row .value {
+	color: #333;
+	font-weight: 500;
+}
+</style>

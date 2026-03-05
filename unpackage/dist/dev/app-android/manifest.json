@@ -1,0 +1,37 @@
+{
+  "id": "__UNI__E6393FD",
+  "name": "demo",
+  "description": "",
+  "version": {
+    "name": "1.0.0",
+    "code": "100"
+  },
+  "uni-app-x": {
+    "compilerVersion": "4.87"
+  },
+  "app-android": {
+    "distribute": {
+      "modules": {
+        "uni-location": {
+          "tencent": {
+            "key": "HPPBZ-OHVLH-CVFDX-W5UU2-TD36T-YWFF7"
+          }
+        },
+        "uni-map": {
+          "tencent": {
+            "key": "HPPBZ-OHVLH-CVFDX-W5UU2-TD36T-YWFF7"
+          }
+        }
+      },
+      "icons": {
+        "hdpi": "",
+        "xhdpi": "",
+        "xxhdpi": "",
+        "xxxhdpi": ""
+      },
+      "splashScreens": {
+        "default": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,120 @@
+<template>
+	<view class="container">
+		<view class="title-section">
+			<text class="title-text">Admin Home</text>
+			<text class="hint-text">Manage scooters and revenue</text>
+		</view>
+
+		<view class="menu-section">
+			<button class="menu-btn primary" @click="goModifyScooter">
+				Modify Scooter Information
+			</button>
+			<button class="menu-btn" @click="goRevenue">
+				View Revenue
+			</button>
+			<button class="menu-btn danger" @click="logout">
+				Logout
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+const goModifyScooter = () => {
+	uni.navigateTo({
+		url: '/pages/admin/modify'
+	})
+}
+
+const goRevenue = () => {
+	uni.navigateTo({
+		url: '/pages/admin/revenue'
+	})
+}
+
+const logout = () => {
+	uni.showModal({
+		title: 'Logout',
+		content: 'Are you sure you want to logout?',
+		success: (res) => {
+			if (res.confirm === true) {
+				uni.removeStorageSync('userInfo')
+				uni.removeStorageSync('token')
+				uni.removeStorageSync('userId')
+				uni.removeStorageSync('role')
+				uni.removeStorageSync('selectedScooterId')
+
+				uni.showToast({
+					title: 'Logged out successfully',
+					icon: 'success'
+				})
+
+				setTimeout(() => {
+					uni.reLaunch({
+						url: '/pages/login/login'
+					})
+				}, 800)
+			}
+		}
+	})
+}
+</script>
+
+<style>
+.container {
+	display: flex;
+	flex-direction: column;
+	padding: 24px;
+	background-color: #f5f5f5;
+	min-height: 100vh;
+}
+
+.title-section {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 24px;
+}
+
+.title-text {
+	font-size: 22px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+.hint-text {
+	font-size: 14px;
+	color: #666;
+}
+
+.menu-section {
+	display: flex;
+	flex-direction: column;
+}
+
+.menu-btn {
+	padding: 14px;
+	border-radius: 8px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ddd;
+	font-size: 16px;
+	font-weight: bold;
+	background-color: #ffffff;
+	color: #333;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	margin-bottom: 24px;
+}
+
+.menu-btn.primary {
+	background-color: #4CAF50;
+	border-color: #4CAF50;
+	color: #ffffff;
+}
+
+.menu-btn.danger {
+	background-color: #f44336;
+	border-color: #f44336;
+	color: #ffffff;
+}
+</style>

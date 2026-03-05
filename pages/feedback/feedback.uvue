@@ -1,0 +1,232 @@
+<template>
+	<view class="container">
+		<view class="title-section">
+			<text class="title-text">Submit Feedback</text>
+			<text class="hint-text">Report an issue or suggest an improvement</text>
+		</view>
+
+		<view class="form-section">
+			<view class="form-row">
+				<text class="label">Scooter ID</text>
+				<input
+					class="input"
+					v-model="scooterId"
+					placeholder="e.g. 1 or SC001"
+					placeholder-class="input-placeholder"
+				/>
+			</view>
+			<view class="form-row">
+				<text class="label">Description</text>
+				<textarea
+					class="textarea"
+					v-model="description"
+					placeholder="Describe your feedback (required)"
+					placeholder-class="input-placeholder"
+					:maxlength="500"
+				/>
+				<text class="char-count">{{ description.length }}/500</text>
+			</view>
+			<view class="form-row">
+				<text class="label">Location (optional)</text>
+				<input
+					class="input"
+					v-model="location"
+					placeholder="e.g. Street name or area"
+					placeholder-class="input-placeholder"
+				/>
+			</view>
+
+			<view v-if="submitError.length > 0" class="error-row">
+				<text class="error-text">{{ submitError }}</text>
+			</view>
+
+			<button class="submit-btn" :disabled="isSubmitting" @click="onSubmit">Submit Feedback</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref } from 'vue'
+import { BASE_URL } from '../../common/api.uts'
+
+const scooterId = ref('')
+const description = ref('')
+const location = ref('')
+const isSubmitting = ref(false)
+const submitError = ref('')
+
+const onSubmit = () => {
+	submitError.value = ''
+	const sid = scooterId.value != null ? scooterId.value.trim() : ''
+	const desc = description.value != null ? description.value.trim() : ''
+	const loc = location.value != null ? location.value.trim() : ''
+
+	if (sid.length === 0) {
+		submitError.value = 'Please enter Scooter ID'
+		uni.showToast({ title: 'Please enter Scooter ID', icon: 'none' })
+		return
+	}
+	if (desc.length === 0) {
+		submitError.value = 'Please enter a description'
+		uni.showToast({ title: 'Please enter a description', icon: 'none' })
+		return
+	}
+
+	isSubmitting.value = true
+
+	const tokenRaw = uni.getStorageSync('token')
+	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
+	const header: UTSJSONObject = {
+		'Content-Type': 'application/json'
+	}
+	if (token.length > 0) {
+		header['Authorization'] = 'Bearer ' + token
+	}
+
+	const body: UTSJSONObject = {
+		'scooter_id': sid,
+		'description': desc
+	}
+	if (loc.length > 0) {
+		body['location'] = loc
+	}
+
+	uni.request({
+		url: BASE_URL + '/api/v1/feedbacks',
+		method: 'POST',
+		header: header,
+		data: body,
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.showToast({ title: 'Feedback submitted', icon: 'success' })
+				scooterId.value = ''
+				description.value = ''
+				location.value = ''
+			} else {
+				let msg = 'Failed to submit feedback'
+				const data = res.data as UTSJSONObject | null
+				if (data != null && data['message'] != null) {
+					msg = '' + data['message']
+				} else if (data != null && data['error'] != null) {
+					msg = '' + data['error']
+				}
+				submitError.value = msg
+				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+			}
+		},
+		fail: () => {
+			submitError.value = 'Network error. Please try again.'
+			uni.showToast({ title: 'Network error', icon: 'none' })
+		},
+		complete: () => {
+			isSubmitting.value = false
+		}
+	})
+}
+</script>
+
+<style>
+.container {
+	display: flex;
+	flex-direction: column;
+	padding: 24px;
+	background-color: #f5f5f5;
+	min-height: 100vh;
+}
+
+.title-section {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 24px;
+}
+
+.title-text {
+	font-size: 22px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+.hint-text {
+	font-size: 14px;
+	color: #666;
+}
+
+.form-section {
+	display: flex;
+	flex-direction: column;
+	background-color: white;
+	border-radius: 12px;
+	padding: 20px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.form-row {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 16px;
+}
+
+.label {
+	font-size: 14px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+.input {
+	height: 44px;
+	padding: 0 12px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ddd;
+	border-radius: 8px;
+	font-size: 14px;
+	background-color: white;
+}
+
+.textarea {
+	min-height: 100px;
+	padding: 12px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ddd;
+	border-radius: 8px;
+	font-size: 14px;
+	background-color: white;
+}
+
+.input-placeholder {
+	color: #999;
+}
+
+.char-count {
+	font-size: 12px;
+	color: #999;
+	margin-top: 4px;
+}
+
+.error-row {
+	margin-bottom: 12px;
+}
+
+.error-text {
+	font-size: 14px;
+	color: #f44336;
+}
+
+.submit-btn {
+	margin-top: 8px;
+	padding: 14px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: bold;
+}
+
+.submit-btn[disabled] {
+	background-color: #ccc;
+}
+</style>

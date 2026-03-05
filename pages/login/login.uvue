@@ -1,0 +1,393 @@
+<template>
+	<view class="back">
+		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
+		
+		<view class="login_title">
+			<text class="title_text">log in</text>
+		</view>
+		
+		<view class="login_container">
+			<!-- 第一个输入框绑定 email -->
+			<input 
+        v-model="userInfo.email" 
+        type="text" 
+        placeholder="please enter your email" 
+        confirm-type="next" 
+        class="input"
+      />
+			<view class="span1"></view>
+			<!-- 第二个输入框绑定 password -->
+			<input 
+        v-model="userInfo.password" 
+        type="password" 
+        placeholder="please enter your password" 
+        class="input"
+      />
+			<view class="span2"></view>
+			<!-- 登录按钮绑定点击事件 -->
+			<button 
+        @click="onSubmit" 
+        size="default" 
+        :disabled="isSubmitting" 
+        style="color: white;background-color: rgba(60, 60, 60, 0.7);">
+				{{ isSubmitting ? 'Logging in...' : 'log in' }}
+			</button>
+			<view class="span3"></view>
+			<navigator url="/pages/register/register" open-type="reLaunch">
+				<button size="default" style="color: white;background-color: rgba(60, 60, 60, 0.7);">sign up</button>
+			</navigator>
+		</view>
+	</view>
+	
+	<view class="bottom">
+		<navigator url="/pages/index/index" open-type="reLaunch" class="bottom_left">
+			<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
+			<view class="left_down"><text class="text3">Home</text></view>
+		</navigator>
+		<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" class="bottom_center">
+			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
+			<view class="center_down"><text class="text3">Bike</text></view>
+		</navigator>
+		<view class="bottom_right">
+			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
+			<view class="right_down"><text class="text3">Me</text></view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { reactive, ref } from 'vue';
+import { BASE_URL } from '../../common/api.uts';
+
+// 响应式数据对象，用于存储用户输入
+type UserInfo = {
+	email: string
+	password: string
+}
+const userInfo = reactive<UserInfo>({
+	email: '',
+	password: ''
+});
+
+// 控制提交状态，防止重复提交
+const isSubmitting = ref(false);
+
+// 定义提交方法
+const onSubmit = () => {
+	// 防止重复提交
+	if (isSubmitting.value) return;
+
+	// 简单校验
+	if (userInfo.email == null || userInfo.email == '' || userInfo.password == null || userInfo.password == '') {
+		uni.showToast({
+			title: 'Please fill in both email and password.',
+			icon: 'none'
+		});
+		return;
+	}
+
+	isSubmitting.value = true;
+
+	uni.request({
+		url: BASE_URL + '/api/v1/auth/login',
+		method: 'POST',
+		data: {
+			email: userInfo.email,
+			password: userInfo.password
+		},
+		header: {
+			'Content-Type': 'application/json'
+		},
+		success: (res) => {
+			console.log('Login API Response:', res.data);
+			
+			// 后端返回结构为 { "data": { "token": "...", "userId": "...", "role": "...", "name": "...", "email": "..." } }
+			const ret = res.data as UTSJSONObject
+			
+			// 只要状态码是 200，且 data 字段存在，就认为成功
+			if (res.statusCode === 200) {
+				// 检查是一层结构还是两层结构
+				// 如果后端直接返回对象，或者包了一层 'data'
+				let loginData: UTSJSONObject | null = null;
+				
+				if (ret['data'] != null) {
+					loginData = ret['data'] as UTSJSONObject;
+				} else {
+					// 兼容性尝试：也许直接返回了字段
+					loginData = ret;
+				}
+				
+				console.log('Login Data:', JSON.stringify(loginData));
+				
+				// 打印所有可能的字段
+				if (loginData != null) {
+					console.log('id field:', loginData['id']);
+					console.log('userId field:', loginData['userId']);
+					console.log('name field:', loginData['name']);
+					console.log('email field:', loginData['email']);
+					console.log('token field:', loginData['token']);
+				}
+				
+				if (loginData != null) {
+					const token = loginData['token'] as string | null
+					if (token != null) {
+						// 保存 token（使用同步方法确保立即保存）
+						try {
+							uni.setStorageSync('token', token)
+							console.log('Token saved successfully')
+						} catch (e) {
+							console.error('Failed to save token:', e)
+						}
+						
+						// 保存用户ID（优先使用登录返回的 id / userId，其次使用已有的本地 userId，最后才退回到 email）
+						const existingUserId = uni.getStorageSync('userId')
+						let userIdToSave: string = ''
+						const rawLoginId = loginData['id'] != null ? loginData['id'] : loginData['userId']
+						if (rawLoginId != null) {
+							userIdToSave = '' + rawLoginId
+						} else if (existingUserId != null && existingUserId != '') {
+							userIdToSave = '' + existingUserId
+						} else {
+							userIdToSave = userInfo.email
+						}
+						
+						try {
+							uni.setStorageSync('userId', userIdToSave)
+							console.log('User ID saved:', userIdToSave)
+						} catch (e) {
+							console.error('Failed to save user ID:', e)
+						}
+					
+						// 保存用户信息
+						const userName = loginData['name'] != null ? loginData['name'] as string : userInfo.email
+						const userEmail = userInfo.email
+						
+						const userInfoData = {
+							name: userName,
+							email: userEmail
+						}
+						
+						try {
+							const userInfoStr = JSON.stringify(userInfoData)
+							uni.setStorageSync('userInfo', userInfoStr)
+							console.log('User info saved:', userInfoStr)
+						} catch (e) {
+							console.error('Failed to save user info:', e)
+						}
+
+						// 保存角色，用于区分管理员与普通用户（后端返回 token, userId, role）
+						const rawRole = loginData['role'] != null ? loginData['role'] : loginData['userRole']
+						const roleStr = rawRole != null ? ('' + rawRole).trim() : ''
+						const role = roleStr.length > 0 ? roleStr.toUpperCase() : 'CUSTOMER'
+						try {
+							uni.setStorageSync('role', role)
+						} catch (e) {
+							console.error('Failed to save role:', e)
+						}
+						// 强制按字符串比较（UTS 中 JSON 取出的值可能与字面量 === 不相等，用 indexOf 判定）
+						const roleForCheck = ('' + role).trim().toUpperCase()
+						const isAdmin = roleForCheck.indexOf('ADMIN') === 0 && roleForCheck.length === 5
+						const targetUrl = isAdmin ? '/pages/admin/home' : '/pages/index/index'
+						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
+						
+						uni.showToast({
+							title: isAdmin ? 'Admin login' : 'Login successful!',
+							icon: 'success'
+						});
+						
+						setTimeout(() => {
+							uni.reLaunch({ url: targetUrl })
+						}, 800)
+						return;
+					}
+				}
+			} 
+			
+			// 失败流程
+			const retObj = res.data as UTSJSONObject
+			// 默认错误消息
+			let msg = 'Login failed. Please check your credentials.';
+			
+			// 尝试提取后端详细错误信息
+			// 后端通常返回 { "message": "...", "error": "..." }
+			const backendMsg = retObj['message'];
+			const backendErr = retObj['error'];
+			
+			if (backendMsg != null) {
+				msg = backendMsg as string;
+			} else if (backendErr != null) {
+				msg = `Error: ${backendErr}`;
+			}
+			
+			console.error('Login failed. Status:', res.statusCode, 'Response:', JSON.stringify(retObj));
+			
+			uni.showToast({
+				title: msg,
+				icon: 'none',
+				duration: 3000
+			});
+		},
+		fail: (err) => {
+			console.error('Login request failed:', err);
+			uni.showToast({
+				title: 'Network error, please try again later.',
+				icon: 'none'
+			});
+		},
+		complete: () => {
+			// 请求完成后，无论成功失败都重置提交状态
+			isSubmitting.value = false;
+		}
+	});
+};
+</script>
+
+<style lang="scss">
+	.back{
+		width: 100%;
+		height: 100%;
+		//background-color: aqua;
+		.backpic{
+			width: 100%;
+			height: 100%;
+		}
+		// 登录标题样式
+		.login_title {
+			position: absolute;
+			top: 80px; // 距离顶部的距离
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 10;
+			padding: 10px;
+			background-color: rgba(0, 0, 0, 0.3);
+			.title_text {
+				height: 100%;
+				font-size: 32px;
+				font-weight: bold;
+				color: white;
+				text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+			}
+		}
+		.login_container{
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 300px;
+			padding: 30px;
+			background-color: rgba(227, 225, 225, 0.46);
+			border-radius: 15px;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+			.input{
+				width: 100%;
+				height: 10%;
+				padding: 20px;
+				border: none;
+				border-radius: 8px;
+				background-color: rgba(60, 60, 60, 0.7);
+				color: white;
+				font-size: 16px;
+				box-sizing: border-box; /* 确保padding不会增加总宽度 */
+			}
+			.span1{
+				width: 100%;
+				height: 10px;
+				/* background-color: aqua; */
+			}
+			/*.input2{
+				width: 100%;
+				padding: 12px;
+				border: none;
+				border-radius: 8px;
+				background-color: rgba(60, 60, 60, 0.7);
+				color: white;
+				font-size: 16px;
+			}*/
+			.span2{
+				width: 100%;
+				height: 10px;
+				/* background-color: aqua; */
+			}
+			.span3{
+				width: 100%;
+				height: 10px;
+				/* background-color: aqua; */
+			}
+		}
+	}
+	
+	.bottom{
+		width: 100%;
+		height: 80px;
+		background: #E3E1E1;
+		border-radius: 25px 25px 0px 0px;
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		flex-shrink: 0;
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		z-index: 10;
+		.bottom_left{
+			border-radius: 0px;
+			width: 33.33%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			.icon2{
+				width: 30px;
+				height: 30px;
+			}
+			.left_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 40%;
+				width: 100%;
+			}
+		}
+		.bottom_center{
+			border-radius: 0px;
+			width: 33.33%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			.bike_icon{
+				width: 30px;
+				height: 30px;
+			}
+			.center_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 40%;
+				width: 100%;
+			}
+		}
+		.bottom_right{
+			border-radius: 0px;
+			width: 33.33%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			.icon2{
+				width: 30px;
+				height: 30px;
+			}
+			.right_down{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 40%;
+				width: 100%;
+			}
+		}
+	}
+</style>

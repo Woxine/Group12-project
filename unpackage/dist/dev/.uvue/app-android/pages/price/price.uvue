@@ -1,0 +1,407 @@
+import { ref } from 'vue';
+import { BASE_URL } from '../../common/api.uts';
+// Define types
+type DurationItem = {
+    __$originalPosition?: UTSSourceMapPosition<"DurationItem", "pages/price/price.uvue", 58, 6>;
+    time: string;
+    price: number;
+};
+type UserInfo = {
+    __$originalPosition?: UTSSourceMapPosition<"UserInfo", "pages/price/price.uvue", 63, 6>;
+    name: string;
+    email: string;
+};
+// Booking duration data
+const __sfc__ = defineComponent({
+    __name: 'price',
+    setup(__props) {
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        const durations = ref<DurationItem[]>([
+            { time: '1 Hour', price: 1 } as DurationItem,
+            { time: '4 Hours', price: 1 } as DurationItem,
+            { time: '1 Day', price: 1 } as DurationItem,
+            { time: '1 Week', price: 1 } as DurationItem
+        ]);
+        // Start and end time
+        const startTime = ref<string>('');
+        const endTime = ref<string>('');
+        const durationCode = ref<string>(''); // Store duration code (1H, 4H, 1D, 1W)
+        // Select start time
+        const selectStartTime = () => {
+            const now = new Date();
+            const currentHour = now.getHours().toString(10).padStart(2, '0');
+            const currentMinute = now.getMinutes().toString(10).padStart(2, '0');
+            const currentDate = now.getFullYear() + '-' +
+                (now.getMonth() + 1).toString(10).padStart(2, '0') + '-' +
+                now.getDate().toString(10).padStart(2, '0');
+            uni.showActionSheet({
+                itemList: ['Start Now', '1 Hour Later', '2 Hours Later', '3 Hours Later'],
+                success: (res) => {
+                    if (res.tapIndex === 0) {
+                        // Start Now
+                        startTime.value = currentDate + ' ' + currentHour + ':' + currentMinute;
+                    }
+                    else if (res.tapIndex === 1) {
+                        // 1 Hour Later
+                        const time1 = new Date(now.getTime() + 60 * 60 * 1000);
+                        const hour1 = time1.getHours().toString(10).padStart(2, '0');
+                        const minute1 = time1.getMinutes().toString(10).padStart(2, '0');
+                        startTime.value = currentDate + ' ' + hour1 + ':' + minute1;
+                    }
+                    else if (res.tapIndex === 2) {
+                        // 2 Hours Later
+                        const time2 = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+                        const hour2 = time2.getHours().toString(10).padStart(2, '0');
+                        const minute2 = time2.getMinutes().toString(10).padStart(2, '0');
+                        startTime.value = currentDate + ' ' + hour2 + ':' + minute2;
+                    }
+                    else if (res.tapIndex === 3) {
+                        // 3 Hours Later
+                        const time3 = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+                        const hour3 = time3.getHours().toString(10).padStart(2, '0');
+                        const minute3 = time3.getMinutes().toString(10).padStart(2, '0');
+                        startTime.value = currentDate + ' ' + hour3 + ':' + minute3;
+                    }
+                }
+            });
+        };
+        // Select end time
+        const selectEndTime = () => {
+            if (startTime.value == '') {
+                uni.showToast({
+                    title: 'Please select start time first',
+                    icon: 'none'
+                });
+                return;
+            }
+            const now = new Date();
+            const currentDate = now.getFullYear() + '-' +
+                (now.getMonth() + 1).toString(10).padStart(2, '0') + '-' +
+                now.getDate().toString(10).padStart(2, '0');
+            uni.showActionSheet({
+                itemList: ['1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
+                success: (res) => {
+                    let endDateTime: Date | null = null;
+                    let duration: string = '';
+                    if (res.tapIndex === 0) {
+                        endDateTime = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+                        duration = '1H';
+                    }
+                    else if (res.tapIndex === 1) {
+                        endDateTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+                        duration = '4H';
+                    }
+                    else if (res.tapIndex === 2) {
+                        endDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                        duration = '1D';
+                    }
+                    else if (res.tapIndex === 3) {
+                        endDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                        duration = '1W';
+                    }
+                    if (endDateTime != null) {
+                        const endDate = endDateTime.getFullYear() + '-' +
+                            (endDateTime.getMonth() + 1).toString(10).padStart(2, '0') + '-' +
+                            endDateTime.getDate().toString(10).padStart(2, '0');
+                        const endHour = endDateTime.getHours().toString(10).padStart(2, '0');
+                        const endMinute = endDateTime.getMinutes().toString(10).padStart(2, '0');
+                        endTime.value = endDate + ' ' + endHour + ':' + endMinute;
+                        durationCode.value = duration;
+                    }
+                }
+            });
+        };
+        // Confirm selection
+        const confirm = () => {
+            if (startTime.value == '') {
+                uni.showToast({
+                    title: 'Please select start time',
+                    icon: 'none'
+                });
+                return;
+            }
+            if (endTime.value == '') {
+                uni.showToast({
+                    title: 'Please select end time',
+                    icon: 'none'
+                });
+                return;
+            }
+            // Get user info and token（确保 token 为字符串并去除首尾空格）
+            const userInfoStr = uni.getStorageSync('userInfo');
+            const tokenRaw = uni.getStorageSync('token');
+            const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : '';
+            const userIdStorage = uni.getStorageSync('userId');
+            let userId: string = '';
+            let userName: string = '';
+            // Prefer userId saved in storage
+            if (userIdStorage != null && userIdStorage != '') {
+                userId = '' + userIdStorage;
+            }
+            if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
+                try {
+                    const userInfo = UTSAndroid.consoleDebugError(JSON.parse<UserInfo>(userInfoStr as string), " at pages/price/price.uvue:201")!!;
+                    if (userInfo != null) {
+                        const nameValue = userInfo['name'] as string;
+                        userName = nameValue.length > 0 ? nameValue : 'Guest';
+                    }
+                }
+                catch (e: any) {
+                    console.error('Failed to parse user info:', e, " at pages/price/price.uvue:207");
+                }
+            }
+            if (token === '' || token.length === 0) {
+                uni.showToast({
+                    title: 'Please login first',
+                    icon: 'none'
+                });
+                return;
+            }
+            console.log('Token:', token, " at pages/price/price.uvue:219");
+            console.log('User ID:', userId, " at pages/price/price.uvue:220");
+            console.log('User Name:', userName, " at pages/price/price.uvue:221");
+            // Get selected scooter ID (frontend stores code like SC001, backend needs numeric ID)
+            const selectedScooterId = uni.getStorageSync('selectedScooterId');
+            let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
+            // Extract numeric part as backend ID, e.g., SC002 -> 2
+            let numericScooterId: string = '';
+            for (let i = 0; i < scooterId.length; i++) {
+                const ch = scooterId.charAt(i);
+                if (ch >= '0' && ch <= '9') {
+                    numericScooterId += ch;
+                }
+            }
+            if (numericScooterId.length == 0) {
+                numericScooterId = scooterId; // Fallback: if no numbers, use original string
+            }
+            // Calculate booking duration (hours)
+            const startDate = new Date(startTime.value);
+            const endDate = new Date(endTime.value);
+            const durationMs = endDate.getTime() - startDate.getTime();
+            const durationHours = durationMs / (1000 * 60 * 60);
+            // Calculate total price (assume £1/hour)
+            const totalPrice = durationHours * 1;
+            console.log('Start Time:', startTime.value, " at pages/price/price.uvue:247");
+            console.log('End Time:', endTime.value, " at pages/price/price.uvue:248");
+            console.log('Duration Hours:', durationHours, " at pages/price/price.uvue:249");
+            console.log('Total Price:', totalPrice, " at pages/price/price.uvue:250");
+            // If still cannot get userId, prompt user to login again
+            if (userId == null || userId == '') {
+                uni.showToast({
+                    title: 'User information missing, please login again before booking',
+                    icon: 'none'
+                });
+                return;
+            }
+            // Check if user already has an active booking — do not allow duplicate booking
+            uni.request({
+                url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
+                method: 'GET',
+                header: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                success: (checkRes) => {
+                    let hasActiveBooking = false;
+                    if (checkRes.statusCode >= 200 && checkRes.statusCode < 300 && checkRes.data != null && typeof checkRes.data === 'object') {
+                        const obj = checkRes.data as UTSJSONObject;
+                        const list = obj['data'];
+                        if (list != null && Array.isArray(list)) {
+                            const arr = list as UTSJSONObject[];
+                            for (let i = 0; i < arr.length; i++) {
+                                const rawStatus = arr[i]['status'];
+                                const s = rawStatus != null ? ('' + rawStatus).toUpperCase() : '';
+                                if (s === 'CONFIRMED' || s === 'PENDING') {
+                                    hasActiveBooking = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (hasActiveBooking === true) {
+                        uni.showToast({
+                            title: 'You already have an active booking. Cancel it or wait until it ends.',
+                            icon: 'none',
+                            duration: 3000
+                        });
+                        return;
+                    }
+                    const bookingData = { __$originalPosition: new UTSSourceMapPosition("bookingData", "pages/price/price.uvue", 295, 10),
+                        user_id: userId,
+                        userId: userId,
+                        scooter_id: numericScooterId,
+                        start_time: startTime.value,
+                        end_time: endTime.value,
+                        duration: durationCode.value,
+                        total_price: totalPrice,
+                        status: 'CONFIRMED'
+                    } as UTSJSONObject;
+                    console.log('Booking info:', bookingData, " at pages/price/price.uvue:305");
+                    uni.request({
+                        url: BASE_URL + '/api/v1/bookings',
+                        method: 'POST',
+                        data: bookingData,
+                        header: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        success: (res) => {
+                            console.log('Booking API Response:', res, " at pages/price/price.uvue:315");
+                            console.log('Status Code:', res.statusCode, " at pages/price/price.uvue:316");
+                            console.log('Response Data:', res.data, " at pages/price/price.uvue:317");
+                            if (res.statusCode >= 200 && res.statusCode < 300) {
+                                console.log('Booking successfully saved to database', " at pages/price/price.uvue:320");
+                                uni.showToast({
+                                    title: 'Booking successful, proceed to payment',
+                                    icon: 'success'
+                                });
+                                setTimeout(() => {
+                                    uni.navigateTo({
+                                        url: '/pages/payment/payment'
+                                    });
+                                }, 1000);
+                            }
+                            else {
+                                console.error('Booking failed:', res.statusCode, " at pages/price/price.uvue:331");
+                                let errorMsg: string = 'Booking failed, please try again';
+                                const errorData = res.data as UTSJSONObject | null;
+                                if (errorData != null) {
+                                    const msg = errorData['message'];
+                                    const err = errorData['error'];
+                                    const detail = errorData['detail'];
+                                    if (msg != null) {
+                                        errorMsg = '' + msg;
+                                    }
+                                    else if (err != null) {
+                                        errorMsg = '' + err;
+                                    }
+                                    else if (detail != null) {
+                                        errorMsg = '' + detail;
+                                    }
+                                }
+                                // 401 提示重新登录
+                                if (res.statusCode === 401) {
+                                    errorMsg = 'Login expired or invalid, please login again';
+                                    uni.showToast({
+                                        title: errorMsg,
+                                        icon: 'none',
+                                        duration: 2500
+                                    });
+                                    setTimeout(() => {
+                                        uni.reLaunch({ url: '/pages/login/login' });
+                                    }, 2500);
+                                }
+                                else {
+                                    // 后端其他错误时的友好提示
+                                    const msgLower = errorMsg.toLowerCase();
+                                    if (msgLower.indexOf('bookingresponse') >= 0 || msgLower.indexOf('type definition error') >= 0) {
+                                        errorMsg = 'Booking service error, please try again later';
+                                    }
+                                    uni.showToast({
+                                        title: errorMsg,
+                                        icon: 'none',
+                                        duration: 3000
+                                    });
+                                }
+                            }
+                        },
+                        fail: (error) => {
+                            console.error('Network error during booking:', error, " at pages/price/price.uvue:372");
+                            uni.showToast({
+                                title: 'Network error (simulated booking), proceed to payment',
+                                icon: 'none'
+                            });
+                            setTimeout(() => {
+                                uni.navigateTo({
+                                    url: '/pages/payment/payment'
+                                });
+                            }, 1000);
+                        }
+                    });
+                },
+                fail: () => {
+                    uni.showToast({ title: 'Failed to check bookings', icon: 'none' });
+                }
+            });
+        };
+        // Cancel selection
+        const cancel = () => {
+            startTime.value = '';
+            endTime.value = '';
+            uni.showToast({
+                title: 'Cancelled',
+                icon: 'none'
+            });
+            // Return to home page
+            uni.reLaunch({
+                url: '/pages/index/index'
+            });
+        };
+        return (): any | null => {
+            return _cE("view", _uM({ class: "container" }), [
+                _cE("scroll-view", _uM({
+                    "scroll-y": "true",
+                    class: "scroll-area"
+                }), [
+                    _cE("view", _uM({ class: "title" }), [
+                        _cE("text", _uM({ class: "title-text" }), "Select Booking Duration")
+                    ]),
+                    _cE("view", _uM({ class: "duration-cards" }), [
+                        _cE(Fragment, null, RenderHelpers.renderList(durations.value, (duration, index, __index, _cached): any => {
+                            return _cE("view", _uM({
+                                key: index,
+                                class: "card"
+                            }), [
+                                _cE("view", _uM({ class: "card-header" }), [
+                                    _cE("text", _uM({ class: "duration" }), _tD(duration.time), 1 /* TEXT */)
+                                ]),
+                                _cE("view", _uM({ class: "card-body" }), [
+                                    _cE("text", _uM({ class: "price" }), "£" + _tD(duration.price), 1 /* TEXT */)
+                                ])
+                            ]);
+                        }), 128 /* KEYED_FRAGMENT */)
+                    ]),
+                    _cE("view", _uM({ class: "time-section" }), [
+                        _cE("view", _uM({ class: "section-title" }), [
+                            _cE("text", _uM({ class: "section-title-text" }), "Start Time")
+                        ]),
+                        _cE("view", _uM({
+                            class: "time-input",
+                            onClick: selectStartTime
+                        }), [
+                            _cE("text", _uM({ class: "time-label" }), "Select Start Time"),
+                            _cE("text", _uM({ class: "time-value" }), _tD(startTime.value.length > 0 ? startTime.value : 'Not Selected'), 1 /* TEXT */)
+                        ])
+                    ]),
+                    _cE("view", _uM({ class: "time-section" }), [
+                        _cE("view", _uM({ class: "section-title" }), [
+                            _cE("text", _uM({ class: "section-title-text" }), "End Time")
+                        ]),
+                        _cE("view", _uM({
+                            class: "time-input",
+                            onClick: selectEndTime
+                        }), [
+                            _cE("text", _uM({ class: "time-label" }), "Select End Time"),
+                            _cE("text", _uM({ class: "time-value" }), _tD(endTime.value.length > 0 ? endTime.value : 'Not Selected'), 1 /* TEXT */)
+                        ])
+                    ]),
+                    _cE("view", _uM({ class: "button-group" }), [
+                        _cE("button", _uM({
+                            class: "confirm-btn",
+                            onClick: confirm
+                        }), "Confirm"),
+                        _cE("button", _uM({
+                            class: "cancel-btn",
+                            onClick: cancel
+                        }), "Cancel")
+                    ])
+                ])
+            ]);
+        };
+    }
+});
+export default __sfc__;
+const GenPagesPricePriceStyles = [_uM([["container", _pS(_uM([["width", "100%"], ["height", "100%"], ["backgroundColor", "#f5f5f5"], ["paddingTop", 0], ["paddingRight", 0], ["paddingBottom", 0], ["paddingLeft", 0], ["boxSizing", "border-box"], ["display", "flex"], ["flexDirection", "column"]]))], ["scroll-area", _pS(_uM([["flexGrow", 1], ["flexShrink", 1], ["flexBasis", "0%"], ["width", "100%"], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 20], ["paddingLeft", 20], ["boxSizing", "border-box"]]))], ["title", _pS(_uM([["textAlign", "center"], ["marginBottom", 30]]))], ["title-text", _pS(_uM([["fontSize", 24], ["fontWeight", "bold"], ["color", "#333333"]]))], ["duration-cards", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["marginBottom", 30]]))], ["card", _uM([["", _uM([["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 20], ["paddingLeft", 20], ["boxShadow", "0 4px 12px rgba(0, 0, 0, 0.1)"], ["transitionProperty", "all"], ["transitionDuration", "0.3s"], ["transitionTimingFunction", "ease"], ["marginBottom", 15]])], [".selected", _uM([["backgroundColor", "#e8f5e9"], ["borderTopWidth", 2], ["borderRightWidth", 2], ["borderBottomWidth", 2], ["borderLeftWidth", 2], ["borderTopStyle", "solid"], ["borderRightStyle", "solid"], ["borderBottomStyle", "solid"], ["borderLeftStyle", "solid"], ["borderTopColor", "#4CAF50"], ["borderRightColor", "#4CAF50"], ["borderBottomColor", "#4CAF50"], ["borderLeftColor", "#4CAF50"], ["transform", "translateY(-2px)"], ["boxShadow", "0 6px 16px rgba(76, 175, 80, 0.2)"]])]])], ["card-header", _pS(_uM([["textAlign", "center"], ["marginBottom", 10]]))], ["duration", _pS(_uM([["fontSize", 18], ["fontWeight", "bold"], ["color", "#333333"]]))], ["card-body", _pS(_uM([["textAlign", "center"]]))], ["price", _pS(_uM([["fontSize", 20], ["fontWeight", "bold"], ["color", "#4CAF50"]]))], ["time-section", _pS(_uM([["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 20], ["paddingLeft", 20], ["marginBottom", 20], ["boxShadow", "0 4px 12px rgba(0, 0, 0, 0.1)"]]))], ["section-title", _pS(_uM([["marginBottom", 12], ["textAlign", "left"]]))], ["section-title-text", _pS(_uM([["fontSize", 14], ["fontWeight", "bold"], ["color", "#666666"]]))], ["time-input", _pS(_uM([["backgroundColor", "#f9f9f9"], ["borderTopWidth", 1], ["borderRightWidth", 1], ["borderBottomWidth", 1], ["borderLeftWidth", 1], ["borderTopStyle", "solid"], ["borderRightStyle", "solid"], ["borderBottomStyle", "solid"], ["borderLeftStyle", "solid"], ["borderTopColor", "#dddddd"], ["borderRightColor", "#dddddd"], ["borderBottomColor", "#dddddd"], ["borderLeftColor", "#dddddd"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["paddingTop", 12], ["paddingRight", 15], ["paddingBottom", 12], ["paddingLeft", 15], ["display", "flex"], ["justifyContent", "space-between"], ["alignItems", "center"]]))], ["time-label", _pS(_uM([["fontSize", 12], ["color", "#999999"]]))], ["time-value", _pS(_uM([["fontSize", 14], ["color", "#333333"], ["fontWeight", "bold"]]))], ["button-group", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["alignItems", "center"], ["marginTop", 20], ["marginBottom", 20]]))], ["confirm-btn", _pS(_uM([["width", "80%"], ["height", 45], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 16], ["fontWeight", "bold"], ["marginBottom", 15]]))], ["cancel-btn", _pS(_uM([["width", "80%"], ["height", 45], ["backgroundColor", "#f44336"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 16], ["fontWeight", "bold"]]))], ["@TRANSITION", _uM([["card", _uM([["property", "all"], ["duration", "0.3s"], ["timingFunction", "ease"]])]])]])];
+//# sourceMappingURL=price.uvue.map
