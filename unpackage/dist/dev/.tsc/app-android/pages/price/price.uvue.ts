@@ -22,6 +22,7 @@ const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
 const _cache = __ins.renderCache;
 
 const durations = ref<DurationItem[]>([
+	{ time: '10 Minutes', price: 0.2 },
 	{ time: '1 Hour', price: 1 },
 	{ time: '4 Hours', price: 1 },
 	{ time: '1 Day', price: 1 },
@@ -87,21 +88,26 @@ const selectEndTime = () => {
 		now.getDate().toString().padStart(2, '0');
 	
 	uni.showActionSheet({
-		itemList: ['1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
+		itemList: ['10 Minutes Later', '1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
 		success: (res) => {
 			let endDateTime: Date | null = null;
 			let duration: string = '';
 			
 			if (res.tapIndex === 0) {
+				// 10 minutes from start time so actual duration is 10 minutes
+				const startDate = new Date(startTime.value);
+				endDateTime = new Date(startDate.getTime() + 10 * 60 * 1000);
+				duration = '10M';
+			} else if (res.tapIndex === 1) {
 				endDateTime = new Date(now.getTime() + 1 * 60 * 60 * 1000);
 				duration = '1H';
-			} else if (res.tapIndex === 1) {
+			} else if (res.tapIndex === 2) {
 				endDateTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
 				duration = '4H';
-			} else if (res.tapIndex === 2) {
+			} else if (res.tapIndex === 3) {
 				endDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 				duration = '1D';
-			} else if (res.tapIndex === 3) {
+			} else if (res.tapIndex === 4) {
 				endDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 				duration = '1W';
 			}
@@ -153,13 +159,13 @@ const confirm = () => {
 	
 	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
 		try {
-			const userInfo = UTSAndroid.consoleDebugError(JSON.parse<UserInfo>(userInfoStr), " at pages/price/price.uvue:201")!!
+			const userInfo = UTSAndroid.consoleDebugError(JSON.parse<UserInfo>(userInfoStr), " at pages/price/price.uvue:207")!!
 			if (userInfo != null) {
 				const nameValue = userInfo['name'] as string
 				userName = nameValue.length > 0 ? nameValue : 'Guest';
 			}
 		} catch (e) {
-			console.error('Failed to parse user info:', e, " at pages/price/price.uvue:207");
+			console.error('Failed to parse user info:', e, " at pages/price/price.uvue:213");
 		}
 	}
 	
@@ -171,9 +177,9 @@ const confirm = () => {
 		return;
 	}
 	
-	console.log('Token:', token, " at pages/price/price.uvue:219");
-	console.log('User ID:', userId, " at pages/price/price.uvue:220");
-	console.log('User Name:', userName, " at pages/price/price.uvue:221");
+	console.log('Token:', token, " at pages/price/price.uvue:225");
+	console.log('User ID:', userId, " at pages/price/price.uvue:226");
+	console.log('User Name:', userName, " at pages/price/price.uvue:227");
 	
 	// Get selected scooter ID (frontend stores code like SC001, backend needs numeric ID)
 	const selectedScooterId = uni.getStorageSync('selectedScooterId')
@@ -199,10 +205,10 @@ const confirm = () => {
 	// Calculate total price (assume £1/hour)
 	const totalPrice = durationHours * 1;
 	
-	console.log('Start Time:', startTime.value, " at pages/price/price.uvue:247");
-	console.log('End Time:', endTime.value, " at pages/price/price.uvue:248");
-	console.log('Duration Hours:', durationHours, " at pages/price/price.uvue:249");
-	console.log('Total Price:', totalPrice, " at pages/price/price.uvue:250");
+	console.log('Start Time:', startTime.value, " at pages/price/price.uvue:253");
+	console.log('End Time:', endTime.value, " at pages/price/price.uvue:254");
+	console.log('Duration Hours:', durationHours, " at pages/price/price.uvue:255");
+	console.log('Total Price:', totalPrice, " at pages/price/price.uvue:256");
 	
 	// If still cannot get userId, prompt user to login again
 	if (userId == null || userId == '') {
@@ -247,17 +253,22 @@ const confirm = () => {
 				return;
 			}
 
-			const bookingData = {__$originalPosition: new UTSSourceMapPosition("bookingData", "pages/price/price.uvue", 295, 10),
-				user_id: userId,
-				userId: userId,
-				scooter_id: numericScooterId,
-				start_time: startTime.value,
-				end_time: endTime.value,
-				duration: durationCode.value,
-				total_price: totalPrice,
-				status: 'CONFIRMED'
+			const doCreateBooking = (startLatVal: number | null, startLngVal: number | null) => {
+			const bookingData: UTSJSONObject = {__$originalPosition: new UTSSourceMapPosition("bookingData", "pages/price/price.uvue", 302, 10),
+				'user_id': userId,
+				'userId': userId,
+				'scooter_id': numericScooterId,
+				'start_time': startTime.value,
+				'end_time': endTime.value,
+				'duration': durationCode.value,
+				'total_price': totalPrice,
+				'status': 'CONFIRMED'
 			};
-			console.log('Booking info:', bookingData, " at pages/price/price.uvue:305");
+			if (startLatVal != null && startLngVal != null) {
+				bookingData['startLat'] = startLatVal;
+				bookingData['startLng'] = startLngVal;
+			}
+			console.log('Booking info:', bookingData, " at pages/price/price.uvue:316");
 			uni.request({
 				url: BASE_URL + '/api/v1/bookings',
 				method: 'POST',
@@ -267,12 +278,12 @@ const confirm = () => {
 					'Authorization': 'Bearer ' + token
 				},
 				success: (res) => {
-					console.log('Booking API Response:', res, " at pages/price/price.uvue:315");
-					console.log('Status Code:', res.statusCode, " at pages/price/price.uvue:316");
-					console.log('Response Data:', res.data, " at pages/price/price.uvue:317");
+					console.log('Booking API Response:', res, " at pages/price/price.uvue:326");
+					console.log('Status Code:', res.statusCode, " at pages/price/price.uvue:327");
+					console.log('Response Data:', res.data, " at pages/price/price.uvue:328");
 			
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				console.log('Booking successfully saved to database', " at pages/price/price.uvue:320");
+				console.log('Booking successfully saved to database', " at pages/price/price.uvue:331");
 				uni.showToast({
 					title: 'Booking successful, proceed to payment',
 					icon: 'success'
@@ -283,7 +294,7 @@ const confirm = () => {
 					});
 				}, 1000);
 			} else {
-				console.error('Booking failed:', res.statusCode, " at pages/price/price.uvue:331");
+				console.error('Booking failed:', res.statusCode, " at pages/price/price.uvue:342");
 				let errorMsg: string = 'Booking failed, please try again';
 				const errorData = res.data as UTSJSONObject | null;
 				if (errorData !== null) {
@@ -324,7 +335,7 @@ const confirm = () => {
 			}
 		},
 		fail: (error) => {
-			console.error('Network error during booking:', error, " at pages/price/price.uvue:372");
+			console.error('Network error during booking:', error, " at pages/price/price.uvue:383");
 			uni.showToast({
 				title: 'Network error (simulated booking), proceed to payment',
 				icon: 'none'
@@ -335,6 +346,12 @@ const confirm = () => {
 				});
 			}, 1000);
 		}
+			});
+			};
+			uni.getLocation({
+				type: 'gcj02',
+				success: (res) => { doCreateBooking(res.latitude, res.longitude); },
+				fail: () => { doCreateBooking(null, null); }
 			});
 		},
 		fail: () => {

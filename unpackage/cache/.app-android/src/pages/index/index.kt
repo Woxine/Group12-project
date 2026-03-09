@@ -15,6 +15,8 @@ import kotlin.properties.Delegates
 import io.dcloud.uniapp.extapi.createMapContext as uni_createMapContext
 import io.dcloud.uniapp.extapi.getLocation as uni_getLocation
 import io.dcloud.uniapp.extapi.navigateTo as uni_navigateTo
+import io.dcloud.uniapp.framework.onShow
+import io.dcloud.uniapp.extapi.request as uni_request
 import io.dcloud.uniapp.extapi.showToast as uni_showToast
 open class GenPagesIndexIndex : BasePage {
     constructor(__ins: ComponentInternalInstance, __renderer: String?) : super(__ins, __renderer) {}
@@ -29,31 +31,125 @@ open class GenPagesIndexIndex : BasePage {
             val scale = ref(16)
             val markers = ref(_uA<Marker>())
             val mapContext = ref(null as MapContext?)
+            val buildNearbyMarkers = fun(lat: Number, lng: Number): UTSArray<Marker> {
+                return UTSAndroid.consoleDebugError(JSON.parse<UTSArray<Marker>>(JSON.stringify(_uA(
+                    object : UTSJSONObject() {
+                        var id: Number = 1
+                        var longitude = lng - 0.0006
+                        var latitude = lat - 0.0007
+                        var title = "附近1"
+                        var iconPath = "/static/location.png"
+                        var width: Number = 32
+                        var height: Number = 32
+                        var anchor = object : UTSJSONObject() {
+                            var x: Number = 0.5
+                            var y: Number = 1
+                        }
+                    },
+                    object : UTSJSONObject() {
+                        var id: Number = 2
+                        var longitude = lng + 0.0005
+                        var latitude = lat + 0.0005
+                        var title = "附近2"
+                        var iconPath = "/static/location.png"
+                        var width: Number = 32
+                        var height: Number = 32
+                        var anchor = object : UTSJSONObject() {
+                            var x: Number = 0.5
+                            var y: Number = 1
+                        }
+                    },
+                    object : UTSJSONObject() {
+                        var id: Number = 3
+                        var longitude = lng - 0.0003
+                        var latitude = lat + 0.0004
+                        var title = "附近3"
+                        var iconPath = "/static/location.png"
+                        var width: Number = 32
+                        var height: Number = 32
+                        var anchor = object : UTSJSONObject() {
+                            var x: Number = 0.5
+                            var y: Number = 1
+                        }
+                    }
+                ))), " at pages/index/index.uvue:66")!!
+            }
+            val fetchScooterMarkers = fun(nearby: UTSArray<Marker>, lat: Number, lng: Number){
+                uni_request<Any>(RequestOptions(url = BASE_URL + "/api/v1/scooters", method = "GET", success = fun(res){
+                    if (res.statusCode != 200 || res.data == null) {
+                        markers.value = nearby
+                        return
+                    }
+                    val raw = res.data as UTSJSONObject
+                    var arr: UTSArray<UTSJSONObject> = _uA()
+                    if (raw["data"] != null) {
+                        arr = raw["data"] as UTSArray<UTSJSONObject>
+                    } else if (raw["scooters"] != null) {
+                        arr = raw["scooters"] as UTSArray<UTSJSONObject>
+                    } else if (raw["list"] != null) {
+                        arr = raw["list"] as UTSArray<UTSJSONObject>
+                    }
+                    val scooterMarkers: UTSArray<Marker> = _uA()
+                    var count: Number = 0
+                    run {
+                        var i: Number = 0
+                        while(i < arr.length && count < 5){
+                            val item = arr[i] as UTSJSONObject
+                            val latVal = if (item["location_lat"] != null) {
+                                item["location_lat"]
+                            } else {
+                                item["locationLat"]
+                            }
+                            val lngVal = if (item["location_lng"] != null) {
+                                item["location_lng"]
+                            } else {
+                                item["locationLng"]
+                            }
+                            val numLat = if (latVal != null) {
+                                (latVal as Number)
+                            } else {
+                                null
+                            }
+                            val numLng = if (lngVal != null) {
+                                (lngVal as Number)
+                            } else {
+                                null
+                            }
+                            if (numLat != null && numLng != null && !isNaN(numLat) && !isNaN(numLng)) {
+                                val rawId = item["id"]
+                                val sid = if (rawId != null) {
+                                    ("SC" + ("" + rawId))
+                                } else {
+                                    ("SC" + (count + 1))
+                                }
+                                scooterMarkers.push(Marker(id = 10 + count, latitude = numLat, longitude = numLng, title = sid, iconPath = "/static/location.png", width = 32, height = 32, anchor = Anchor(x = 0.5, y = 1)))
+                                count++
+                            }
+                            i++
+                        }
+                    }
+                    markers.value = nearby.concat(scooterMarkers)
+                }
+                , fail = fun(_){
+                    markers.value = nearby
+                }
+                ))
+            }
+            val applyMarkers = fun(lat: Number, lng: Number){
+                val nearby = buildNearbyMarkers(lat, lng)
+                fetchScooterMarkers(nearby, lat, lng)
+            }
             val getCurrentLocation = fun(){
                 uni_getLocation(GetLocationOptions(type = "gcj02", success = fun(res){
                     val lng = res.longitude
                     val lat = res.latitude
                     longitude.value = lng
                     latitude.value = lat
-                    val temp = UTSAndroid.consoleDebugError(JSON.parse<UTSArray<Marker>>(JSON.stringify(_uA(
-                        object : UTSJSONObject() {
-                            var id: Number = 1
-                            var longitude = lng
-                            var latitude = lat
-                            var title = "我的位置"
-                            var iconPath = "/static/location.png"
-                            var width: Number = 32
-                            var height: Number = 32
-                            var anchor = object : UTSJSONObject() {
-                                var x: Number = 0.5
-                                var y: Number = 1
-                            }
-                        }
-                    ))), " at pages/index/index.uvue:89")!!
-                    markers.value = temp
+                    applyMarkers(lat, lng)
+                    mapContext.value?.moveToLocation(MapContextMoveToLocationOptions(latitude = lat, longitude = lng))
                 }
                 , fail = fun(err){
-                    console.error("定位失败", err, " at pages/index/index.uvue:102")
+                    console.error("定位失败", err, " at pages/index/index.uvue:139")
                     uni_showToast(ShowToastOptions(title = "定位失败，请开启权限", icon = "none"))
                 }
                 ))
@@ -66,6 +162,10 @@ open class GenPagesIndexIndex : BasePage {
                     mapContext.value = uni_createMapContext("mainMap", null)
                 }
                 getCurrentLocation()
+            }
+            )
+            onShow(fun(){
+                applyMarkers(latitude.value, longitude.value)
             }
             )
             val goToBikeList = fun(){

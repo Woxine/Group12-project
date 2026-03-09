@@ -25,7 +25,7 @@
 			</view>
 		</view>
 
-		<button class="reload-btn" :disabled="isLoading" @click="loadData">
+		<button :class="['reload-btn', isLoading ? 'reload-btn-disabled' : '']" :disabled="isLoading" @click="loadData">
 			{{ isLoading ? 'Loading...' : 'Reload' }}
 		</button>
 	</view>
@@ -130,7 +130,7 @@ onMounted(() => {
 	flex-direction: column;
 	padding: 24px;
 	background-color: #f5f5f5;
-	min-height: 100vh;
+	min-height: 750px;
 }
 
 .title-section {
@@ -210,7 +210,7 @@ onMounted(() => {
 	font-weight: bold;
 }
 
-.reload-btn[disabled] {
+.reload-btn-disabled {
 	background-color: #ccc;
 }
 </style>

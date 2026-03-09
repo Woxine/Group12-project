@@ -1,8 +1,8 @@
-import { ref, onMounted } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import { ref, computed, onMounted } from 'vue';
+import { onShow, onHide } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 type Booking = {
-    __$originalPosition?: UTSSourceMapPosition<"Booking", "pages/orders/orders.uvue", 87, 6>;
+    __$originalPosition?: UTSSourceMapPosition<"Booking", "pages/orders/orders.uvue", 97, 6>;
     id: string | null;
     scooterId: string;
     duration: string;
@@ -10,6 +10,15 @@ type Booking = {
     endTime: string;
     price: number;
     status: string;
+    startLat?: number | null;
+    startLng?: number | null;
+    endLat?: number | null;
+    endLng?: number | null;
+};
+type BookingsResult = {
+    __$originalPosition?: UTSSourceMapPosition<"BookingsResult", "pages/orders/orders.uvue", 111, 6>;
+    list: Booking[];
+    totalCount: number;
 };
 const __sfc__ = defineComponent({
     __name: 'orders',
@@ -17,17 +26,24 @@ const __sfc__ = defineComponent({
         const __ins = getCurrentInstance()!;
         const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
         const _cache = __ins.renderCache;
+        const PAGE_SIZE = 10;
         const isLoggedIn = ref(false);
         const isLoading = ref(false);
         const loadError = ref('');
         const bookings = ref<Booking[]>([]);
+        const total = ref(0);
+        const currentPage = ref(1);
+        const loadingMore = ref(false);
         const scrollWrapHeight = ref(600);
         const scrollViewHeight = ref(560);
         const isRefreshing = ref(false);
+        let autoRefreshTimer: number | null = null;
+        const fetchBookingsRef = ref<((fromPull: boolean) => void) | null>(null);
+        const hasMore = computed((): boolean => bookings.value.length < total.value);
         const formatStatus = (status: string | null): string => {
             if (status == null || status.length == 0)
                 return 'Unknown';
-            const s = status.toUpperCase();
+            const s = ('' + status).trim().toUpperCase();
             if (s == 'CONFIRMED')
                 return 'Confirmed';
             if (s == 'PENDING')
@@ -59,7 +75,11 @@ const __sfc__ = defineComponent({
             const rawPrice = item['total_price'] != null ? item['total_price'] : item['price'];
             const price = rawPrice != null ? (rawPrice as number) : 0;
             const rawStatus = item['status'];
-            const statusVal = rawStatus != null ? ('' + rawStatus) : 'Unknown';
+            const statusVal = rawStatus != null ? ('' + rawStatus).trim() : 'Unknown';
+            const startLat = item['start_lat'] != null && typeof item['start_lat'] === 'number' ? item['start_lat'] as number : null;
+            const startLng = item['start_lng'] != null && typeof item['start_lng'] === 'number' ? item['start_lng'] as number : null;
+            const endLat = item['end_lat'] != null && typeof item['end_lat'] === 'number' ? item['end_lat'] as number : null;
+            const endLng = item['end_lng'] != null && typeof item['end_lng'] === 'number' ? item['end_lng'] as number : null;
             return {
                 id: id,
                 scooterId: scooterId,
@@ -67,11 +87,59 @@ const __sfc__ = defineComponent({
                 startTime: startTime,
                 endTime: endTime,
                 price: price,
-                status: statusVal
+                status: statusVal,
+                startLat: startLat,
+                startLng: startLng,
+                endLat: endLat,
+                endLng: endLng
             } as Booking;
+        };
+        const applyBookingsResponse = (obj: UTSJSONObject): BookingsResult => {
+            let arr: any[] = [];
+            if (obj['data'] != null && Array.isArray(obj['data'])) {
+                arr = obj['data'] as any[];
+            }
+            const totalCount = obj['total'] != null ? (obj['total'] as number) : arr.length;
+            const list: Booking[] = [];
+            for (let i = 0; i < arr.length; i++) {
+                const item = arr[i] as UTSJSONObject;
+                list.push(parseApiBooking(item, i));
+            }
+            return { list, totalCount } as BookingsResult;
+        };
+        const hasActiveBookings = (): boolean => {
+            const list = bookings.value;
+            for (let i = 0; i < list.length; i++) {
+                const s = ('' + list[i].status).trim().toUpperCase();
+                if (s === 'CONFIRMED' || s === 'PENDING')
+                    return true;
+            }
+            return false;
+        };
+        const clearAutoRefresh = () => {
+            const id = autoRefreshTimer;
+            if (id != null) {
+                clearInterval(id);
+                autoRefreshTimer = null;
+            }
+        };
+        const startAutoRefresh = () => {
+            if (autoRefreshTimer != null)
+                return;
+            autoRefreshTimer = setInterval(() => {
+                if (hasActiveBookings()) {
+                    const fn = fetchBookingsRef.value;
+                    if (fn != null)
+                        fn(true);
+                }
+                else {
+                    clearAutoRefresh();
+                }
+            }, 60000);
         };
         const fetchBookings = (fromPullRefresh: boolean) => {
             const userIdStorage = uni.getStorageSync('userId');
+            console.log('[orders] uni.getStorageSync("userId") =', userIdStorage, " at pages/orders/orders.uvue:226");
             const tokenStorage = uni.getStorageSync('token');
             const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null;
             const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null;
@@ -91,8 +159,9 @@ const __sfc__ = defineComponent({
                 isLoading.value = true;
             }
             loadError.value = '';
+            currentPage.value = 1;
             uni.request({
-                url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
+                url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=' + PAGE_SIZE,
                 method: 'GET',
                 header: {
                     'Content-Type': 'application/json',
@@ -103,22 +172,15 @@ const __sfc__ = defineComponent({
                         const responseData = res.data;
                         if (responseData != null && typeof responseData === 'object') {
                             const obj = responseData as UTSJSONObject;
-                            let arr: any[] = [];
-                            if (obj['data'] != null && Array.isArray(obj['data'])) {
-                                arr = obj['data'] as any[];
-                            }
-                            else if (Array.isArray(responseData)) {
-                                arr = responseData as any[];
-                            }
-                            const list: Booking[] = [];
-                            for (let i = 0; i < arr.length; i++) {
-                                const item = arr[i] as UTSJSONObject;
-                                list.push(parseApiBooking(item, i));
-                            }
+                            const { list, totalCount } = applyBookingsResponse(obj);
                             bookings.value = list;
+                            total.value = totalCount;
+                            if (hasActiveBookings())
+                                startAutoRefresh();
                         }
                         else {
                             bookings.value = [];
+                            total.value = 0;
                         }
                     }
                     else {
@@ -127,11 +189,46 @@ const __sfc__ = defineComponent({
                 },
                 fail: (error) => {
                     loadError.value = 'Network error. Please check your connection.';
-                    console.error('Fetch bookings failed:', error, " at pages/orders/orders.uvue:205");
+                    console.error('Fetch bookings failed:', error, " at pages/orders/orders.uvue:277");
                 },
                 complete: () => {
                     isLoading.value = false;
                     isRefreshing.value = false;
+                }
+            });
+        };
+        fetchBookingsRef.value = fetchBookings;
+        const loadMore = () => {
+            const userIdStorage = uni.getStorageSync('userId');
+            const tokenStorage = uni.getStorageSync('token');
+            const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null;
+            const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null;
+            if (userId == null || token == null || loadingMore.value || !hasMore.value)
+                return;
+            loadingMore.value = true;
+            const nextPage = currentPage.value + 1;
+            uni.request({
+                url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=' + nextPage + '&size=' + PAGE_SIZE,
+                method: 'GET',
+                header: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                success: (res) => {
+                    if (res.statusCode >= 200 && res.statusCode < 300) {
+                        const responseData = res.data;
+                        if (responseData != null && typeof responseData === 'object') {
+                            const obj = responseData as UTSJSONObject;
+                            const { list, totalCount } = applyBookingsResponse(obj);
+                            bookings.value = bookings.value.concat(list);
+                            total.value = totalCount;
+                            currentPage.value = nextPage;
+                        }
+                    }
+                },
+                fail: () => { },
+                complete: () => {
+                    loadingMore.value = false;
                 }
             });
         };
@@ -142,10 +239,37 @@ const __sfc__ = defineComponent({
         const canCancel = (status: string | null): boolean => {
             if (status == null || status.length === 0)
                 return true;
-            const s = status.toUpperCase();
+            const s = ('' + status).trim().toUpperCase();
             if (s === 'CANCELLED' || s === 'COMPLETED')
                 return false;
             return true;
+        };
+        const isCompleted = (status: string | null): boolean => {
+            if (status == null || status.length === 0)
+                return false;
+            const s = ('' + status).trim().toUpperCase();
+            return s == 'COMPLETED';
+        };
+        const isCancelled = (status: string | null): boolean => {
+            if (status == null || status.length === 0)
+                return false;
+            const s = ('' + status).trim().toUpperCase();
+            return s == 'CANCELLED' || s == 'CANCELED';
+        };
+        const hasRoute = (booking: Booking): boolean => {
+            const slat = booking.startLat;
+            const slng = booking.startLng;
+            const elat = booking.endLat;
+            const elng = booking.endLng;
+            return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng);
+        };
+        const goToRoute = (booking: Booking) => {
+            const bid = booking.id;
+            if (bid == null || bid.length === 0) {
+                uni.showToast({ title: 'Invalid booking', icon: 'none' });
+                return;
+            }
+            uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid });
         };
         const cancelOrder = (booking: Booking) => {
             const bid = booking.id;
@@ -165,33 +289,93 @@ const __sfc__ = defineComponent({
                 success: (res) => {
                     const confirm = res.confirm === true;
                     if (confirm) {
-                        uni.request({
-                            url: BASE_URL + '/api/v1/bookings/' + bid,
-                            method: 'DELETE',
-                            header: {
-                                'Content-Type': 'application/json',
-                                'Authorization': 'Bearer ' + token
-                            },
-                            success: (resp) => {
-                                if (resp.statusCode >= 200 && resp.statusCode < 300) {
-                                    uni.showToast({ title: 'Order cancelled', icon: 'success' });
-                                    fetchBookings(false);
-                                }
-                                else {
-                                    let msg = 'Failed to cancel';
-                                    const data = resp.data as UTSJSONObject | null;
-                                    if (data != null && data['message'] != null) {
-                                        msg = '' + data['message'];
-                                    }
-                                    uni.showToast({ title: msg, icon: 'none', duration: 3000 });
-                                }
-                            },
-                            fail: (err) => {
-                                uni.showToast({ title: 'Network error', icon: 'none' });
-                                console.error('Cancel booking failed:', err, " at pages/orders/orders.uvue:266");
+                        const doCancel = (endLatVal: number | null, endLngVal: number | null) => {
+                            const body: UTSJSONObject = { __$originalPosition: new UTSSourceMapPosition("body", "pages/orders/orders.uvue", 384, 12), };
+                            if (endLatVal != null && endLngVal != null) {
+                                body['endLat'] = endLatVal;
+                                body['endLng'] = endLngVal;
                             }
+                            uni.request({
+                                url: BASE_URL + '/api/v1/bookings/' + bid,
+                                method: 'DELETE',
+                                data: body,
+                                header: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + token
+                                },
+                                success: (resp) => {
+                                    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+                                        uni.showToast({ title: 'Order cancelled', icon: 'success' });
+                                        fetchBookings(false);
+                                    }
+                                    else {
+                                        let msg = 'Failed to cancel';
+                                        const data = resp.data as UTSJSONObject | null;
+                                        if (data != null && data['message'] != null) {
+                                            msg = '' + data['message'];
+                                        }
+                                        uni.showToast({ title: msg, icon: 'none', duration: 3000 });
+                                    }
+                                },
+                                fail: (err) => {
+                                    uni.showToast({ title: 'Network error', icon: 'none' });
+                                    console.error('Cancel booking failed:', err, " at pages/orders/orders.uvue:412");
+                                }
+                            });
+                        };
+                        uni.getLocation({
+                            type: 'gcj02',
+                            success: (loc) => { doCancel(loc.latitude, loc.longitude); },
+                            fail: () => { doCancel(null, null); }
                         });
                     }
+                }
+            });
+        };
+        const endRide = (booking: Booking) => {
+            const bid = booking.id;
+            if (bid == null || bid.length === 0) {
+                uni.showToast({ title: 'Invalid booking', icon: 'none' });
+                return;
+            }
+            const tokenRaw = uni.getStorageSync('token');
+            const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : '';
+            if (token === '') {
+                uni.showToast({ title: 'Please login again', icon: 'none' });
+                return;
+            }
+            uni.getLocation({
+                type: 'gcj02',
+                success: (loc) => {
+                    uni.request({
+                        url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
+                        method: 'PATCH',
+                        data: { endLat: loc.latitude, endLng: loc.longitude },
+                        header: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        success: (resp) => {
+                            if (resp.statusCode >= 200 && resp.statusCode < 300) {
+                                uni.showToast({ title: 'Ride ended', icon: 'success' });
+                                fetchBookings(false);
+                            }
+                            else {
+                                let msg = 'Failed to end ride';
+                                const data = resp.data as UTSJSONObject | null;
+                                if (data != null && data['message'] != null) {
+                                    msg = '' + data['message'];
+                                }
+                                uni.showToast({ title: msg, icon: 'none', duration: 3000 });
+                            }
+                        },
+                        fail: () => {
+                            uni.showToast({ title: 'Network error', icon: 'none' });
+                        }
+                    });
+                },
+                fail: () => {
+                    uni.showToast({ title: 'Location unavailable, cannot end ride', icon: 'none' });
                 }
             });
         };
@@ -225,6 +409,9 @@ const __sfc__ = defineComponent({
             if (hasUser) {
                 fetchBookings(false);
             }
+        });
+        onHide(() => {
+            clearAutoRefresh();
         });
         return (): any | null => {
             const _component_navigator = resolveComponent("navigator");
@@ -345,14 +532,47 @@ const __sfc__ = defineComponent({
                                                                 class: "card-actions"
                                                             }), [
                                                                 _cE("button", _uM({
+                                                                    class: "end-ride-btn",
+                                                                    onClick: () => { endRide(booking); }
+                                                                }), "End Ride", 8 /* PROPS */, ["onClick"]),
+                                                                _cE("button", _uM({
                                                                     class: "cancel-order-btn",
                                                                     onClick: () => { cancelOrder(booking); }
                                                                 }), "Cancel Order", 8 /* PROPS */, ["onClick"])
                                                             ])
+                                                            : _cC("v-if", true),
+                                                        isTrue(isCompleted(booking.status) || isCancelled(booking.status))
+                                                            ? _cE("view", _uM({
+                                                                key: 1,
+                                                                class: "card-actions"
+                                                            }), [
+                                                                _cE("button", _uM({
+                                                                    class: "view-route-btn",
+                                                                    onClick: () => { goToRoute(booking); }
+                                                                }), "View Route", 8 /* PROPS */, ["onClick"])
+                                                            ])
                                                             : _cC("v-if", true)
                                                     ])
                                                 ]);
-                                            }), 128 /* KEYED_FRAGMENT */)
+                                            }), 128 /* KEYED_FRAGMENT */),
+                                            isTrue(hasMore.value)
+                                                ? _cE("view", _uM({
+                                                    key: 0,
+                                                    class: "load-more-wrap"
+                                                }), [
+                                                    isTrue(loadingMore.value)
+                                                        ? _cE("button", _uM({
+                                                            key: 0,
+                                                            class: _nC(['load-more-btn', 'load-more-btn-disabled']),
+                                                            disabled: ""
+                                                        }), "Loading...")
+                                                        : _cE("button", _uM({
+                                                            key: 1,
+                                                            class: "load-more-btn",
+                                                            onClick: loadMore
+                                                        }), "Load more")
+                                                ])
+                                                : _cC("v-if", true)
                                         ])
                         ], 44 /* STYLE, PROPS, NEED_HYDRATION */, ["refresher-triggered"])
                     ], 4 /* STYLE */)
@@ -361,5 +581,5 @@ const __sfc__ = defineComponent({
     }
 });
 export default __sfc__;
-const GenPagesOrdersOrdersStyles = [_uM([["container", _pS(_uM([["width", "100%"], ["display", "flex"], ["flexDirection", "column"], ["backgroundColor", "#f5f5f5"], ["boxSizing", "border-box"]]))], ["login-prompt", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["alignItems", "center"], ["justifyContent", "center"], ["paddingTop", 60], ["paddingRight", 24], ["paddingBottom", 60], ["paddingLeft", 24]]))], ["icon-large", _pS(_uM([["width", 80], ["height", 80], ["opacity", 0.6], ["marginBottom", 24]]))], ["prompt-text", _pS(_uM([["fontSize", 16], ["color", "#666666"], ["marginBottom", 24], ["textAlign", "center"]]))], ["login-btn", _pS(_uM([["width", 200], ["height", 44], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 16], ["fontWeight", "bold"]]))], ["scroll-wrap", _pS(_uM([["width", "100%"]]))], ["scroll-area", _pS(_uM([["width", "100%"], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["boxSizing", "border-box"]]))], ["title-section", _pS(_uM([["marginBottom", 20]]))], ["title-text", _pS(_uM([["fontSize", 22], ["fontWeight", "bold"], ["color", "#333333"]]))], ["loading-section", _pS(_uM([["paddingTop", 40], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["textAlign", "center"]]))], ["error-section", _pS(_uM([["paddingTop", 40], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["textAlign", "center"]]))], ["loading-text", _pS(_uM([["fontSize", 14], ["color", "#999999"]]))], ["error-text", _pS(_uM([["fontSize", 14], ["color", "#f44336"], ["marginBottom", 16]]))], ["retry-btn", _pS(_uM([["paddingTop", 10], ["paddingRight", 24], ["paddingBottom", 10], ["paddingLeft", 24], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["empty-section", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["alignItems", "center"], ["justifyContent", "center"], ["paddingTop", 60], ["paddingRight", 24], ["paddingBottom", 60], ["paddingLeft", 24], ["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["boxShadow", "0 2px 8px rgba(0, 0, 0, 0.08)"]]))], ["empty-text", _pS(_uM([["fontSize", 18], ["fontWeight", "bold"], ["color", "#333333"], ["marginBottom", 8]]))], ["empty-hint", _pS(_uM([["fontSize", 14], ["color", "#999999"], ["marginBottom", 24], ["textAlign", "center"]]))], ["explore-btn", _pS(_uM([["paddingTop", 12], ["paddingRight", 32], ["paddingBottom", 12], ["paddingLeft", 32], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["bookings-list", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["gap", "16px"]]))], ["booking-card", _pS(_uM([["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["paddingTop", 16], ["paddingRight", 16], ["paddingBottom", 16], ["paddingLeft", 16], ["boxShadow", "0 2px 8px rgba(0, 0, 0, 0.08)"]]))], ["card-header", _pS(_uM([["display", "flex"], ["flexDirection", "row"], ["justifyContent", "space-between"], ["alignItems", "center"], ["marginBottom", 12], ["paddingBottom", 10], ["borderBottomWidth", 1], ["borderBottomStyle", "solid"], ["borderBottomColor", "#eeeeee"]]))], ["booking-id", _pS(_uM([["fontSize", 16], ["fontWeight", "bold"], ["color", "#333333"]]))], ["status-badge", _pS(_uM([["fontSize", 12], ["paddingTop", 4], ["paddingRight", 10], ["paddingBottom", 4], ["paddingLeft", 10], ["borderTopLeftRadius", 6], ["borderTopRightRadius", 6], ["borderBottomRightRadius", 6], ["borderBottomLeftRadius", 6], ["fontWeight", "bold"]]))], ["status-Confirmed", _pS(_uM([["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"]]))], ["status-Pending", _pS(_uM([["backgroundColor", "#FFC107"], ["color", "#333333"]]))], ["status-Cancelled", _pS(_uM([["backgroundColor", "#f44336"], ["color", "#FFFFFF"]]))], ["status-Completed", _pS(_uM([["backgroundColor", "#2196F3"], ["color", "#FFFFFF"]]))], ["status-Unknown", _pS(_uM([["backgroundColor", "#9E9E9E"], ["color", "#FFFFFF"]]))], ["card-body", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["gap", "6px"]]))], ["card-actions", _pS(_uM([["marginTop", 12], ["paddingTop", 10], ["borderTopWidth", 1], ["borderTopStyle", "solid"], ["borderTopColor", "#eeeeee"]]))], ["cancel-order-btn", _pS(_uM([["width", "100%"], ["paddingTop", 10], ["paddingRight", 16], ["paddingBottom", 10], ["paddingLeft", 16], ["backgroundColor", "#f44336"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["detail-row", _pS(_uM([["display", "flex"], ["flexDirection", "row"], ["justifyContent", "space-between"], ["fontSize", 14]]))], ["label", _uM([[".detail-row ", _uM([["color", "#999999"]])]])], ["value", _uM([[".detail-row ", _uM([["color", "#333333"]])]])]])];
+const GenPagesOrdersOrdersStyles = [_uM([["container", _pS(_uM([["width", "100%"], ["height", "100%"], ["display", "flex"], ["flexDirection", "column"], ["backgroundColor", "#f5f5f5"], ["boxSizing", "border-box"]]))], ["login-prompt", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["alignItems", "center"], ["justifyContent", "center"], ["paddingTop", 60], ["paddingRight", 24], ["paddingBottom", 60], ["paddingLeft", 24]]))], ["icon-large", _pS(_uM([["width", 80], ["height", 80], ["opacity", 0.6], ["marginBottom", 24]]))], ["prompt-text", _pS(_uM([["fontSize", 16], ["color", "#666666"], ["marginBottom", 24], ["textAlign", "center"]]))], ["login-btn", _pS(_uM([["width", 200], ["height", 44], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 16], ["fontWeight", "bold"]]))], ["scroll-wrap", _pS(_uM([["width", "100%"]]))], ["scroll-area", _pS(_uM([["width", "100%"], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["boxSizing", "border-box"]]))], ["title-section", _pS(_uM([["marginBottom", 20]]))], ["title-text", _pS(_uM([["fontSize", 22], ["fontWeight", "bold"], ["color", "#333333"]]))], ["loading-section", _pS(_uM([["paddingTop", 40], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["textAlign", "center"]]))], ["error-section", _pS(_uM([["paddingTop", 40], ["paddingRight", 20], ["paddingBottom", 40], ["paddingLeft", 20], ["textAlign", "center"]]))], ["loading-text", _pS(_uM([["fontSize", 14], ["color", "#999999"]]))], ["error-text", _pS(_uM([["fontSize", 14], ["color", "#f44336"], ["display", "flex"], ["flexDirection", "column"], ["marginBottom", 16]]))], ["retry-btn", _pS(_uM([["paddingTop", 10], ["paddingRight", 24], ["paddingBottom", 10], ["paddingLeft", 24], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["empty-section", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["alignItems", "center"], ["justifyContent", "center"], ["paddingTop", 60], ["paddingRight", 24], ["paddingBottom", 60], ["paddingLeft", 24], ["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["boxShadow", "0 2px 8px rgba(0, 0, 0, 0.08)"]]))], ["empty-text", _pS(_uM([["fontSize", 18], ["fontWeight", "bold"], ["color", "#333333"], ["marginBottom", 8]]))], ["empty-hint", _pS(_uM([["fontSize", 14], ["color", "#999999"], ["marginBottom", 24], ["textAlign", "center"]]))], ["explore-btn", _pS(_uM([["paddingTop", 12], ["paddingRight", 32], ["paddingBottom", 12], ["paddingLeft", 32], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["bookings-list", _pS(_uM([["display", "flex"], ["flexDirection", "column"]]))], ["load-more-wrap", _pS(_uM([["marginTop", 8], ["marginBottom", 24], ["textAlign", "center"]]))], ["load-more-btn", _pS(_uM([["paddingTop", 10], ["paddingRight", 28], ["paddingBottom", 10], ["paddingLeft", 28], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14]]))], ["load-more-btn-disabled", _pS(_uM([["opacity", 0.7]]))], ["booking-card", _pS(_uM([["backgroundColor", "#FFFFFF"], ["borderTopLeftRadius", 12], ["borderTopRightRadius", 12], ["borderBottomRightRadius", 12], ["borderBottomLeftRadius", 12], ["paddingTop", 16], ["paddingRight", 16], ["paddingBottom", 16], ["paddingLeft", 16], ["marginBottom", 16], ["boxShadow", "0 2px 8px rgba(0, 0, 0, 0.08)"]]))], ["card-header", _pS(_uM([["display", "flex"], ["flexDirection", "row"], ["justifyContent", "space-between"], ["alignItems", "center"], ["marginBottom", 12], ["paddingBottom", 10], ["borderBottomWidth", 1], ["borderBottomStyle", "solid"], ["borderBottomColor", "#eeeeee"]]))], ["booking-id", _pS(_uM([["fontSize", 16], ["fontWeight", "bold"], ["color", "#333333"]]))], ["status-badge", _pS(_uM([["fontSize", 12], ["paddingTop", 4], ["paddingRight", 10], ["paddingBottom", 4], ["paddingLeft", 10], ["borderTopLeftRadius", 6], ["borderTopRightRadius", 6], ["borderBottomRightRadius", 6], ["borderBottomLeftRadius", 6], ["fontWeight", "bold"]]))], ["status-Confirmed", _pS(_uM([["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"]]))], ["status-Pending", _pS(_uM([["backgroundColor", "#FFC107"], ["color", "#333333"]]))], ["status-Cancelled", _pS(_uM([["backgroundColor", "#f44336"], ["color", "#FFFFFF"]]))], ["status-Completed", _pS(_uM([["backgroundColor", "#2196F3"], ["color", "#FFFFFF"]]))], ["status-Unknown", _pS(_uM([["backgroundColor", "#9E9E9E"], ["color", "#FFFFFF"]]))], ["card-body", _pS(_uM([["display", "flex"], ["flexDirection", "column"]]))], ["card-actions", _pS(_uM([["marginTop", 12], ["paddingTop", 10], ["borderTopWidth", 1], ["borderTopStyle", "solid"], ["borderTopColor", "#eeeeee"], ["display", "flex"], ["flexDirection", "column"], ["gap", "8px"]]))], ["end-ride-btn", _pS(_uM([["width", "100%"], ["paddingTop", 10], ["paddingRight", 16], ["paddingBottom", 10], ["paddingLeft", 16], ["backgroundColor", "#4CAF50"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["cancel-order-btn", _pS(_uM([["width", "100%"], ["paddingTop", 10], ["paddingRight", 16], ["paddingBottom", 10], ["paddingLeft", 16], ["backgroundColor", "#f44336"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"]]))], ["view-route-btn", _pS(_uM([["width", "100%"], ["paddingTop", 10], ["paddingRight", 16], ["paddingBottom", 10], ["paddingLeft", 16], ["backgroundColor", "#2196F3"], ["color", "#FFFFFF"], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["fontSize", 14], ["fontWeight", "bold"], ["marginTop", 8]]))], ["detail-row", _pS(_uM([["display", "flex"], ["flexDirection", "row"], ["justifyContent", "space-between"], ["fontSize", 14], ["marginBottom", 6]]))], ["label", _uM([[".detail-row ", _uM([["color", "#999999"]])]])], ["value", _uM([[".detail-row ", _uM([["color", "#333333"], ["fontWeight", "400"]])]])]])];
 //# sourceMappingURL=orders.uvue.map

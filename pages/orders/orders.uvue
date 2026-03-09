@@ -69,9 +69,17 @@
 							<text class="value">£{{ booking.price }}</text>
 						</view>
 						<view v-if="canCancel(booking.status)" class="card-actions">
+							<button class="end-ride-btn" @click="endRide(booking)">End Ride</button>
 							<button class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Order</button>
 						</view>
+						<view v-if="isCompleted(booking.status) || isCancelled(booking.status)" class="card-actions">
+							<button class="view-route-btn" @click="goToRoute(booking)">View Route</button>
+						</view>
 					</view>
+				</view>
+				<view v-if="hasMore" class="load-more-wrap">
+					<button v-if="loadingMore" :class="['load-more-btn', 'load-more-btn-disabled']" disabled>Loading...</button>
+					<button v-else class="load-more-btn" @click="loadMore">Load more</button>
 				</view>
 			</view>
 			</scroll-view>
@@ -80,9 +88,11 @@
 </template>
 
 <script setup lang="uts">
-import { ref, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { ref, computed, onMounted } from 'vue'
+import { onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
+
+const PAGE_SIZE = 10
 
 type Booking = {
 	id: string | null
@@ -92,19 +102,35 @@ type Booking = {
 	endTime: string
 	price: number
 	status: string
+	startLat?: number | null
+	startLng?: number | null
+	endLat?: number | null
+	endLng?: number | null
+}
+
+type BookingsResult = {
+	list: Booking[]
+	totalCount: number
 }
 
 const isLoggedIn = ref(false)
 const isLoading = ref(false)
 const loadError = ref('')
 const bookings = ref<Booking[]>([])
+const total = ref(0)
+const currentPage = ref(1)
+const loadingMore = ref(false)
 const scrollWrapHeight = ref(600)
 const scrollViewHeight = ref(560)
 const isRefreshing = ref(false)
+let autoRefreshTimer: number | null = null
+const fetchBookingsRef = ref<((fromPull: boolean) => void) | null>(null)
+
+const hasMore = computed(() => bookings.value.length < total.value)
 
 const formatStatus = (status: string | null): string => {
 	if (status == null || status.length == 0) return 'Unknown'
-	const s = status.toUpperCase()
+	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED') return 'Confirmed'
 	if (s == 'PENDING') return 'Pending'
 	if (s == 'CANCELLED') return 'Cancelled'
@@ -132,7 +158,11 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 	const rawPrice = item['total_price'] != null ? item['total_price'] : item['price']
 	const price = rawPrice != null ? (rawPrice as number) : 0
 	const rawStatus = item['status']
-	const statusVal = rawStatus != null ? ('' + rawStatus) : 'Unknown'
+	const statusVal = rawStatus != null ? ('' + rawStatus).trim() : 'Unknown'
+	const startLat = item['start_lat'] != null && typeof item['start_lat'] === 'number' ? item['start_lat'] as number : null
+	const startLng = item['start_lng'] != null && typeof item['start_lng'] === 'number' ? item['start_lng'] as number : null
+	const endLat = item['end_lat'] != null && typeof item['end_lat'] === 'number' ? item['end_lat'] as number : null
+	const endLng = item['end_lng'] != null && typeof item['end_lng'] === 'number' ? item['end_lng'] as number : null
 	return {
 		id: id,
 		scooterId: scooterId,
@@ -140,12 +170,60 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 		startTime: startTime,
 		endTime: endTime,
 		price: price,
-		status: statusVal
+		status: statusVal,
+		startLat: startLat,
+		startLng: startLng,
+		endLat: endLat,
+		endLng: endLng
 	}
+}
+
+const applyBookingsResponse = (obj: UTSJSONObject): BookingsResult => {
+	let arr: any[] = []
+	if (obj['data'] != null && Array.isArray(obj['data'])) {
+		arr = obj['data'] as any[]
+	}
+	const totalCount = obj['total'] != null ? (obj['total'] as number) : arr.length
+	const list: Booking[] = []
+	for (let i = 0; i < arr.length; i++) {
+		const item = arr[i] as UTSJSONObject
+		list.push(parseApiBooking(item, i))
+	}
+	return { list, totalCount }
+}
+
+const hasActiveBookings = (): boolean => {
+	const list = bookings.value
+	for (let i = 0; i < list.length; i++) {
+		const s = ('' + list[i].status).trim().toUpperCase()
+		if (s === 'CONFIRMED' || s === 'PENDING') return true
+	}
+	return false
+}
+
+const clearAutoRefresh = () => {
+	const id = autoRefreshTimer
+	if (id != null) {
+		clearInterval(id)
+		autoRefreshTimer = null
+	}
+}
+
+const startAutoRefresh = () => {
+	if (autoRefreshTimer != null) return
+	autoRefreshTimer = setInterval(() => {
+		if (hasActiveBookings()) {
+			const fn = fetchBookingsRef.value
+			if (fn != null) fn(true)
+		} else {
+			clearAutoRefresh()
+		}
+	}, 60000)
 }
 
 const fetchBookings = (fromPullRefresh: boolean) => {
 	const userIdStorage = uni.getStorageSync('userId')
+	console.log('[orders] uni.getStorageSync("userId") =', userIdStorage)
 	const tokenStorage = uni.getStorageSync('token')
 	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
 	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
@@ -168,9 +246,10 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 		isLoading.value = true
 	}
 	loadError.value = ''
+	currentPage.value = 1
 
 	uni.request({
-		url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=' + PAGE_SIZE,
 		method: 'GET',
 		header: {
 			'Content-Type': 'application/json',
@@ -181,20 +260,13 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 				const responseData = res.data
 				if (responseData != null && typeof responseData === 'object') {
 					const obj = responseData as UTSJSONObject
-					let arr: any[] = []
-					if (obj['data'] != null && Array.isArray(obj['data'])) {
-						arr = obj['data'] as any[]
-					} else if (Array.isArray(responseData)) {
-						arr = responseData as any[]
-					}
-					const list: Booking[] = []
-					for (let i = 0; i < arr.length; i++) {
-						const item = arr[i] as UTSJSONObject
-						list.push(parseApiBooking(item, i))
-					}
+					const { list, totalCount } = applyBookingsResponse(obj)
 					bookings.value = list
+					total.value = totalCount
+					if (hasActiveBookings()) startAutoRefresh()
 				} else {
 					bookings.value = []
+					total.value = 0
 				}
 			} else {
 				loadError.value = 'Failed to load bookings (HTTP ' + res.statusCode + ')'
@@ -211,6 +283,44 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 	})
 }
 
+fetchBookingsRef.value = fetchBookings
+
+const loadMore = () => {
+	const userIdStorage = uni.getStorageSync('userId')
+	const tokenStorage = uni.getStorageSync('token')
+	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
+	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	if (userId == null || token == null || loadingMore.value || !hasMore.value) return
+
+	loadingMore.value = true
+	const nextPage = currentPage.value + 1
+
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=' + nextPage + '&size=' + PAGE_SIZE,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const responseData = res.data
+				if (responseData != null && typeof responseData === 'object') {
+					const obj = responseData as UTSJSONObject
+					const { list, totalCount } = applyBookingsResponse(obj)
+					bookings.value = bookings.value.concat(list)
+					total.value = totalCount
+					currentPage.value = nextPage
+				}
+			}
+		},
+		fail: () => {},
+		complete: () => {
+			loadingMore.value = false
+		}
+	})
+}
+
 const onPullRefresh = () => {
 	isRefreshing.value = true
 	fetchBookings(true)
@@ -218,9 +328,38 @@ const onPullRefresh = () => {
 
 const canCancel = (status: string | null): boolean => {
 	if (status == null || status.length === 0) return true
-	const s = status.toUpperCase()
+	const s = ('' + status).trim().toUpperCase()
 	if (s === 'CANCELLED' || s === 'COMPLETED') return false
 	return true
+}
+
+const isCompleted = (status: string | null): boolean => {
+	if (status == null || status.length === 0) return false
+	const s = ('' + status).trim().toUpperCase()
+	return s == 'COMPLETED'
+}
+
+const isCancelled = (status: string | null): boolean => {
+	if (status == null || status.length === 0) return false
+	const s = ('' + status).trim().toUpperCase()
+	return s == 'CANCELLED' || s == 'CANCELED'
+}
+
+const hasRoute = (booking: Booking): boolean => {
+	const slat = booking.startLat
+	const slng = booking.startLng
+	const elat = booking.endLat
+	const elng = booking.endLng
+	return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng)
+}
+
+const goToRoute = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length === 0) {
+		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		return
+	}
+	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
 }
 
 const cancelOrder = (booking: Booking) => {
@@ -241,32 +380,92 @@ const cancelOrder = (booking: Booking) => {
 		success: (res) => {
 			const confirm = res.confirm === true
 			if (confirm) {
-				uni.request({
-					url: BASE_URL + '/api/v1/bookings/' + bid,
-					method: 'DELETE',
-					header: {
-						'Content-Type': 'application/json',
-						'Authorization': 'Bearer ' + token
-					},
-					success: (resp) => {
-						if (resp.statusCode >= 200 && resp.statusCode < 300) {
-							uni.showToast({ title: 'Order cancelled', icon: 'success' })
-							fetchBookings(false)
-						} else {
-							let msg = 'Failed to cancel'
-							const data = resp.data as UTSJSONObject | null
-							if (data !== null && data['message'] !== null) {
-								msg = '' + data['message']
-							}
-							uni.showToast({ title: msg, icon: 'none', duration: 3000 })
-						}
-					},
-					fail: (err) => {
-						uni.showToast({ title: 'Network error', icon: 'none' })
-						console.error('Cancel booking failed:', err)
+				const doCancel = (endLatVal: number | null, endLngVal: number | null) => {
+					const body: UTSJSONObject = {}
+					if (endLatVal != null && endLngVal != null) {
+						body['endLat'] = endLatVal
+						body['endLng'] = endLngVal
 					}
+					uni.request({
+						url: BASE_URL + '/api/v1/bookings/' + bid,
+						method: 'DELETE',
+						data: body,
+						header: {
+							'Content-Type': 'application/json',
+							'Authorization': 'Bearer ' + token
+						},
+						success: (resp) => {
+							if (resp.statusCode >= 200 && resp.statusCode < 300) {
+								uni.showToast({ title: 'Order cancelled', icon: 'success' })
+								fetchBookings(false)
+							} else {
+								let msg = 'Failed to cancel'
+								const data = resp.data as UTSJSONObject | null
+								if (data !== null && data['message'] !== null) {
+									msg = '' + data['message']
+								}
+								uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+							}
+						},
+						fail: (err) => {
+							uni.showToast({ title: 'Network error', icon: 'none' })
+							console.error('Cancel booking failed:', err)
+						}
+					})
+				}
+				uni.getLocation({
+					type: 'gcj02',
+					success: (loc) => { doCancel(loc.latitude, loc.longitude) },
+					fail: () => { doCancel(null, null) }
 				})
 			}
+		}
+	})
+}
+
+const endRide = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length === 0) {
+		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		return
+	}
+	const tokenRaw = uni.getStorageSync('token')
+	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
+	if (token === '') {
+		uni.showToast({ title: 'Please login again', icon: 'none' })
+		return
+	}
+	uni.getLocation({
+		type: 'gcj02',
+		success: (loc) => {
+			uni.request({
+				url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
+				method: 'PATCH',
+				data: { endLat: loc.latitude, endLng: loc.longitude },
+				header: {
+					'Content-Type': 'application/json',
+					'Authorization': 'Bearer ' + token
+				},
+				success: (resp) => {
+					if (resp.statusCode >= 200 && resp.statusCode < 300) {
+						uni.showToast({ title: 'Ride ended', icon: 'success' })
+						fetchBookings(false)
+					} else {
+						let msg = 'Failed to end ride'
+						const data = resp.data as UTSJSONObject | null
+						if (data != null && data['message'] != null) {
+							msg = '' + data['message']
+						}
+						uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+					}
+				},
+				fail: () => {
+					uni.showToast({ title: 'Network error', icon: 'none' })
+				}
+			})
+		},
+		fail: () => {
+			uni.showToast({ title: 'Location unavailable, cannot end ride', icon: 'none' })
 		}
 	})
 }
@@ -302,12 +501,16 @@ onShow(() => {
 		fetchBookings(false)
 	}
 })
+
+onHide(() => {
+	clearAutoRefresh()
+})
 </script>
 
 <style lang="scss">
 .container {
 	width: 100%;
-	height: 100vh;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
 	background-color: #f5f5f5;
@@ -382,7 +585,8 @@ onShow(() => {
 .error-text {
 	font-size: 14px;
 	color: #f44336;
-	display: block;
+	display: flex;
+	flex-direction: column;
 	margin-bottom: 16px;
 }
 
@@ -434,13 +638,32 @@ onShow(() => {
 .bookings-list {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+}
+
+.load-more-wrap {
+	margin-top: 8px;
+	margin-bottom: 24px;
+	text-align: center;
+}
+
+.load-more-btn {
+	padding: 10px 28px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+}
+
+.load-more-btn-disabled {
+	opacity: 0.7;
 }
 
 .booking-card {
 	background-color: white;
 	border-radius: 12px;
 	padding: 16px;
+	margin-bottom: 16px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -497,7 +720,6 @@ onShow(() => {
 .card-body {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
 }
 
 .card-actions {
@@ -506,6 +728,20 @@ onShow(() => {
 	border-top-width: 1px;
 	border-top-style: solid;
 	border-top-color: #eee;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.end-ride-btn {
+	width: 100%;
+	padding: 10px 16px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
 }
 
 .cancel-order-btn {
@@ -519,11 +755,24 @@ onShow(() => {
 	font-weight: bold;
 }
 
+.view-route-btn {
+	width: 100%;
+	padding: 10px 16px;
+	background-color: #2196F3;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+	margin-top: 8px;
+}
+
 .detail-row {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
 	font-size: 14px;
+	margin-bottom: 6px;
 }
 
 .detail-row .label {
@@ -532,6 +781,6 @@ onShow(() => {
 
 .detail-row .value {
 	color: #333;
-	font-weight: 500;
+	font-weight: 400;
 }
 </style>

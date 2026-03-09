@@ -156,12 +156,19 @@ open class GenPagesAdminRevenue : BasePage {
                         }
                     }
                     ,
-                    _cE("button", _uM("class" to "reload-btn", "disabled" to isLoading.value, "onClick" to loadData), _tD(if (isLoading.value) {
+                    _cE("button", _uM("class" to _nC(_uA(
+                        "reload-btn",
+                        if (isLoading.value) {
+                            "reload-btn-disabled"
+                        } else {
+                            ""
+                        }
+                    )), "disabled" to isLoading.value, "onClick" to loadData), _tD(if (isLoading.value) {
                         "Loading..."
                     } else {
                         "Reload"
                     }
-                    ), 9, _uA(
+                    ), 11, _uA(
                         "disabled"
                     ))
                 ))
@@ -176,7 +183,7 @@ open class GenPagesAdminRevenue : BasePage {
         }
         val styles0: Map<String, Map<String, Map<String, Any>>>
             get() {
-                return _uM("container" to _pS(_uM("display" to "flex", "flexDirection" to "column", "paddingTop" to 24, "paddingRight" to 24, "paddingBottom" to 24, "paddingLeft" to 24, "backgroundColor" to "#f5f5f5")), "title-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 24)), "title-text" to _pS(_uM("fontSize" to 22, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "hint-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "card" to _pS(_uM("backgroundColor" to "#ffffff", "borderTopLeftRadius" to 12, "borderTopRightRadius" to 12, "borderBottomRightRadius" to 12, "borderBottomLeftRadius" to 12, "paddingTop" to 20, "paddingRight" to 20, "paddingBottom" to 20, "paddingLeft" to 20, "boxShadow" to "0 2px 8px rgba(0, 0, 0, 0.08)", "marginBottom" to 24)), "row" to _pS(_uM("display" to "flex", "flexDirection" to "row", "justifyContent" to "space-between", "alignItems" to "center", "marginBottom" to 12, "marginBottom:last-child" to 0)), "row-left" to _pS(_uM("display" to "flex", "flexDirection" to "column")), "duration-text" to _pS(_uM("fontSize" to 16, "fontWeight" to "bold", "color" to "#333333")), "orders-text" to _pS(_uM("fontSize" to 12, "color" to "#666666", "marginTop" to 4)), "revenue-text" to _pS(_uM("fontSize" to 16, "fontWeight" to "bold", "color" to "#4CAF50")), "loading-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "empty-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "reload-btn" to _pS(_uM("paddingTop" to 14, "paddingRight" to 14, "paddingBottom" to 14, "paddingLeft" to 14, "backgroundColor" to "#4CAF50", "color" to "#ffffff", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "borderTopWidth" to 0, "borderRightWidth" to 0, "borderBottomWidth" to 0, "borderLeftWidth" to 0, "fontSize" to 16, "fontWeight" to "bold")))
+                return _uM("container" to _pS(_uM("display" to "flex", "flexDirection" to "column", "paddingTop" to 24, "paddingRight" to 24, "paddingBottom" to 24, "paddingLeft" to 24, "backgroundColor" to "#f5f5f5", "minHeight" to 750)), "title-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 24)), "title-text" to _pS(_uM("fontSize" to 22, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "hint-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "card" to _pS(_uM("backgroundColor" to "#ffffff", "borderTopLeftRadius" to 12, "borderTopRightRadius" to 12, "borderBottomRightRadius" to 12, "borderBottomLeftRadius" to 12, "paddingTop" to 20, "paddingRight" to 20, "paddingBottom" to 20, "paddingLeft" to 20, "boxShadow" to "0 2px 8px rgba(0, 0, 0, 0.08)", "marginBottom" to 24)), "row" to _pS(_uM("display" to "flex", "flexDirection" to "row", "justifyContent" to "space-between", "alignItems" to "center", "marginBottom" to 12, "marginBottom:last-child" to 0)), "row-left" to _pS(_uM("display" to "flex", "flexDirection" to "column")), "duration-text" to _pS(_uM("fontSize" to 16, "fontWeight" to "bold", "color" to "#333333")), "orders-text" to _pS(_uM("fontSize" to 12, "color" to "#666666", "marginTop" to 4)), "revenue-text" to _pS(_uM("fontSize" to 16, "fontWeight" to "bold", "color" to "#4CAF50")), "loading-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "empty-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "reload-btn" to _pS(_uM("paddingTop" to 14, "paddingRight" to 14, "paddingBottom" to 14, "paddingLeft" to 14, "backgroundColor" to "#4CAF50", "color" to "#ffffff", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "borderTopWidth" to 0, "borderRightWidth" to 0, "borderBottomWidth" to 0, "borderLeftWidth" to 0, "fontSize" to 16, "fontWeight" to "bold")), "reload-btn-disabled" to _pS(_uM("backgroundColor" to "#cccccc")))
             }
         var inheritAttrs = true
         var inject: Map<String, Map<String, Any?>> = _uM()

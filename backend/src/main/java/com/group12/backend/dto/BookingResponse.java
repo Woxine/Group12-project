@@ -10,6 +10,10 @@ public class BookingResponse {
     private String endTime;
     private String duration;
     private Double totalPrice;
+    private Double startLat;
+    private Double startLng;
+    private Double endLat;
+    private Double endLng;
 
     public BookingResponse() {
     }
@@ -70,5 +74,13 @@ public class BookingResponse {
     public void setDuration(String duration) { this.duration = duration; }
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
+    public Double getStartLat() { return startLat; }
+    public void setStartLat(Double startLat) { this.startLat = startLat; }
+    public Double getStartLng() { return startLng; }
+    public void setStartLng(Double startLng) { this.startLng = startLng; }
+    public Double getEndLat() { return endLat; }
+    public void setEndLat(Double endLat) { this.endLat = endLat; }
+    public Double getEndLng() { return endLng; }
+    public void setEndLng(Double endLng) { this.endLng = endLng; }
 }
 

@@ -1,8 +1,5 @@
 package com.group12.backend.controller;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +10,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.group12.backend.dto.BookingResponse;
 import com.group12.backend.dto.RegisterRequest;
 import com.group12.backend.service.UserService;
 
@@ -27,21 +24,6 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-
-    private static Map<String, Object> bookingToMap(BookingResponse r) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", r.getId());
-        m.put("scooterId", r.getScooterId());
-        m.put("userId", r.getUserId());
-        m.put("status", r.getStatus());
-        m.put("startTime", r.getStartTime());
-        m.put("endTime", r.getEndTime());
-        m.put("duration", r.getDuration());
-        m.put("total_price", r.getTotalPrice());
-        m.put("price", r.getTotalPrice());
-        m.put("createdAt", r.getCreatedAt());
-        return m;
-    }
 
     // API-002
     /**
@@ -55,19 +37,25 @@ public class UserController {
 
     // API-005
     /**
-     * 获取用户历史订单
-     * 查询指定用户的预订记录（转为 Map 列表避免 Jackson 序列化 BookingResponse 报错）
+     * 获取用户历史订单（分页，每页默认 10 条）
+     * 查询指定用户的预订记录
      */
     @GetMapping("/{userId}/bookings")
-    public ResponseEntity<Object> getHistory(@PathVariable String userId) {
-        List<Object> raw = userService.getUserBookings(userId);
-        List<Map<String, Object>> data = new ArrayList<>();
-        for (Object o : raw) {
-            if (o instanceof BookingResponse) {
-                data.add(bookingToMap((BookingResponse) o));
-            }
-        }
-        return ResponseEntity.ok(Map.of("data", data));
+    public ResponseEntity<Object> getHistory(
+            @PathVariable String userId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(userService.getUserBookings(userId, page, size));
+    }
+
+    /**
+     * Get a single booking by id (for route page). Returns 404 if not owner.
+     */
+    @GetMapping("/{userId}/bookings/{bookingId}")
+    public ResponseEntity<Object> getBookingById(
+            @PathVariable String userId,
+            @PathVariable String bookingId) {
+        return ResponseEntity.ok(userService.getBookingById(userId, bookingId));
     }
 
     // API-012

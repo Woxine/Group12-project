@@ -71,6 +71,12 @@
 			"style": {
 				"navigationBarTitleText": "Admin"
 			}
+		},
+		{
+			"path": "pages/orders/route",
+			"style": {
+				"navigationBarTitleText": "route"
+			}
 		}
 	],
 	"globalStyle": {

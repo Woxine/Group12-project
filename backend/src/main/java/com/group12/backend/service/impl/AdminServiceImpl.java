@@ -96,9 +96,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private static String toDurationType(Double hours) {
-        if (hours == null || hours <= 1.0) {
-            return "1H";
-        }
+        if (hours == null) return "1H";
+        if (hours > 0 && hours <= 10.0 / 60.0 + 0.01) return "10M";
+        if (hours <= 1.0) return "1H";
         if (hours <= 4.0) {
             return "4H";
         }

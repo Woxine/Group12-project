@@ -34,7 +34,7 @@ public class BookingServiceImpl implements BookingService {
     public Object createBooking(CreateBookingRequest request) {
         Long userId = Long.parseLong(request.getUser_id());
         Long scooterId = Long.parseLong(request.getScooter_id());
-        String durationRequest = request.getDuration(); // 1H, 4H, 1D, 1W
+        String durationRequest = request.getDuration(); // 10M, 1H, 4H, 1D, 1W
 
         // 1. 校验用户
         User user = userRepository.findById(userId)
@@ -60,20 +60,25 @@ public class BookingServiceImpl implements BookingService {
         LocalDateTime endTime;
         Double durationHours;
         
-        if ("1H".equalsIgnoreCase(durationRequest)) {
+        if ("10M".equalsIgnoreCase(durationRequest)) {
+            durationHours = 10.0 / 60.0;
+            endTime = startTime.plusMinutes(10);
+        } else if ("1H".equalsIgnoreCase(durationRequest)) {
             durationHours = 1.0;
+            endTime = startTime.plusHours(1);
         } else if ("4H".equalsIgnoreCase(durationRequest)) {
             durationHours = 4.0;
+            endTime = startTime.plusHours(4);
         } else if ("1D".equalsIgnoreCase(durationRequest)) {
             durationHours = 24.0;
+            endTime = startTime.plusHours(24);
         } else if ("1W".equalsIgnoreCase(durationRequest)) {
             durationHours = 168.0;
+            endTime = startTime.plusHours(168);
         } else {
-            // 默认 1 小时 或者 抛出异常
-            durationHours = 1.0; 
+            durationHours = 1.0;
+            endTime = startTime.plusHours(1);
         }
-        
-        endTime = startTime.plusHours(durationHours.longValue());
         
         // 计算总价 (这里假设 hourRate 是每小时单价)
         java.math.BigDecimal rate = scooter.getHourRate();
@@ -88,7 +93,9 @@ public class BookingServiceImpl implements BookingService {
         booking.setDurationHours(durationHours);
         booking.setTotalPrice(totalPrice);
         booking.setStatus("CONFIRMED"); // 初始状态为已确认
-        
+        if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
+        if (request.getStartLng() != null) booking.setStartLng(request.getStartLng());
+
         Booking savedBooking = bookingRepository.save(booking);
 
         // 7. 更新车辆状态为占用
@@ -109,7 +116,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public Object cancelBooking(String bookingId) {
+    public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
@@ -120,9 +127,11 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Cannot cancel booking with status: " + booking.getStatus());
         }
 
-        // 更新订单状态
+        // 更新订单状态，记录终点位置（用于路线展示）
         booking.setStatus("CANCELLED");
         booking.setEndTime(LocalDateTime.now());
+        if (endLat != null) booking.setEndLat(endLat);
+        if (endLng != null) booking.setEndLng(endLng);
         bookingRepository.save(booking);
 
         // 释放车辆
@@ -131,5 +140,25 @@ public class BookingServiceImpl implements BookingService {
         scooterRepository.save(scooter);
 
         return "Booking cancelled successfully";
+    }
+
+    @Override
+    @Transactional
+    public Object completeBooking(String bookingId, Double endLat, Double endLng) {
+        Long id = Long.parseLong(bookingId);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        if (!"CONFIRMED".equals(booking.getStatus())) {
+            throw new RuntimeException("Cannot complete booking with status: " + booking.getStatus());
+        }
+        booking.setStatus("COMPLETED");
+        booking.setEndTime(LocalDateTime.now());
+        if (endLat != null) booking.setEndLat(endLat);
+        if (endLng != null) booking.setEndLng(endLng);
+        bookingRepository.save(booking);
+        Scooter scooter = booking.getScooter();
+        scooter.setStatus("AVAILABLE");
+        scooterRepository.save(scooter);
+        return "Booking completed successfully";
     }
 }

@@ -32,6 +32,7 @@ import GenPagesPaymentPaymentClass from './pages/payment/payment.uvue';
 import GenPagesAdminModifyClass from './pages/admin/modify.uvue';
 import GenPagesAdminHomeClass from './pages/admin/home.uvue';
 import GenPagesAdminRevenueClass from './pages/admin/revenue.uvue';
+import GenPagesOrdersRouteClass from './pages/orders/route.uvue';
 function definePageRoutes() {
     __uniRoutes.push({ path: "pages/index/index", component: GenPagesIndexIndexClass, meta: { isQuit: true } as UniPageMeta, style: _uM([["navigationBarTitleText", "uni-app x"]]) } as UniPageRoute);
     __uniRoutes.push({ path: "pages/bikelist/bikelist", component: GenPagesBikelistBikelistClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "bikelist"]]) } as UniPageRoute);
@@ -45,6 +46,7 @@ function definePageRoutes() {
     __uniRoutes.push({ path: "pages/admin/modify", component: GenPagesAdminModifyClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
     __uniRoutes.push({ path: "pages/admin/home", component: GenPagesAdminHomeClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
     __uniRoutes.push({ path: "pages/admin/revenue", component: GenPagesAdminRevenueClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "Admin"]]) } as UniPageRoute);
+    __uniRoutes.push({ path: "pages/orders/route", component: GenPagesOrdersRouteClass, meta: { isQuit: false } as UniPageMeta, style: _uM([["navigationBarTitleText", "route"]]) } as UniPageRoute);
 }
 const __uniTabBar: Map<string, any | null> | null = null;
 const __uniLaunchPage: Map<string, any | null> = _uM([["url", "pages/index/index"], ["style", _uM([["navigationBarTitleText", "uni-app x"]])]]);

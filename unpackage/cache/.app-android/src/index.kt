@@ -66,9 +66,9 @@ fun tryConnectSocket(host: String, port: String, id: String): UTSPromise<SocketT
     )
 }
 fun initRuntimeSocketService(): UTSPromise<Boolean> {
-    val hosts: String = "10.69.22.172,192.168.133.1,192.168.30.1,192.168.31.214,127.0.0.1"
+    val hosts: String = "10.69.22.172,172.20.10.2,192.168.133.1,192.168.30.1,127.0.0.1"
     val port: String = "8090"
-    val id: String = "app-android_zPOv8G"
+    val id: String = "app-android__BrB3T"
     if (hosts == "" || port == "" || id == "") {
         return UTSPromise.resolve(false)
     }
@@ -151,195 +151,7 @@ val GenAppClass = CreateVueAppComponent(GenApp::class.java, fun(): VueComponentO
     return GenApp(instance)
 }
 )
-open class AnchorPoint (
-    @JsonNotNull
-    open var x: Number,
-    @JsonNotNull
-    open var y: Number,
-) : UTSReactiveObject(), IUTSSourceMap {
-    override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
-        return UTSSourceMapPosition("AnchorPoint", "pages/index/index.uvue", 58, 7)
-    }
-    override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
-        return AnchorPointReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
-    }
-}
-class AnchorPointReactiveObject : AnchorPoint, IUTSReactive<AnchorPoint> {
-    override var __v_raw: AnchorPoint
-    override var __v_isReadonly: Boolean
-    override var __v_isShallow: Boolean
-    override var __v_skip: Boolean
-    constructor(__v_raw: AnchorPoint, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(x = __v_raw.x, y = __v_raw.y) {
-        this.__v_raw = __v_raw
-        this.__v_isReadonly = __v_isReadonly
-        this.__v_isShallow = __v_isShallow
-        this.__v_skip = __v_skip
-    }
-    override fun __v_clone(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): AnchorPointReactiveObject {
-        return AnchorPointReactiveObject(this.__v_raw, __v_isReadonly, __v_isShallow, __v_skip)
-    }
-    override var x: Number
-        get() {
-            return _tRG(__v_raw, "x", __v_raw.x, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("x")) {
-                return
-            }
-            val oldValue = __v_raw.x
-            __v_raw.x = value
-            _tRS(__v_raw, "x", oldValue, value)
-        }
-    override var y: Number
-        get() {
-            return _tRG(__v_raw, "y", __v_raw.y, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("y")) {
-                return
-            }
-            val oldValue = __v_raw.y
-            __v_raw.y = value
-            _tRS(__v_raw, "y", oldValue, value)
-        }
-}
-open class Marker (
-    @JsonNotNull
-    open var id: Number,
-    @JsonNotNull
-    open var longitude: Number,
-    @JsonNotNull
-    open var latitude: Number,
-    @JsonNotNull
-    open var title: String,
-    @JsonNotNull
-    open var iconPath: String,
-    @JsonNotNull
-    open var width: Number,
-    @JsonNotNull
-    open var height: Number,
-    @JsonNotNull
-    open var anchor: AnchorPoint,
-) : UTSReactiveObject(), IUTSSourceMap {
-    override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
-        return UTSSourceMapPosition("Marker", "pages/index/index.uvue", 63, 7)
-    }
-    override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
-        return MarkerReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
-    }
-}
-class MarkerReactiveObject : Marker, IUTSReactive<Marker> {
-    override var __v_raw: Marker
-    override var __v_isReadonly: Boolean
-    override var __v_isShallow: Boolean
-    override var __v_skip: Boolean
-    constructor(__v_raw: Marker, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(id = __v_raw.id, longitude = __v_raw.longitude, latitude = __v_raw.latitude, title = __v_raw.title, iconPath = __v_raw.iconPath, width = __v_raw.width, height = __v_raw.height, anchor = __v_raw.anchor) {
-        this.__v_raw = __v_raw
-        this.__v_isReadonly = __v_isReadonly
-        this.__v_isShallow = __v_isShallow
-        this.__v_skip = __v_skip
-    }
-    override fun __v_clone(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): MarkerReactiveObject {
-        return MarkerReactiveObject(this.__v_raw, __v_isReadonly, __v_isShallow, __v_skip)
-    }
-    override var id: Number
-        get() {
-            return _tRG(__v_raw, "id", __v_raw.id, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("id")) {
-                return
-            }
-            val oldValue = __v_raw.id
-            __v_raw.id = value
-            _tRS(__v_raw, "id", oldValue, value)
-        }
-    override var longitude: Number
-        get() {
-            return _tRG(__v_raw, "longitude", __v_raw.longitude, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("longitude")) {
-                return
-            }
-            val oldValue = __v_raw.longitude
-            __v_raw.longitude = value
-            _tRS(__v_raw, "longitude", oldValue, value)
-        }
-    override var latitude: Number
-        get() {
-            return _tRG(__v_raw, "latitude", __v_raw.latitude, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("latitude")) {
-                return
-            }
-            val oldValue = __v_raw.latitude
-            __v_raw.latitude = value
-            _tRS(__v_raw, "latitude", oldValue, value)
-        }
-    override var title: String
-        get() {
-            return _tRG(__v_raw, "title", __v_raw.title, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("title")) {
-                return
-            }
-            val oldValue = __v_raw.title
-            __v_raw.title = value
-            _tRS(__v_raw, "title", oldValue, value)
-        }
-    override var iconPath: String
-        get() {
-            return _tRG(__v_raw, "iconPath", __v_raw.iconPath, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("iconPath")) {
-                return
-            }
-            val oldValue = __v_raw.iconPath
-            __v_raw.iconPath = value
-            _tRS(__v_raw, "iconPath", oldValue, value)
-        }
-    override var width: Number
-        get() {
-            return _tRG(__v_raw, "width", __v_raw.width, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("width")) {
-                return
-            }
-            val oldValue = __v_raw.width
-            __v_raw.width = value
-            _tRS(__v_raw, "width", oldValue, value)
-        }
-    override var height: Number
-        get() {
-            return _tRG(__v_raw, "height", __v_raw.height, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("height")) {
-                return
-            }
-            val oldValue = __v_raw.height
-            __v_raw.height = value
-            _tRS(__v_raw, "height", oldValue, value)
-        }
-    override var anchor: AnchorPoint
-        get() {
-            return _tRG(__v_raw, "anchor", __v_raw.anchor, __v_isReadonly, __v_isShallow)
-        }
-        set(value) {
-            if (!__v_canSet("anchor")) {
-                return
-            }
-            val oldValue = __v_raw.anchor
-            __v_raw.anchor = value
-            _tRS(__v_raw, "anchor", oldValue, value)
-        }
-}
-typealias MapContext = Any
+val BASE_URL = "http://172.20.10.2:8080"
 val GenPagesIndexIndexClass = CreateVueComponent(GenPagesIndexIndex::class.java, fun(): VueComponentOptions {
     return VueComponentOptions(type = "page", name = "", inheritAttrs = GenPagesIndexIndex.inheritAttrs, inject = GenPagesIndexIndex.inject, props = GenPagesIndexIndex.props, propsNeedCastKeys = GenPagesIndexIndex.propsNeedCastKeys, emits = GenPagesIndexIndex.emits, components = GenPagesIndexIndex.components, styles = GenPagesIndexIndex.styles, setup = fun(props: ComponentPublicInstance): Any? {
         return GenPagesIndexIndex.setup(props as GenPagesIndexIndex)
@@ -350,7 +162,6 @@ val GenPagesIndexIndexClass = CreateVueComponent(GenPagesIndexIndex::class.java,
     return GenPagesIndexIndex(instance, renderer)
 }
 )
-val BASE_URL = "http://192.168.31.214:8080"
 open class Scooter (
     @JsonNotNull
     open var id: String,
@@ -765,9 +576,13 @@ open class Booking (
     open var price: Number,
     @JsonNotNull
     open var status: String,
+    open var startLat: Number? = null,
+    open var startLng: Number? = null,
+    open var endLat: Number? = null,
+    open var endLng: Number? = null,
 ) : UTSReactiveObject(), IUTSSourceMap {
     override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
-        return UTSSourceMapPosition("Booking", "pages/orders/orders.uvue", 87, 6)
+        return UTSSourceMapPosition("Booking", "pages/orders/orders.uvue", 97, 6)
     }
     override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
         return BookingReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
@@ -778,7 +593,7 @@ class BookingReactiveObject : Booking, IUTSReactive<Booking> {
     override var __v_isReadonly: Boolean
     override var __v_isShallow: Boolean
     override var __v_skip: Boolean
-    constructor(__v_raw: Booking, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(id = __v_raw.id, scooterId = __v_raw.scooterId, duration = __v_raw.duration, startTime = __v_raw.startTime, endTime = __v_raw.endTime, price = __v_raw.price, status = __v_raw.status) {
+    constructor(__v_raw: Booking, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(id = __v_raw.id, scooterId = __v_raw.scooterId, duration = __v_raw.duration, startTime = __v_raw.startTime, endTime = __v_raw.endTime, price = __v_raw.price, status = __v_raw.status, startLat = __v_raw.startLat, startLng = __v_raw.startLng, endLat = __v_raw.endLat, endLng = __v_raw.endLng) {
         this.__v_raw = __v_raw
         this.__v_isReadonly = __v_isReadonly
         this.__v_isShallow = __v_isShallow
@@ -871,6 +686,64 @@ class BookingReactiveObject : Booking, IUTSReactive<Booking> {
             __v_raw.status = value
             _tRS(__v_raw, "status", oldValue, value)
         }
+    override var startLat: Number?
+        get() {
+            return _tRG(__v_raw, "startLat", __v_raw.startLat, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("startLat")) {
+                return
+            }
+            val oldValue = __v_raw.startLat
+            __v_raw.startLat = value
+            _tRS(__v_raw, "startLat", oldValue, value)
+        }
+    override var startLng: Number?
+        get() {
+            return _tRG(__v_raw, "startLng", __v_raw.startLng, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("startLng")) {
+                return
+            }
+            val oldValue = __v_raw.startLng
+            __v_raw.startLng = value
+            _tRS(__v_raw, "startLng", oldValue, value)
+        }
+    override var endLat: Number?
+        get() {
+            return _tRG(__v_raw, "endLat", __v_raw.endLat, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("endLat")) {
+                return
+            }
+            val oldValue = __v_raw.endLat
+            __v_raw.endLat = value
+            _tRS(__v_raw, "endLat", oldValue, value)
+        }
+    override var endLng: Number?
+        get() {
+            return _tRG(__v_raw, "endLng", __v_raw.endLng, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("endLng")) {
+                return
+            }
+            val oldValue = __v_raw.endLng
+            __v_raw.endLng = value
+            _tRS(__v_raw, "endLng", oldValue, value)
+        }
+}
+open class BookingsResult (
+    @JsonNotNull
+    open var list: UTSArray<Booking>,
+    @JsonNotNull
+    open var totalCount: Number,
+) : UTSObject(), IUTSSourceMap {
+    override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
+        return UTSSourceMapPosition("BookingsResult", "pages/orders/orders.uvue", 111, 6)
+    }
 }
 val GenPagesOrdersOrdersClass = CreateVueComponent(GenPagesOrdersOrders::class.java, fun(): VueComponentOptions {
     return VueComponentOptions(type = "page", name = "", inheritAttrs = GenPagesOrdersOrders.inheritAttrs, inject = GenPagesOrdersOrders.inject, props = GenPagesOrdersOrders.props, propsNeedCastKeys = GenPagesOrdersOrders.propsNeedCastKeys, emits = GenPagesOrdersOrders.emits, components = GenPagesOrdersOrders.components, styles = GenPagesOrdersOrders.styles, setup = fun(props: ComponentPublicInstance): Any? {
@@ -903,7 +776,7 @@ open class PaymentInfo (
     open var alipayPassword: String,
 ) : UTSReactiveObject(), IUTSSourceMap {
     override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
-        return UTSSourceMapPosition("PaymentInfo", "pages/payment/payment.uvue", 163, 6)
+        return UTSSourceMapPosition("PaymentInfo", "pages/payment/payment.uvue", 162, 6)
     }
     override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
         return PaymentInfoReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
@@ -992,6 +865,58 @@ val GenPagesAdminModifyClass = CreateVueComponent(GenPagesAdminModify::class.jav
     return GenPagesAdminModify(instance, renderer)
 }
 )
+open class LocationPoint (
+    @JsonNotNull
+    open var latitude: Number,
+    @JsonNotNull
+    open var longitude: Number,
+) : UTSReactiveObject(), IUTSSourceMap {
+    override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
+        return UTSSourceMapPosition("LocationPoint", "pages/admin/home.uvue", 31, 6)
+    }
+    override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
+        return LocationPointReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
+    }
+}
+class LocationPointReactiveObject : LocationPoint, IUTSReactive<LocationPoint> {
+    override var __v_raw: LocationPoint
+    override var __v_isReadonly: Boolean
+    override var __v_isShallow: Boolean
+    override var __v_skip: Boolean
+    constructor(__v_raw: LocationPoint, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(latitude = __v_raw.latitude, longitude = __v_raw.longitude) {
+        this.__v_raw = __v_raw
+        this.__v_isReadonly = __v_isReadonly
+        this.__v_isShallow = __v_isShallow
+        this.__v_skip = __v_skip
+    }
+    override fun __v_clone(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): LocationPointReactiveObject {
+        return LocationPointReactiveObject(this.__v_raw, __v_isReadonly, __v_isShallow, __v_skip)
+    }
+    override var latitude: Number
+        get() {
+            return _tRG(__v_raw, "latitude", __v_raw.latitude, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("latitude")) {
+                return
+            }
+            val oldValue = __v_raw.latitude
+            __v_raw.latitude = value
+            _tRS(__v_raw, "latitude", oldValue, value)
+        }
+    override var longitude: Number
+        get() {
+            return _tRG(__v_raw, "longitude", __v_raw.longitude, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("longitude")) {
+                return
+            }
+            val oldValue = __v_raw.longitude
+            __v_raw.longitude = value
+            _tRS(__v_raw, "longitude", oldValue, value)
+        }
+}
 val GenPagesAdminHomeClass = CreateVueComponent(GenPagesAdminHome::class.java, fun(): VueComponentOptions {
     return VueComponentOptions(type = "page", name = "", inheritAttrs = GenPagesAdminHome.inheritAttrs, inject = GenPagesAdminHome.inject, props = GenPagesAdminHome.props, propsNeedCastKeys = GenPagesAdminHome.propsNeedCastKeys, emits = GenPagesAdminHome.emits, components = GenPagesAdminHome.components, styles = GenPagesAdminHome.styles, setup = fun(props: ComponentPublicInstance): Any? {
         return GenPagesAdminHome.setup(props as GenPagesAdminHome)
@@ -1078,6 +1003,68 @@ val GenPagesAdminRevenueClass = CreateVueComponent(GenPagesAdminRevenue::class.j
     return GenPagesAdminRevenue(instance, renderer)
 }
 )
+open class LocationObject (
+    @JsonNotNull
+    open var latitude: Number,
+    @JsonNotNull
+    open var longitude: Number,
+) : UTSReactiveObject(), IUTSSourceMap {
+    override fun `__$getOriginalPosition`(): UTSSourceMapPosition? {
+        return UTSSourceMapPosition("LocationObject", "pages/orders/route.uvue", 52, 6)
+    }
+    override fun __v_create(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): UTSReactiveObject {
+        return LocationObjectReactiveObject(this, __v_isReadonly, __v_isShallow, __v_skip)
+    }
+}
+class LocationObjectReactiveObject : LocationObject, IUTSReactive<LocationObject> {
+    override var __v_raw: LocationObject
+    override var __v_isReadonly: Boolean
+    override var __v_isShallow: Boolean
+    override var __v_skip: Boolean
+    constructor(__v_raw: LocationObject, __v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean) : super(latitude = __v_raw.latitude, longitude = __v_raw.longitude) {
+        this.__v_raw = __v_raw
+        this.__v_isReadonly = __v_isReadonly
+        this.__v_isShallow = __v_isShallow
+        this.__v_skip = __v_skip
+    }
+    override fun __v_clone(__v_isReadonly: Boolean, __v_isShallow: Boolean, __v_skip: Boolean): LocationObjectReactiveObject {
+        return LocationObjectReactiveObject(this.__v_raw, __v_isReadonly, __v_isShallow, __v_skip)
+    }
+    override var latitude: Number
+        get() {
+            return _tRG(__v_raw, "latitude", __v_raw.latitude, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("latitude")) {
+                return
+            }
+            val oldValue = __v_raw.latitude
+            __v_raw.latitude = value
+            _tRS(__v_raw, "latitude", oldValue, value)
+        }
+    override var longitude: Number
+        get() {
+            return _tRG(__v_raw, "longitude", __v_raw.longitude, __v_isReadonly, __v_isShallow)
+        }
+        set(value) {
+            if (!__v_canSet("longitude")) {
+                return
+            }
+            val oldValue = __v_raw.longitude
+            __v_raw.longitude = value
+            _tRS(__v_raw, "longitude", oldValue, value)
+        }
+}
+val GenPagesOrdersRouteClass = CreateVueComponent(GenPagesOrdersRoute::class.java, fun(): VueComponentOptions {
+    return VueComponentOptions(type = "page", name = "", inheritAttrs = GenPagesOrdersRoute.inheritAttrs, inject = GenPagesOrdersRoute.inject, props = GenPagesOrdersRoute.props, propsNeedCastKeys = GenPagesOrdersRoute.propsNeedCastKeys, emits = GenPagesOrdersRoute.emits, components = GenPagesOrdersRoute.components, styles = GenPagesOrdersRoute.styles, setup = fun(props: ComponentPublicInstance): Any? {
+        return GenPagesOrdersRoute.setup(props as GenPagesOrdersRoute)
+    }
+    )
+}
+, fun(instance, renderer): GenPagesOrdersRoute {
+    return GenPagesOrdersRoute(instance, renderer)
+}
+)
 fun createApp(): UTSJSONObject {
     val app = createSSRApp(GenAppClass)
     return _uO("app" to app)
@@ -1108,6 +1095,7 @@ fun definePageRoutes() {
     __uniRoutes.push(UniPageRoute(path = "pages/admin/modify", component = GenPagesAdminModifyClass, meta = UniPageMeta(isQuit = false), style = _uM("navigationBarTitleText" to "Admin")))
     __uniRoutes.push(UniPageRoute(path = "pages/admin/home", component = GenPagesAdminHomeClass, meta = UniPageMeta(isQuit = false), style = _uM("navigationBarTitleText" to "Admin")))
     __uniRoutes.push(UniPageRoute(path = "pages/admin/revenue", component = GenPagesAdminRevenueClass, meta = UniPageMeta(isQuit = false), style = _uM("navigationBarTitleText" to "Admin")))
+    __uniRoutes.push(UniPageRoute(path = "pages/orders/route", component = GenPagesOrdersRouteClass, meta = UniPageMeta(isQuit = false), style = _uM("navigationBarTitleText" to "route")))
 }
 val __uniLaunchPage: Map<String, Any?> = _uM("url" to "pages/index/index", "style" to _uM("navigationBarTitleText" to "uni-app x"))
 fun defineAppConfig() {

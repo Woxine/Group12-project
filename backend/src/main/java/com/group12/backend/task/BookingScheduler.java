@@ -35,8 +35,10 @@ public class BookingScheduler {
         if (!expiredBookings.isEmpty()) {
             System.out.println("BookingScheduler: Found " + expiredBookings.size() + " expired bookings. Processing...");
             for (Booking booking : expiredBookings) {
-                // 1. Update Booking status
+                // 1. Update Booking status; use start location as end if end not set (for route display)
                 booking.setStatus("COMPLETED");
+                if (booking.getEndLat() == null && booking.getStartLat() != null) booking.setEndLat(booking.getStartLat());
+                if (booking.getEndLng() == null && booking.getStartLng() != null) booking.setEndLng(booking.getStartLng());
                 bookingRepository.save(booking);
 
                 // 2. Update Scooter status

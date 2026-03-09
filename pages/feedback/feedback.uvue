@@ -40,7 +40,7 @@
 				<text class="error-text">{{ submitError }}</text>
 			</view>
 
-			<button class="submit-btn" :disabled="isSubmitting" @click="onSubmit">Submit Feedback</button>
+			<button :class="['submit-btn', isSubmitting ? 'submit-btn-disabled' : '']" :disabled="isSubmitting" @click="onSubmit">Submit Feedback</button>
 		</view>
 	</view>
 </template>
@@ -131,7 +131,7 @@ const onSubmit = () => {
 	flex-direction: column;
 	padding: 24px;
 	background-color: #f5f5f5;
-	min-height: 100vh;
+	min-height: 750px;
 }
 
 .title-section {
@@ -226,7 +226,7 @@ const onSubmit = () => {
 	font-weight: bold;
 }
 
-.submit-btn[disabled] {
+.submit-btn-disabled {
 	background-color: #ccc;
 }
 </style>

@@ -56,7 +56,7 @@ open class GenPagesAdminModify : BasePage {
                     uni_showToast(ShowToastOptions(title = "Please login first", icon = "none"))
                     return
                 }
-                val body: UTSJSONObject = object : UTSJSONObject(UTSSourceMapPosition("body", "pages/admin/modify.uvue", 105, 8)) {
+                val body: UTSJSONObject = object : UTSJSONObject(UTSSourceMapPosition("body", "pages/admin/modify.uvue", 107, 8)) {
                 }
                 var hasField = false
                 val statusStr = if (status.value != null) {
@@ -83,8 +83,11 @@ open class GenPagesAdminModify : BasePage {
                     ""
                 }
                 if (latStr.length > 0) {
-                    body["location_lat"] = parseFloat(latStr)
-                    hasField = true
+                    val latNum = parseFloat(latStr)
+                    if (!isNaN(latNum)) {
+                        body["location_lat"] = Math.round(latNum * 1e6) / 1e6
+                        hasField = true
+                    }
                 }
                 val lngStr = if (locationLng.value != null) {
                     locationLng.value.trim()
@@ -92,8 +95,11 @@ open class GenPagesAdminModify : BasePage {
                     ""
                 }
                 if (lngStr.length > 0) {
-                    body["location_lng"] = parseFloat(lngStr)
-                    hasField = true
+                    val lngNum = parseFloat(lngStr)
+                    if (!isNaN(lngNum)) {
+                        body["location_lng"] = Math.round(lngNum * 1e6) / 1e6
+                        hasField = true
+                    }
                 }
                 if (hasField === false) {
                     errorMsg.value = "Please enter at least one field to update"
@@ -170,21 +176,21 @@ open class GenPagesAdminModify : BasePage {
                             ))
                         )),
                         _cE("view", _uM("class" to "form-row"), _uA(
-                            _cE("text", _uM("class" to "label"), "Location Latitude"),
+                            _cE("text", _uM("class" to "label"), "Location Latitude (最多6位小数)"),
                             _cE("input", _uM("class" to "input", "modelValue" to locationLat.value, "onInput" to fun(`$event`: UniInputEvent){
                                 locationLat.value = `$event`.detail.value
                             }
-                            , "placeholder" to "optional", "placeholder-class" to "input-placeholder", "type" to "number"), null, 40, _uA(
+                            , "placeholder" to "e.g. 39.908692", "placeholder-class" to "input-placeholder", "type" to "text", "inputmode" to "decimal"), null, 40, _uA(
                                 "modelValue",
                                 "onInput"
                             ))
                         )),
                         _cE("view", _uM("class" to "form-row"), _uA(
-                            _cE("text", _uM("class" to "label"), "Location Longitude"),
+                            _cE("text", _uM("class" to "label"), "Location Longitude (最多6位小数)"),
                             _cE("input", _uM("class" to "input", "modelValue" to locationLng.value, "onInput" to fun(`$event`: UniInputEvent){
                                 locationLng.value = `$event`.detail.value
                             }
-                            , "placeholder" to "optional", "placeholder-class" to "input-placeholder", "type" to "number"), null, 40, _uA(
+                            , "placeholder" to "e.g. 116.397477", "placeholder-class" to "input-placeholder", "type" to "text", "inputmode" to "decimal"), null, 40, _uA(
                                 "modelValue",
                                 "onInput"
                             ))
@@ -197,12 +203,19 @@ open class GenPagesAdminModify : BasePage {
                             _cC("v-if", true)
                         }
                         ,
-                        _cE("button", _uM("class" to "submit-btn", "disabled" to isSubmitting.value, "onClick" to onSubmit), _tD(if (isSubmitting.value) {
+                        _cE("button", _uM("class" to _nC(_uA(
+                            "submit-btn",
+                            if (isSubmitting.value) {
+                                "submit-btn-disabled"
+                            } else {
+                                ""
+                            }
+                        )), "disabled" to isSubmitting.value, "onClick" to onSubmit), _tD(if (isSubmitting.value) {
                             "Updating..."
                         } else {
                             "Update Scooter"
                         }
-                        ), 9, _uA(
+                        ), 11, _uA(
                             "disabled"
                         ))
                     ))
@@ -218,7 +231,7 @@ open class GenPagesAdminModify : BasePage {
         }
         val styles0: Map<String, Map<String, Map<String, Any>>>
             get() {
-                return _uM("container" to _pS(_uM("display" to "flex", "flexDirection" to "column", "paddingTop" to 24, "paddingRight" to 24, "paddingBottom" to 24, "paddingLeft" to 24, "backgroundColor" to "#f5f5f5")), "title-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 24)), "title-text" to _pS(_uM("fontSize" to 22, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "hint-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "form-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "backgroundColor" to "#FFFFFF", "borderTopLeftRadius" to 12, "borderTopRightRadius" to 12, "borderBottomRightRadius" to 12, "borderBottomLeftRadius" to 12, "paddingTop" to 20, "paddingRight" to 20, "paddingBottom" to 20, "paddingLeft" to 20, "boxShadow" to "0 2px 8px rgba(0, 0, 0, 0.08)")), "form-row" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 16)), "label" to _pS(_uM("fontSize" to 14, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "input" to _pS(_uM("height" to 44, "paddingTop" to 0, "paddingRight" to 12, "paddingBottom" to 0, "paddingLeft" to 12, "borderTopWidth" to 1, "borderRightWidth" to 1, "borderBottomWidth" to 1, "borderLeftWidth" to 1, "borderTopStyle" to "solid", "borderRightStyle" to "solid", "borderBottomStyle" to "solid", "borderLeftStyle" to "solid", "borderTopColor" to "#dddddd", "borderRightColor" to "#dddddd", "borderBottomColor" to "#dddddd", "borderLeftColor" to "#dddddd", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "fontSize" to 14, "backgroundColor" to "#FFFFFF")), "input-placeholder" to _pS(_uM("color" to "#999999")), "error-row" to _pS(_uM("marginBottom" to 12)), "error-text" to _pS(_uM("fontSize" to 14, "color" to "#f44336")), "submit-btn" to _pS(_uM("marginTop" to 8, "paddingTop" to 14, "paddingRight" to 14, "paddingBottom" to 14, "paddingLeft" to 14, "backgroundColor" to "#4CAF50", "color" to "#FFFFFF", "borderTopWidth" to "medium", "borderRightWidth" to "medium", "borderBottomWidth" to "medium", "borderLeftWidth" to "medium", "borderTopStyle" to "none", "borderRightStyle" to "none", "borderBottomStyle" to "none", "borderLeftStyle" to "none", "borderTopColor" to "#000000", "borderRightColor" to "#000000", "borderBottomColor" to "#000000", "borderLeftColor" to "#000000", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "fontSize" to 16, "fontWeight" to "bold")))
+                return _uM("container" to _pS(_uM("display" to "flex", "flexDirection" to "column", "paddingTop" to 24, "paddingRight" to 24, "paddingBottom" to 24, "paddingLeft" to 24, "backgroundColor" to "#f5f5f5", "minHeight" to 750)), "title-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 24)), "title-text" to _pS(_uM("fontSize" to 22, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "hint-text" to _pS(_uM("fontSize" to 14, "color" to "#666666")), "form-section" to _pS(_uM("display" to "flex", "flexDirection" to "column", "backgroundColor" to "#FFFFFF", "borderTopLeftRadius" to 12, "borderTopRightRadius" to 12, "borderBottomRightRadius" to 12, "borderBottomLeftRadius" to 12, "paddingTop" to 20, "paddingRight" to 20, "paddingBottom" to 20, "paddingLeft" to 20, "boxShadow" to "0 2px 8px rgba(0, 0, 0, 0.08)")), "form-row" to _pS(_uM("display" to "flex", "flexDirection" to "column", "marginBottom" to 16)), "label" to _pS(_uM("fontSize" to 14, "fontWeight" to "bold", "color" to "#333333", "marginBottom" to 8)), "input" to _pS(_uM("height" to 44, "paddingTop" to 0, "paddingRight" to 12, "paddingBottom" to 0, "paddingLeft" to 12, "borderTopWidth" to 1, "borderRightWidth" to 1, "borderBottomWidth" to 1, "borderLeftWidth" to 1, "borderTopStyle" to "solid", "borderRightStyle" to "solid", "borderBottomStyle" to "solid", "borderLeftStyle" to "solid", "borderTopColor" to "#dddddd", "borderRightColor" to "#dddddd", "borderBottomColor" to "#dddddd", "borderLeftColor" to "#dddddd", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "fontSize" to 14, "backgroundColor" to "#FFFFFF")), "input-placeholder" to _pS(_uM("color" to "#999999")), "error-row" to _pS(_uM("marginBottom" to 12)), "error-text" to _pS(_uM("fontSize" to 14, "color" to "#f44336")), "submit-btn" to _pS(_uM("marginTop" to 8, "paddingTop" to 14, "paddingRight" to 14, "paddingBottom" to 14, "paddingLeft" to 14, "backgroundColor" to "#4CAF50", "color" to "#FFFFFF", "borderTopWidth" to "medium", "borderRightWidth" to "medium", "borderBottomWidth" to "medium", "borderLeftWidth" to "medium", "borderTopStyle" to "none", "borderRightStyle" to "none", "borderBottomStyle" to "none", "borderLeftStyle" to "none", "borderTopColor" to "#000000", "borderRightColor" to "#000000", "borderBottomColor" to "#000000", "borderLeftColor" to "#000000", "borderTopLeftRadius" to 8, "borderTopRightRadius" to 8, "borderBottomRightRadius" to 8, "borderBottomLeftRadius" to 8, "fontSize" to 16, "fontWeight" to "bold")), "submit-btn-disabled" to _pS(_uM("backgroundColor" to "#cccccc")))
             }
         var inheritAttrs = true
         var inject: Map<String, Map<String, Any?>> = _uM()

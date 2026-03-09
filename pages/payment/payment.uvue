@@ -122,8 +122,7 @@
 					@click="onPayment" 
 					size="default" 
 					:disabled="isPaymentProcessing" 
-					class="payment_button"
-					:class="{ processing: isPaymentProcessing }"
+					:class="['payment_button', isPaymentProcessing ? 'payment_button_disabled' : '', isPaymentProcessing ? 'processing' : '']"
 					style="background-color: #4CAF50; color: white; border: none;"
 				>
 					{{ isPaymentProcessing ? 'Processing...' : `Pay £${orderAmount.toFixed(2)}` }}
@@ -303,7 +302,7 @@ const onCancel = () => {
 .back {
 	position: relative;
 	width: 100%;
-	height: 100vh;
+	height: 100%;
 	background-color: #f5f5f5;
 	display: flex;
 	flex-direction: column;
@@ -363,7 +362,7 @@ const onCancel = () => {
 .order_label {
 	font-size: 13px;
 	color: #666;
-	font-weight: 600;
+	font-weight: bold;
 	letter-spacing: 0.3px;
 }
 
@@ -376,7 +375,7 @@ const onCancel = () => {
 .order_item .label {
 	font-size: 13px;
 	color: #666;
-	font-weight: 600;
+	font-weight: bold;
 }
 
 .order_item .amount {
@@ -390,13 +389,9 @@ const onCancel = () => {
 	position: relative;
 	z-index: 1;
 	flex: 1;
-	overflow-y: scroll;
-	-webkit-overflow-scrolling: touch;
 	height: 0;
 	min-height: 0;
 	width: 100%;
-	/* 确保可以滚动到底部 */
-	scroll-behavior: smooth;
 }
 
 .payment_container {
@@ -415,10 +410,11 @@ const onCancel = () => {
 }
 
 .form_group .label {
-	display: block;
+	display: flex;
+	flex-direction: column;
 	font-size: 14px;
 	color: #333;
-	font-weight: 600;
+	font-weight: bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
 }
@@ -438,7 +434,6 @@ const onCancel = () => {
 
 .form_row {
 	display: flex;
-	gap: 15px;
 	justify-content: space-between;
 }
 
@@ -447,10 +442,11 @@ const onCancel = () => {
 }
 
 .form_group_half .label {
-	display: block;
+	display: flex;
+	flex-direction: column;
 	font-size: 14px;
 	color: #333;
-	font-weight: 600;
+	font-weight: bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
 }
@@ -468,7 +464,6 @@ const onCancel = () => {
 
 .input:focus {
 	border-color: #4CAF50;
-	outline: none;
 	background-color: #fff;
 	box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
@@ -493,7 +488,7 @@ const onCancel = () => {
 .picker_text {
 	font-size: 13px;
 	color: #333;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .arrow_text {
@@ -586,7 +581,7 @@ const onCancel = () => {
 	opacity: 0.8;
 }
 
-.payment_button[disabled] {
+.payment_button_disabled {
 	background: #cccccc;
 	box-shadow: none;
 	opacity: 0.6;

@@ -39,24 +39,26 @@
 			</view>
 
 			<view class="form-row">
-				<text class="label">Location Latitude</text>
+				<text class="label">Location Latitude (最多6位小数)</text>
 				<input
 					class="input"
 					v-model="locationLat"
-					placeholder="optional"
+					placeholder="e.g. 39.908692"
 					placeholder-class="input-placeholder"
-					type="number"
+					type="text"
+					inputmode="decimal"
 				/>
 			</view>
 
 			<view class="form-row">
-				<text class="label">Location Longitude</text>
+				<text class="label">Location Longitude (最多6位小数)</text>
 				<input
 					class="input"
 					v-model="locationLng"
-					placeholder="optional"
+					placeholder="e.g. 116.397477"
 					placeholder-class="input-placeholder"
-					type="number"
+					type="text"
+					inputmode="decimal"
 				/>
 			</view>
 
@@ -64,7 +66,7 @@
 				<text class="error-text">{{ errorMsg }}</text>
 			</view>
 
-			<button class="submit-btn" :disabled="isSubmitting" @click="onSubmit">
+			<button :class="['submit-btn', isSubmitting ? 'submit-btn-disabled' : '']" :disabled="isSubmitting" @click="onSubmit">
 				{{ isSubmitting ? 'Updating...' : 'Update Scooter' }}
 			</button>
 		</view>
@@ -116,13 +118,19 @@ const onSubmit = () => {
 	}
 	const latStr = locationLat.value != null ? locationLat.value.trim() : ''
 	if (latStr.length > 0) {
-		body['location_lat'] = parseFloat(latStr)
-		hasField = true
+		const latNum = parseFloat(latStr)
+		if (!isNaN(latNum)) {
+			body['location_lat'] = Math.round(latNum * 1e6) / 1e6
+			hasField = true
+		}
 	}
 	const lngStr = locationLng.value != null ? locationLng.value.trim() : ''
 	if (lngStr.length > 0) {
-		body['location_lng'] = parseFloat(lngStr)
-		hasField = true
+		const lngNum = parseFloat(lngStr)
+		if (!isNaN(lngNum)) {
+			body['location_lng'] = Math.round(lngNum * 1e6) / 1e6
+			hasField = true
+		}
 	}
 
 	if (hasField === false) {
@@ -177,7 +185,7 @@ const onSubmit = () => {
 	flex-direction: column;
 	padding: 24px;
 	background-color: #f5f5f5;
-	min-height: 100vh;
+	min-height: 750px;
 }
 
 .title-section {
@@ -255,7 +263,7 @@ const onSubmit = () => {
 	font-weight: bold;
 }
 
-.submit-btn[disabled] {
+.submit-btn-disabled {
 	background-color: #ccc;
 }
 </style>

@@ -1,22 +1,6 @@
 import { ref, onMounted, getCurrentInstance } from 'vue';
-// Define types
-type AnchorPoint = {
-    __$originalPosition?: UTSSourceMapPosition<"AnchorPoint", "pages/index/index.uvue", 58, 7>;
-    x: number;
-    y: number;
-};
-type Marker = {
-    __$originalPosition?: UTSSourceMapPosition<"Marker", "pages/index/index.uvue", 63, 7>;
-    id: number;
-    longitude: number;
-    latitude: number;
-    title: string;
-    iconPath: string;
-    width: number;
-    height: number;
-    anchor: AnchorPoint;
-};
-type MapContext = any;
+import { onShow } from '@dcloudio/uni-app';
+import { BASE_URL } from '../../common/api.uts';
 const __sfc__ = defineComponent({
     __name: 'index',
     setup(__props) {
@@ -28,6 +12,68 @@ const __sfc__ = defineComponent({
         const scale = ref(16);
         const markers = ref([] as Marker[]);
         const mapContext = ref(null as MapContext | null);
+        const buildNearbyMarkers = (lat: number, lng: number): Marker[] => {
+            return UTSAndroid.consoleDebugError(JSON.parse<Marker[]>(JSON.stringify([
+                { id: 1, longitude: lng - 0.0006, latitude: lat - 0.0007, title: '附近1', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
+                { id: 2, longitude: lng + 0.0005, latitude: lat + 0.0005, title: '附近2', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
+                { id: 3, longitude: lng - 0.0003, latitude: lat + 0.0004, title: '附近3', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } }
+            ])), " at pages/index/index.uvue:66")!;
+        };
+        const fetchScooterMarkers = (nearby: Marker[], lat: number, lng: number) => {
+            uni.request({
+                url: BASE_URL + '/api/v1/scooters',
+                method: 'GET',
+                success: (res) => {
+                    if (res.statusCode != 200 || res.data == null) {
+                        markers.value = nearby;
+                        return;
+                    }
+                    const raw = res.data as UTSJSONObject;
+                    let arr: UTSJSONObject[] = [];
+                    if (raw['data'] != null) {
+                        arr = raw['data'] as UTSJSONObject[];
+                    }
+                    else if (raw['scooters'] != null) {
+                        arr = raw['scooters'] as UTSJSONObject[];
+                    }
+                    else if (raw['list'] != null) {
+                        arr = raw['list'] as UTSJSONObject[];
+                    }
+                    const scooterMarkers: Marker[] = [];
+                    let count = 0;
+                    for (let i = 0; i < arr.length && count < 5; i++) {
+                        const item = arr[i] as UTSJSONObject;
+                        const latVal = item['location_lat'] != null ? item['location_lat'] : item['locationLat'];
+                        const lngVal = item['location_lng'] != null ? item['location_lng'] : item['locationLng'];
+                        const numLat = latVal != null ? (latVal as number) : null;
+                        const numLng = lngVal != null ? (lngVal as number) : null;
+                        if (numLat != null && numLng != null && !isNaN(numLat) && !isNaN(numLng)) {
+                            const rawId = item['id'];
+                            const sid = rawId != null ? ('SC' + ('' + rawId)) : ('SC' + (count + 1));
+                            scooterMarkers.push({
+                                id: 10 + count,
+                                latitude: numLat,
+                                longitude: numLng,
+                                title: sid,
+                                iconPath: '/static/location.png',
+                                width: 32,
+                                height: 32,
+                                anchor: { x: 0.5, y: 1 } as Anchor
+                            } as Marker);
+                            count++;
+                        }
+                    }
+                    markers.value = nearby.concat(scooterMarkers);
+                },
+                fail: () => {
+                    markers.value = nearby;
+                }
+            });
+        };
+        const applyMarkers = (lat: number, lng: number) => {
+            const nearby = buildNearbyMarkers(lat, lng);
+            fetchScooterMarkers(nearby, lat, lng);
+        };
         const getCurrentLocation = () => {
             uni.getLocation({
                 type: 'gcj02',
@@ -35,20 +81,11 @@ const __sfc__ = defineComponent({
                     const { longitude: lng, latitude: lat } = res;
                     longitude.value = lng;
                     latitude.value = lat;
-                    const temp = UTSAndroid.consoleDebugError(JSON.parse<Marker[]>(JSON.stringify([{
-                            id: 1,
-                            longitude: lng,
-                            latitude: lat,
-                            title: '我的位置',
-                            iconPath: '/static/location.png',
-                            width: 32,
-                            height: 32,
-                            anchor: { x: 0.5, y: 1 }
-                        }])), " at pages/index/index.uvue:89")!;
-                    markers.value = temp;
+                    applyMarkers(lat, lng);
+                    mapContext.value?.moveToLocation({ latitude: lat, longitude: lng } as MapContextMoveToLocationOptions);
                 },
                 fail: (err) => {
-                    console.error('定位失败', err, " at pages/index/index.uvue:102");
+                    console.error('定位失败', err, " at pages/index/index.uvue:139");
                     uni.showToast({ title: '定位失败，请开启权限', icon: 'none' });
                 }
             });
@@ -62,6 +99,9 @@ const __sfc__ = defineComponent({
                 mapContext.value = uni.createMapContext('mainMap');
             }
             getCurrentLocation();
+        });
+        onShow(() => {
+            applyMarkers(latitude.value, longitude.value);
         });
         // 跳转到单车列表页面
         const goToBikeList = () => {

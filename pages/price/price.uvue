@@ -67,6 +67,7 @@ type UserInfo = {
 
 // Booking duration data
 const durations = ref<DurationItem[]>([
+	{ time: '10 Minutes', price: 0.2 },
 	{ time: '1 Hour', price: 1 },
 	{ time: '4 Hours', price: 1 },
 	{ time: '1 Day', price: 1 },
@@ -132,21 +133,26 @@ const selectEndTime = () => {
 		now.getDate().toString().padStart(2, '0');
 	
 	uni.showActionSheet({
-		itemList: ['1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
+		itemList: ['10 Minutes Later', '1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
 		success: (res) => {
 			let endDateTime: Date | null = null;
 			let duration: string = '';
 			
 			if (res.tapIndex === 0) {
+				// 10 minutes from start time so actual duration is 10 minutes
+				const startDate = new Date(startTime.value);
+				endDateTime = new Date(startDate.getTime() + 10 * 60 * 1000);
+				duration = '10M';
+			} else if (res.tapIndex === 1) {
 				endDateTime = new Date(now.getTime() + 1 * 60 * 60 * 1000);
 				duration = '1H';
-			} else if (res.tapIndex === 1) {
+			} else if (res.tapIndex === 2) {
 				endDateTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
 				duration = '4H';
-			} else if (res.tapIndex === 2) {
+			} else if (res.tapIndex === 3) {
 				endDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 				duration = '1D';
-			} else if (res.tapIndex === 3) {
+			} else if (res.tapIndex === 4) {
 				endDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 				duration = '1W';
 			}
@@ -292,16 +298,21 @@ const confirm = () => {
 				return;
 			}
 
-			const bookingData = {
-				user_id: userId,
-				userId: userId,
-				scooter_id: numericScooterId,
-				start_time: startTime.value,
-				end_time: endTime.value,
-				duration: durationCode.value,
-				total_price: totalPrice,
-				status: 'CONFIRMED'
+			const doCreateBooking = (startLatVal: number | null, startLngVal: number | null) => {
+			const bookingData: UTSJSONObject = {
+				'user_id': userId,
+				'userId': userId,
+				'scooter_id': numericScooterId,
+				'start_time': startTime.value,
+				'end_time': endTime.value,
+				'duration': durationCode.value,
+				'total_price': totalPrice,
+				'status': 'CONFIRMED'
 			};
+			if (startLatVal != null && startLngVal != null) {
+				bookingData['startLat'] = startLatVal;
+				bookingData['startLng'] = startLngVal;
+			}
 			console.log('Booking info:', bookingData);
 			uni.request({
 				url: BASE_URL + '/api/v1/bookings',
@@ -380,6 +391,12 @@ const confirm = () => {
 				});
 			}, 1000);
 		}
+			});
+			};
+			uni.getLocation({
+				type: 'gcj02',
+				success: (res) => { doCreateBooking(res.latitude, res.longitude); },
+				fail: () => { doCreateBooking(null, null); }
 			});
 		},
 		fail: () => {

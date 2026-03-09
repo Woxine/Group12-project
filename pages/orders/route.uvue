@@ -1,0 +1,376 @@
+<template>
+	<view class="container">
+		<view v-if="loading" class="loading-section">
+			<text class="loading-text">Loading route...</text>
+		</view>
+		<view v-else-if="error.length > 0" class="error-section">
+			<text class="error-text">{{ error }}</text>
+			<button class="back-btn" @click="goBack">Back</button>
+		</view>
+		<view v-else-if="!hasRoute" class="no-route-section">
+			<text class="no-route-text">Route data not available for this order.</text>
+			<text class="no-route-hint">Start and end locations are recorded when you start and end the ride.</text>
+			<button class="back-btn" @click="goBack">Back</button>
+		</view>
+		<view v-else class="map-wrap">
+			<view class="map-section">
+				<map
+					:key="mapKey"
+					id="routeMap"
+					class="route-map"
+					:longitude="longitude"
+					:latitude="latitude"
+					:scale="scale"
+					:markers="markers"
+					:polyline="polylines"
+					:include-points="includePoints"
+					@updated="onMapUpdated"
+				></map>
+				<cover-view class="map-controls">
+					<cover-view class="control-btn" @click="zoomIn">+</cover-view>
+					<cover-view class="control-btn" @click="zoomOut">-</cover-view>
+				</cover-view>
+			</view>
+			<view class="info-section">
+				<text class="info-label">Start</text>
+				<text class="info-value">{{ startLatText }}</text>
+				<text class="info-value">{{ startLngText }}</text>
+				<text class="info-label">End</text>
+				<text class="info-value">{{ endLatText }}</text>
+				<text class="info-value">{{ endLngText }}</text>
+			</view>
+			<button class="back-btn" @click="goBack">Back to Orders</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, computed, getCurrentInstance } from 'vue'
+import { onLoad, onReady } from '@dcloudio/uni-app'
+import { BASE_URL } from '../../common/api.uts'
+
+type LocationObject = { latitude: number, longitude: number }
+
+const bookingId = ref('')
+const loading = ref(true)
+const error = ref('')
+const startLat = ref(null as number | null)
+const startLng = ref(null as number | null)
+const endLat = ref(null as number | null)
+const endLng = ref(null as number | null)
+
+const longitude = ref(116.397477)
+const latitude = ref(39.908692)
+const scale = ref(14)
+const markers = ref([] as Marker[])
+const polylines = ref([] as Polyline[])
+const includePoints = ref([] as LocationObject[])
+const mapKey = ref(0)
+const mapUpdatedOnce = ref(false)
+const mapContext = ref(null as MapContext | null)
+
+const hasRoute = computed(() => {
+	const slat = startLat.value
+	const slng = startLng.value
+	const elat = endLat.value
+	const elng = endLng.value
+	return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng)
+})
+
+const startLatText = ref('Lat: -')
+const startLngText = ref('Lng: -')
+const endLatText = ref('Lat: -')
+const endLngText = ref('Lng: -')
+
+const zoomIn = () => {
+	if (scale.value < 18) {
+		scale.value = scale.value + 1
+	}
+}
+
+const zoomOut = () => {
+	if (scale.value > 5) {
+		scale.value = scale.value - 1
+	}
+}
+
+const syncMarkersToMap = () => {
+	if (mapContext.value == null) return
+	if (markers.value.length == 0) return
+	const tempMarkers = JSON.parse<Marker[]>(JSON.stringify(markers.value))!
+	const opts = { markers: tempMarkers, clear: true } as MapContextAddMarkersOptions
+	mapContext.value?.addMarkers(opts)
+}
+
+const onMapUpdated = () => {
+	mapUpdatedOnce.value = true
+	syncMarkersToMap()
+}
+
+const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
+	startLatText.value = 'Lat: ' + slat.toFixed(6)
+	startLngText.value = 'Lng: ' + slng.toFixed(6)
+	endLatText.value = 'Lat: ' + elat.toFixed(6)
+	endLngText.value = 'Lng: ' + elng.toFixed(6)
+	const startPoint: LocationObject = { latitude: slat, longitude: slng }
+	const endPoint: LocationObject = { latitude: elat, longitude: elng }
+	const eps = 0.002
+	const samePoint = (slat == elat && slng == elng)
+	const endLatForLine = samePoint ? (elat + eps) : elat
+	const endLngForLine = samePoint ? (elng + eps) : elng
+	const startLinePoint = ({ latitude: slat, longitude: slng } as uts.sdk.modules.DCloudUniMapTencent.LocationObject)
+	const endLinePoint = ({ latitude: endLatForLine, longitude: endLngForLine } as uts.sdk.modules.DCloudUniMapTencent.LocationObject)
+	const linePoints = [startLinePoint, endLinePoint] as uts.sdk.modules.DCloudUniMapTencent.LocationObject[]
+	const rawIncludePoints: LocationObject[] = samePoint ? [startPoint, ({ latitude: endLatForLine, longitude: endLngForLine } as LocationObject)] : [startPoint, endPoint]
+	const rawPolylines: Polyline[] = [({ points: linePoints, color: '#FF3B30', width: 10 } as Polyline)]
+	polylines.value = rawPolylines
+	includePoints.value = JSON.parse<LocationObject[]>(JSON.stringify(rawIncludePoints))!
+	longitude.value = (slng + elng) / 2
+	latitude.value = (slat + elat) / 2
+	scale.value = samePoint ? 17 : 14
+	const rawMarkers: Marker[] = [
+		{ id: 1, latitude: slat, longitude: slng, title: 'Start', iconPath: '/static/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'Start', display: 'ALWAYS' } as MapMarkerCallout } as Marker,
+		{ id: 2, latitude: elat, longitude: elng, title: 'End', iconPath: '/static/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'End', display: 'ALWAYS' } as MapMarkerCallout } as Marker
+	]
+	markers.value = JSON.parse<Marker[]>(JSON.stringify(rawMarkers))!
+	mapKey.value = mapKey.value + 1
+	console.log('applyRoute:', { slat, slng, elat, elng, markers: markers.value, includePoints: includePoints.value, polylines: polylines.value })
+	syncMarkersToMap()
+	// Some native map implementations don't render markers on the first frame after data binding
+	setTimeout(() => {
+		if (mapUpdatedOnce.value) {
+			mapKey.value = mapKey.value + 1
+			syncMarkersToMap()
+		}
+	}, 200)
+}
+
+onReady(() => {
+	const instance = getCurrentInstance()
+	if (instance != null && instance.proxy != null) {
+		mapContext.value = uni.createMapContext('routeMap', instance.proxy!)
+	} else {
+		mapContext.value = uni.createMapContext('routeMap')
+	}
+	syncMarkersToMap()
+})
+
+const loadBooking = () => {
+	const userIdStorage = uni.getStorageSync('userId')
+	const tokenStorage = uni.getStorageSync('token')
+	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
+	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	if (userId == null || token == null || bookingId.value.length == 0) {
+		error.value = 'Please log in first'
+		loading.value = false
+		return
+	}
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings/' + bookingId.value,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null) {
+				const obj = res.data as UTSJSONObject
+				const data = obj['data'] != null ? (obj['data'] as UTSJSONObject) : obj
+				const slatVal = data['start_lat']
+				const slngVal = data['start_lng']
+				const elatVal = data['end_lat']
+				const elngVal = data['end_lng']
+				let slat = slatVal != null && typeof slatVal === 'number' ? slatVal as number : null
+				let slng = slngVal != null && typeof slngVal === 'number' ? slngVal as number : null
+				let elat = elatVal != null && typeof elatVal === 'number' ? elatVal as number : null
+				let elng = elngVal != null && typeof elngVal === 'number' ? elngVal as number : null
+				// If we have start but no end (e.g. auto-completed order), use start as end so map can show
+				if (slat != null && slng != null && (elat == null || elng == null)) {
+					elat = slat
+					elng = slng
+				}
+				startLat.value = slat
+				startLng.value = slng
+				endLat.value = elat
+				endLng.value = elng
+				if (slat != null && slng != null && elat != null && elng != null && !isNaN(slat) && !isNaN(slng) && !isNaN(elat) && !isNaN(elng)) {
+					applyRoute(slat, slng, elat, elng)
+				}
+			} else {
+				error.value = 'Failed to load booking'
+			}
+		},
+		fail: () => {
+			error.value = 'Network error'
+		},
+		complete: () => {
+			loading.value = false
+		}
+	})
+}
+
+const goBack = () => {
+	uni.navigateBack({ fail: () => { uni.navigateTo({ url: '/pages/orders/orders' }) } })
+}
+
+onLoad((options: UTSJSONObject) => {
+	const parseNum = (v: any | null): number | null => {
+		if (v == null) return null
+		const raw = ('' + v).trim()
+		if (raw.length == 0) return null
+		const n = parseFloat(raw)
+		return isNaN(n) ? null : n
+	}
+
+	const id = options != null && options['bookingId'] != null ? ('' + options['bookingId']) : ''
+	bookingId.value = id
+	const slatOpt = options != null ? parseNum(options['startLat']) : null
+	const slngOpt = options != null ? parseNum(options['startLng']) : null
+	let elatOpt = options != null ? parseNum(options['endLat']) : null
+	let elngOpt = options != null ? parseNum(options['endLng']) : null
+	if (slatOpt != null && slngOpt != null && (elatOpt == null || elngOpt == null)) {
+		elatOpt = slatOpt
+		elngOpt = slngOpt
+	}
+
+	if (slatOpt != null && slngOpt != null && elatOpt != null && elngOpt != null) {
+		startLat.value = slatOpt
+		startLng.value = slngOpt
+		endLat.value = elatOpt
+		endLng.value = elngOpt
+		applyRoute(slatOpt, slngOpt, elatOpt, elngOpt)
+		loading.value = false
+		return
+	}
+
+	if (id.length > 0) {
+		loadBooking()
+	} else {
+		error.value = 'Missing booking id'
+		loading.value = false
+	}
+})
+</script>
+
+<style lang="scss">
+.container {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background-color: #f5f5f5;
+	box-sizing: border-box;
+}
+
+.loading-section,
+.error-section,
+.no-route-section {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+}
+
+.loading-text {
+	font-size: 16px;
+	color: #666;
+}
+
+.error-text,
+.no-route-text {
+	font-size: 16px;
+	color: #f44336;
+	text-align: center;
+	margin-bottom: 12px;
+}
+
+.no-route-hint {
+	font-size: 14px;
+	color: #999;
+	text-align: center;
+	margin-bottom: 20px;
+}
+
+.back-btn {
+	margin-top: 16px;
+	padding: 10px 24px;
+	background-color: #2196F3;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.map-wrap {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	padding: 16px;
+}
+
+.map-section {
+	width: 100%;
+	position: relative;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	margin-bottom: 16px;
+}
+
+.map-controls {
+	position: absolute;
+	right: 12px;
+	bottom: 12px;
+	display: flex;
+	flex-direction: column;
+	z-index: 10;
+}
+
+.control-btn {
+	width: 36px;
+	height: 36px;
+	line-height: 36px;
+	text-align: center;
+	background-color: rgba(0, 0, 0, 0.55);
+	color: #fff;
+	border-radius: 8px;
+	margin-top: 8px;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+.route-map {
+	width: 100%;
+	height: 320px;
+	background-color: #e5e5e5;
+}
+
+.info-section {
+	background-color: #fff;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 16px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.info-label {
+	display: block;
+	font-size: 12px;
+	color: #999;
+	margin-bottom: 4px;
+}
+
+.info-value {
+	display: block;
+	font-size: 14px;
+	color: #333;
+	margin-bottom: 12px;
+}
+
+.info-value:last-of-type {
+	margin-bottom: 0;
+}
+</style>

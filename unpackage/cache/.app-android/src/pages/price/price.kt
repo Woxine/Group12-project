@@ -12,6 +12,7 @@ import io.dcloud.uts.Map
 import io.dcloud.uts.Set
 import io.dcloud.uts.UTSAndroid
 import kotlin.properties.Delegates
+import io.dcloud.uniapp.extapi.getLocation as uni_getLocation
 import io.dcloud.uniapp.extapi.getStorageSync as uni_getStorageSync
 import io.dcloud.uniapp.extapi.navigateTo as uni_navigateTo
 import io.dcloud.uniapp.extapi.reLaunch as uni_reLaunch
@@ -26,7 +27,7 @@ open class GenPagesPricePrice : BasePage {
             val __ins = getCurrentInstance()!!
             val _ctx = __ins.proxy as GenPagesPricePrice
             val _cache = __ins.renderCache
-            val durations = ref(_uA<DurationItem>(DurationItem(time = "1 Hour", price = 1), DurationItem(time = "4 Hours", price = 1), DurationItem(time = "1 Day", price = 1), DurationItem(time = "1 Week", price = 1)))
+            val durations = ref(_uA<DurationItem>(DurationItem(time = "10 Minutes", price = 0.2), DurationItem(time = "1 Hour", price = 1), DurationItem(time = "4 Hours", price = 1), DurationItem(time = "1 Day", price = 1), DurationItem(time = "1 Week", price = 1)))
             val startTime = ref<String>("")
             val endTime = ref<String>("")
             val durationCode = ref<String>("")
@@ -70,6 +71,7 @@ open class GenPagesPricePrice : BasePage {
                 val now = Date()
                 val currentDate = now.getFullYear() + "-" + (now.getMonth() + 1).toString(10).padStart(2, "0") + "-" + now.getDate().toString(10).padStart(2, "0")
                 uni_showActionSheet(ShowActionSheetOptions(itemList = _uA(
+                    "10 Minutes Later",
                     "1 Hour Later",
                     "4 Hours Later",
                     "1 Day Later",
@@ -78,15 +80,19 @@ open class GenPagesPricePrice : BasePage {
                     var endDateTime: Date? = null
                     var duration: String = ""
                     if (res.tapIndex === 0) {
+                        val startDate = Date(startTime.value)
+                        endDateTime = Date(startDate.getTime() + 600000)
+                        duration = "10M"
+                    } else if (res.tapIndex === 1) {
                         endDateTime = Date(now.getTime() + 3600000)
                         duration = "1H"
-                    } else if (res.tapIndex === 1) {
+                    } else if (res.tapIndex === 2) {
                         endDateTime = Date(now.getTime() + 14400000)
                         duration = "4H"
-                    } else if (res.tapIndex === 2) {
+                    } else if (res.tapIndex === 3) {
                         endDateTime = Date(now.getTime() + 86400000)
                         duration = "1D"
-                    } else if (res.tapIndex === 3) {
+                    } else if (res.tapIndex === 4) {
                         endDateTime = Date(now.getTime() + 604800000)
                         duration = "1W"
                     }
@@ -124,7 +130,7 @@ open class GenPagesPricePrice : BasePage {
                 }
                 if (userInfoStr != null && userInfoStr != "" && UTSAndroid.`typeof`(userInfoStr) === "string") {
                     try {
-                        val userInfo = UTSAndroid.consoleDebugError(JSON.parse<UserInfo__1>(userInfoStr as String), " at pages/price/price.uvue:201")!!!!
+                        val userInfo = UTSAndroid.consoleDebugError(JSON.parse<UserInfo__1>(userInfoStr as String), " at pages/price/price.uvue:207")!!!!
                         if (userInfo != null) {
                             val nameValue = userInfo["name"] as String
                             userName = if (nameValue.length > 0) {
@@ -135,16 +141,16 @@ open class GenPagesPricePrice : BasePage {
                         }
                     }
                      catch (e: Throwable) {
-                        console.error("Failed to parse user info:", e, " at pages/price/price.uvue:207")
+                        console.error("Failed to parse user info:", e, " at pages/price/price.uvue:213")
                     }
                 }
                 if (token === "" || token.length === 0) {
                     uni_showToast(ShowToastOptions(title = "Please login first", icon = "none"))
                     return
                 }
-                console.log("Token:", token, " at pages/price/price.uvue:219")
-                console.log("User ID:", userId, " at pages/price/price.uvue:220")
-                console.log("User Name:", userName, " at pages/price/price.uvue:221")
+                console.log("Token:", token, " at pages/price/price.uvue:225")
+                console.log("User ID:", userId, " at pages/price/price.uvue:226")
+                console.log("User Name:", userName, " at pages/price/price.uvue:227")
                 val selectedScooterId = uni_getStorageSync("selectedScooterId")
                 var scooterId: String = if (selectedScooterId != null) {
                     selectedScooterId as String
@@ -170,10 +176,10 @@ open class GenPagesPricePrice : BasePage {
                 val durationMs = endDate.getTime() - startDate.getTime()
                 val durationHours = durationMs / 3600000
                 val totalPrice = durationHours * 1
-                console.log("Start Time:", startTime.value, " at pages/price/price.uvue:247")
-                console.log("End Time:", endTime.value, " at pages/price/price.uvue:248")
-                console.log("Duration Hours:", durationHours, " at pages/price/price.uvue:249")
-                console.log("Total Price:", totalPrice, " at pages/price/price.uvue:250")
+                console.log("Start Time:", startTime.value, " at pages/price/price.uvue:253")
+                console.log("End Time:", endTime.value, " at pages/price/price.uvue:254")
+                console.log("Duration Hours:", durationHours, " at pages/price/price.uvue:255")
+                console.log("Total Price:", totalPrice, " at pages/price/price.uvue:256")
                 if (userId == null || userId == "") {
                     uni_showToast(ShowToastOptions(title = "User information missing, please login again before booking", icon = "none"))
                     return
@@ -210,59 +216,81 @@ open class GenPagesPricePrice : BasePage {
                         uni_showToast(ShowToastOptions(title = "You already have an active booking. Cancel it or wait until it ends.", icon = "none", duration = 3000))
                         return
                     }
-                    val bookingData: UTSJSONObject = _uO("__\$originalPosition" to UTSSourceMapPosition("bookingData", "pages/price/price.uvue", 295, 10), "user_id" to userId, "userId" to userId, "scooter_id" to numericScooterId, "start_time" to startTime.value, "end_time" to endTime.value, "duration" to durationCode.value, "total_price" to totalPrice, "status" to "CONFIRMED")
-                    console.log("Booking info:", bookingData, " at pages/price/price.uvue:305")
-                    uni_request<Any>(RequestOptions(url = BASE_URL + "/api/v1/bookings", method = "POST", data = bookingData, header = object : UTSJSONObject() {
-                        var `Content-Type` = "application/json"
-                        var Authorization = "Bearer " + token
-                    }, success = fun(res){
-                        console.log("Booking API Response:", res, " at pages/price/price.uvue:315")
-                        console.log("Status Code:", res.statusCode, " at pages/price/price.uvue:316")
-                        console.log("Response Data:", res.data, " at pages/price/price.uvue:317")
-                        if (res.statusCode >= 200 && res.statusCode < 300) {
-                            console.log("Booking successfully saved to database", " at pages/price/price.uvue:320")
-                            uni_showToast(ShowToastOptions(title = "Booking successful, proceed to payment", icon = "success"))
+                    val doCreateBooking = fun(startLatVal: Number?, startLngVal: Number?){
+                        val bookingData: UTSJSONObject = object : UTSJSONObject(UTSSourceMapPosition("bookingData", "pages/price/price.uvue", 302, 10)) {
+                            var user_id = userId
+                            var userId = userId
+                            var scooter_id = numericScooterId
+                            var start_time = startTime.value
+                            var end_time = endTime.value
+                            var duration = durationCode.value
+                            var total_price = totalPrice
+                            var status = "CONFIRMED"
+                        }
+                        if (startLatVal != null && startLngVal != null) {
+                            bookingData["startLat"] = startLatVal
+                            bookingData["startLng"] = startLngVal
+                        }
+                        console.log("Booking info:", bookingData, " at pages/price/price.uvue:316")
+                        uni_request<Any>(RequestOptions(url = BASE_URL + "/api/v1/bookings", method = "POST", data = bookingData, header = object : UTSJSONObject() {
+                            var `Content-Type` = "application/json"
+                            var Authorization = "Bearer " + token
+                        }, success = fun(res){
+                            console.log("Booking API Response:", res, " at pages/price/price.uvue:326")
+                            console.log("Status Code:", res.statusCode, " at pages/price/price.uvue:327")
+                            console.log("Response Data:", res.data, " at pages/price/price.uvue:328")
+                            if (res.statusCode >= 200 && res.statusCode < 300) {
+                                console.log("Booking successfully saved to database", " at pages/price/price.uvue:331")
+                                uni_showToast(ShowToastOptions(title = "Booking successful, proceed to payment", icon = "success"))
+                                setTimeout(fun(){
+                                    uni_navigateTo(NavigateToOptions(url = "/pages/payment/payment"))
+                                }, 1000)
+                            } else {
+                                console.error("Booking failed:", res.statusCode, " at pages/price/price.uvue:342")
+                                var errorMsg: String = "Booking failed, please try again"
+                                val errorData = res.data as UTSJSONObject?
+                                if (errorData != null) {
+                                    val msg = errorData["message"]
+                                    val err = errorData["error"]
+                                    val detail = errorData["detail"]
+                                    if (msg != null) {
+                                        errorMsg = "" + msg
+                                    } else if (err != null) {
+                                        errorMsg = "" + err
+                                    } else if (detail != null) {
+                                        errorMsg = "" + detail
+                                    }
+                                }
+                                if (res.statusCode === 401) {
+                                    errorMsg = "Login expired or invalid, please login again"
+                                    uni_showToast(ShowToastOptions(title = errorMsg, icon = "none", duration = 2500))
+                                    setTimeout(fun(){
+                                        uni_reLaunch(ReLaunchOptions(url = "/pages/login/login"))
+                                    }, 2500)
+                                } else {
+                                    val msgLower = errorMsg.toLowerCase()
+                                    if (msgLower.indexOf("bookingresponse") >= 0 || msgLower.indexOf("type definition error") >= 0) {
+                                        errorMsg = "Booking service error, please try again later"
+                                    }
+                                    uni_showToast(ShowToastOptions(title = errorMsg, icon = "none", duration = 3000))
+                                }
+                            }
+                        }
+                        , fail = fun(error){
+                            console.error("Network error during booking:", error, " at pages/price/price.uvue:383")
+                            uni_showToast(ShowToastOptions(title = "Network error (simulated booking), proceed to payment", icon = "none"))
                             setTimeout(fun(){
                                 uni_navigateTo(NavigateToOptions(url = "/pages/payment/payment"))
-                            }, 1000)
-                        } else {
-                            console.error("Booking failed:", res.statusCode, " at pages/price/price.uvue:331")
-                            var errorMsg: String = "Booking failed, please try again"
-                            val errorData = res.data as UTSJSONObject?
-                            if (errorData != null) {
-                                val msg = errorData["message"]
-                                val err = errorData["error"]
-                                val detail = errorData["detail"]
-                                if (msg != null) {
-                                    errorMsg = "" + msg
-                                } else if (err != null) {
-                                    errorMsg = "" + err
-                                } else if (detail != null) {
-                                    errorMsg = "" + detail
-                                }
                             }
-                            if (res.statusCode === 401) {
-                                errorMsg = "Login expired or invalid, please login again"
-                                uni_showToast(ShowToastOptions(title = errorMsg, icon = "none", duration = 2500))
-                                setTimeout(fun(){
-                                    uni_reLaunch(ReLaunchOptions(url = "/pages/login/login"))
-                                }, 2500)
-                            } else {
-                                val msgLower = errorMsg.toLowerCase()
-                                if (msgLower.indexOf("bookingresponse") >= 0 || msgLower.indexOf("type definition error") >= 0) {
-                                    errorMsg = "Booking service error, please try again later"
-                                }
-                                uni_showToast(ShowToastOptions(title = errorMsg, icon = "none", duration = 3000))
-                            }
+                            , 1000)
                         }
+                        ))
                     }
-                    , fail = fun(error){
-                        console.error("Network error during booking:", error, " at pages/price/price.uvue:372")
-                        uni_showToast(ShowToastOptions(title = "Network error (simulated booking), proceed to payment", icon = "none"))
-                        setTimeout(fun(){
-                            uni_navigateTo(NavigateToOptions(url = "/pages/payment/payment"))
-                        }
-                        , 1000)
+                    uni_getLocation(GetLocationOptions(type = "gcj02", success = fun(res){
+                        doCreateBooking(res.latitude, res.longitude)
+                    }
+                    , fail = fun(_){
+                        doCreateBooking(null, null)
                     }
                     ))
                 }

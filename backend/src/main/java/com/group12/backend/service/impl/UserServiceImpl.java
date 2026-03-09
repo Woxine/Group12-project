@@ -1,10 +1,15 @@
 package com.group12.backend.service.impl;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -55,12 +60,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Object> getUserBookings(String userId) {
+    public Object getUserBookings(String userId, Integer page, Integer size) {
         Long uId = Long.parseLong(userId);
-        List<Booking> bookings = bookingRepository.findByUser_Id(uId);
+        int pageNum = (page != null && page > 0) ? page : 1;
+        int pageSize = (size != null && size > 0) ? size : 10;
+
+        Page<Booking> pageResult = bookingRepository.findByUser_IdOrderByStartTimeDesc(uId, PageRequest.of(pageNum - 1, pageSize));
+        List<Booking> bookings = pageResult.getContent();
 
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        return bookings.stream().map(booking -> {
+        List<Map<String, Object>> data = new ArrayList<>();
+        for (Booking booking : bookings) {
             String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
             String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
             String durationStr = formatDuration(booking.getDurationHours());
@@ -78,12 +88,88 @@ public class UserServiceImpl implements UserService {
             r.setDuration(durationStr);
             r.setTotalPrice(price);
             r.setCreatedAt(startStr);
-            return r;
-        }).collect(Collectors.toList());
+            r.setStartLat(booking.getStartLat());
+            r.setStartLng(booking.getStartLng());
+            r.setEndLat(booking.getEndLat());
+            r.setEndLng(booking.getEndLng());
+
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", r.getId());
+            m.put("scooterId", r.getScooterId());
+            m.put("userId", r.getUserId());
+            m.put("status", r.getStatus());
+            m.put("startTime", r.getStartTime());
+            m.put("endTime", r.getEndTime());
+            m.put("duration", r.getDuration());
+            m.put("total_price", r.getTotalPrice());
+            m.put("price", r.getTotalPrice());
+            m.put("createdAt", r.getCreatedAt());
+            m.put("start_lat", r.getStartLat());
+            m.put("start_lng", r.getStartLng());
+            m.put("end_lat", r.getEndLat());
+            m.put("end_lng", r.getEndLng());
+            data.add(m);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", data);
+        result.put("total", pageResult.getTotalElements());
+        return result;
+    }
+
+    @Override
+    public Object getBookingById(String userId, String bookingId) {
+        Long uId = Long.parseLong(userId);
+        Long bId = Long.parseLong(bookingId);
+        Booking booking = bookingRepository.findById(bId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        if (!booking.getUser().getId().equals(uId)) {
+            throw new RuntimeException("Booking not found");
+        }
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
+        String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
+        String durationStr = formatDuration(booking.getDurationHours());
+        Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
+        BookingResponse r = new BookingResponse(
+                String.valueOf(booking.getId()),
+                String.valueOf(booking.getScooter().getId()),
+                String.valueOf(booking.getUser().getId()),
+                booking.getStatus(),
+                startStr
+        );
+        r.setStartTime(startStr);
+        r.setEndTime(endStr);
+        r.setDuration(durationStr);
+        r.setTotalPrice(price);
+        r.setCreatedAt(startStr);
+        r.setStartLat(booking.getStartLat());
+        r.setStartLng(booking.getStartLng());
+        r.setEndLat(booking.getEndLat());
+        r.setEndLng(booking.getEndLng());
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", r.getId());
+        m.put("scooterId", r.getScooterId());
+        m.put("userId", r.getUserId());
+        m.put("status", r.getStatus());
+        m.put("startTime", r.getStartTime());
+        m.put("endTime", r.getEndTime());
+        m.put("duration", r.getDuration());
+        m.put("total_price", r.getTotalPrice());
+        m.put("price", r.getTotalPrice());
+        m.put("createdAt", r.getCreatedAt());
+        m.put("start_lat", r.getStartLat());
+        m.put("start_lng", r.getStartLng());
+        m.put("end_lat", r.getEndLat());
+        m.put("end_lng", r.getEndLng());
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", m);
+        return result;
     }
 
     private static String formatDuration(Double hours) {
         if (hours == null) return "1H";
+        if (hours > 0 && hours <= 10.0 / 60.0 + 0.01) return "10M";
         if (hours <= 1) return "1H";
         if (hours <= 4) return "4H";
         if (hours <= 24) return "1D";

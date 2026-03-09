@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,14 +56,34 @@ public class BookingController {
     // API-006
     /**
      * 取消预订
-     * 根据预订ID取消行程
+     * 根据预订ID取消行程，可选 body: { "endLat": number, "endLng": number } 记录终点位置
      */
     @DeleteMapping("/{bookingId}")
-    public ResponseEntity<Map<String, Object>> cancel(@PathVariable String bookingId) {
-        Object result = bookingService.cancelBooking(bookingId);
-        Map<String, Object> body = new HashMap<>();
-        body.put("data", result);
-        return ResponseEntity.ok(body);
+    public ResponseEntity<Map<String, Object>> cancel(
+            @PathVariable String bookingId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Double endLat = body != null && body.get("endLat") != null ? ((Number) body.get("endLat")).doubleValue() : null;
+        Double endLng = body != null && body.get("endLng") != null ? ((Number) body.get("endLng")).doubleValue() : null;
+        Object result = bookingService.cancelBooking(bookingId, endLat, endLng);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("data", result);
+        return ResponseEntity.ok(resp);
+    }
+
+    /**
+     * End ride: set end location (from phone GPS) and mark booking COMPLETED.
+     * Body: { "endLat": number, "endLng": number } (optional; can be null if not available).
+     */
+    @PatchMapping("/{bookingId}/complete")
+    public ResponseEntity<Map<String, Object>> complete(
+            @PathVariable String bookingId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Double endLat = body != null && body.get("endLat") != null ? ((Number) body.get("endLat")).doubleValue() : null;
+        Double endLng = body != null && body.get("endLng") != null ? ((Number) body.get("endLng")).doubleValue() : null;
+        Object result = bookingService.completeBooking(bookingId, endLat, endLng);
+        Map<String, Object> res = new HashMap<>();
+        res.put("data", result);
+        return ResponseEntity.ok(res);
     }
 }
 
