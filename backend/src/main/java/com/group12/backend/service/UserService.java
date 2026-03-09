@@ -6,8 +6,6 @@ import com.group12.backend.dto.RegisterRequest;
 
 public interface UserService {
     Object register(RegisterRequest request);
-    Object getUserBookings(String userId, Integer page, Integer size);
-    Object getBookingById(String userId, String bookingId);
+    List<Object> getUserBookings(String userId);
     Object getUserProfile(String userId);
 }
-

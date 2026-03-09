@@ -10,10 +10,8 @@ import com.group12.backend.dto.FeedbackResponse;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
 import com.group12.backend.entity.Scooter;
-import com.group12.backend.entity.User;
 import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
-import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.FeedbackService;
 
 @Service
@@ -25,17 +23,10 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Autowired
     private ScooterRepository scooterRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
     @Override
-    public Object submitFeedback(FeedbackRequest request, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-
+    public Object submitFeedback(FeedbackRequest request) {
         Feedback feedback = new Feedback();
         feedback.setContent(request.getDescription());
-        feedback.setUser(user);
         feedback.setPriority("LOW");
         feedback.setResolved(false);
 
@@ -45,7 +36,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 Optional<Scooter> scooterOpt = scooterRepository.findById(scooterId);
                 scooterOpt.ifPresent(feedback::setScooter);
             } catch (NumberFormatException e) {
-                // ignore invalid scooter id
+                // ignore invalid scooter id format
             }
         }
 
@@ -61,15 +52,11 @@ public class FeedbackServiceImpl implements FeedbackService {
         if (feedbackOpt.isPresent()) {
             Feedback feedback = feedbackOpt.get();
             if (request.getStatus() != null) {
-                // Simple logic: "resolved" or "completed" -> true
                 boolean isResolved = "resolved".equalsIgnoreCase(request.getStatus()) 
                                   || "completed".equalsIgnoreCase(request.getStatus())
                                   || "true".equalsIgnoreCase(request.getStatus());
                 feedback.setResolved(isResolved);
             }
-            // If there was a 'note' field in Feedback entity, we would update it here.
-            // But Feedback entity currently doesn't have a 'note' field based on my read.
-            // So we just save the status.
             
             Feedback saved = feedbackRepository.save(feedback);
             return mapToDTO(saved);

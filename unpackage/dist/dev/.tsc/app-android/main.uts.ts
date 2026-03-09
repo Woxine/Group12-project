@@ -1,4 +1,4 @@
-import 'D:/BrowserDownload/HBuilderX.4.87.2025121004/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-console/src/runtime/app/index.ts';import App from './App.uvue'
+import 'E:/HbuilderX/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-console/src/runtime/app/index.ts';import App from './App.uvue'
 
 import { createSSRApp } from 'vue'
 export function createApp() {

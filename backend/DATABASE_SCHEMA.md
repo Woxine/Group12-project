@@ -23,6 +23,7 @@
 | `id` | `Long` | `BIGINT` | **PK**, Auto Inc | 用户唯一ID |
 | `email` | `String` | `VARCHAR(255)` | **UK**, Not Null | 登录邮箱（唯一） |
 | `password`| `String` | `VARCHAR(255)` | Not Null | 加密后的密码 |
+| `name` | `String` | `VARCHAR(255)` | Not Null | 用户姓名 |
 | `role` | `String` | `VARCHAR` | Def: 'CUSTOMER' | 角色: `CUSTOMER`, `STAFF`, `ADMIN` |
 | `student` | `Boolean` | `TINYINT(1)` | Def: 0 | 是否学生（用于计算优惠） |
 | `age` | `Integer` | `INT` | | 年龄 |
@@ -52,10 +53,6 @@
 | `duration_hours`| `Double` | `FLOAT` | | 时长 |
 | `total_price` | `BigDecimal` | `DECIMAL` | | 总价 |
 | `status` | `String` | `VARCHAR` | Not Null | `CONFIRMED`, `COMPLETED`, `CANCELLED` |
-| `start_lat` | `Double` | `DECIMAL` | Nullable | 开始用车时手机纬度（路线展示） |
-| `start_lng` | `Double` | `DECIMAL` | Nullable | 开始用车时手机经度 |
-| `end_lat` | `Double` | `DECIMAL` | Nullable | 结束还车时手机纬度 |
-| `end_lng` | `Double` | `DECIMAL` | Nullable | 结束还车时手机经度 |
 
 ### 2.4 支付表 (`payments`)
 **用途**：记录交易资金流，与订单强关联。

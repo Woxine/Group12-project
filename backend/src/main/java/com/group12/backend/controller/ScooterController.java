@@ -1,5 +1,6 @@
 package com.group12.backend.controller;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.group12.backend.dto.UpdateScooterRequest;
 import com.group12.backend.service.ScooterService;
 
 @RestController
@@ -23,10 +23,6 @@ public class ScooterController {
     private ScooterService scooterService;
 
     // API-001
-    /**
-     * 获取滑板车列表
-     * 支持按状态筛选和分页查询
-     */
     @GetMapping
     public ResponseEntity<Object> getScooters(
             @RequestParam(required = false) String status,
@@ -36,23 +32,21 @@ public class ScooterController {
     }
 
     // API-010
-    /**
-     * 获取滑板车实时位置
-     * 根据ID查询特定车辆的地理位置
-     */
     @GetMapping("/{scooterId}/location")
     public ResponseEntity<Object> getLocation(@PathVariable String scooterId) {
         return ResponseEntity.ok(Map.of("data", scooterService.getScooterLocation(scooterId)));
     }
 
-    /**
-     * 更新滑板车信息（仅管理员使用）
-     */
     @PutMapping("/{scooterId}")
     public ResponseEntity<Object> updateScooter(
-            @PathVariable String scooterId,
-            @RequestBody UpdateScooterRequest request) {
-        return ResponseEntity.ok(Map.of("data", scooterService.updateScooter(scooterId, request)));
+            @PathVariable Long scooterId,
+            @RequestBody Map<String, Object> body) {
+        String status = body.containsKey("status") ? (String) body.get("status") : null;
+        BigDecimal hourRate = body.containsKey("hour_rate") ? new BigDecimal(body.get("hour_rate").toString()) : null;
+        Double locationLat = body.containsKey("location_lat") ? Double.valueOf(body.get("location_lat").toString()) : null;
+        Double locationLng = body.containsKey("location_lng") ? Double.valueOf(body.get("location_lng").toString()) : null;
+
+        Object updated = scooterService.updateScooter(scooterId, status, hourRate, locationLat, locationLng);
+        return ResponseEntity.ok(Map.of("data", updated));
     }
 }
-

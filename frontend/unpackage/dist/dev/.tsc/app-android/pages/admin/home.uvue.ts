@@ -1,0 +1,75 @@
+
+const __sfc__ = defineComponent({
+  __name: 'home',
+  setup(__props) {
+const __ins = getCurrentInstance()!;
+const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+const _cache = __ins.renderCache;
+
+const goModifyScooter = () => {
+	uni.navigateTo({
+		url: '/pages/admin/modify'
+	})
+}
+
+const goRevenue = () => {
+	uni.navigateTo({
+		url: '/pages/admin/revenue'
+	})
+}
+
+const logout = () => {
+	uni.showModal({
+		title: 'Logout',
+		content: 'Are you sure you want to logout?',
+		success: (res) => {
+			if (res.confirm === true) {
+				uni.removeStorageSync('userInfo')
+				uni.removeStorageSync('token')
+				uni.removeStorageSync('userId')
+				uni.removeStorageSync('role')
+				uni.removeStorageSync('selectedScooterId')
+
+				uni.showToast({
+					title: 'Logged out successfully',
+					icon: 'success'
+				})
+
+				setTimeout(() => {
+					uni.reLaunch({
+						url: '/pages/login/login'
+					})
+				}, 800)
+			}
+		}
+	})
+}
+
+return (): any | null => {
+
+  return _cE("view", _uM({ class: "container" }), [
+    _cE("view", _uM({ class: "title-section" }), [
+      _cE("text", _uM({ class: "title-text" }), "Admin Home"),
+      _cE("text", _uM({ class: "hint-text" }), "Manage scooters and revenue")
+    ]),
+    _cE("view", _uM({ class: "menu-section" }), [
+      _cE("button", _uM({
+        class: "menu-btn primary",
+        onClick: goModifyScooter
+      }), " Modify Scooter Information "),
+      _cE("button", _uM({
+        class: "menu-btn",
+        onClick: goRevenue
+      }), " View Revenue "),
+      _cE("button", _uM({
+        class: "menu-btn danger",
+        onClick: logout
+      }), " Logout ")
+    ])
+  ])
+}
+}
+
+})
+export default __sfc__
+const GenPagesAdminHomeStyles = [_uM([["container", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["paddingTop", 24], ["paddingRight", 24], ["paddingBottom", 24], ["paddingLeft", 24], ["backgroundColor", "#f5f5f5"]]))], ["title-section", _pS(_uM([["display", "flex"], ["flexDirection", "column"], ["marginBottom", 24]]))], ["title-text", _pS(_uM([["fontSize", 22], ["fontWeight", "bold"], ["color", "#333333"], ["marginBottom", 8]]))], ["hint-text", _pS(_uM([["fontSize", 14], ["color", "#666666"]]))], ["menu-section", _pS(_uM([["display", "flex"], ["flexDirection", "column"]]))], ["menu-btn", _uM([["", _uM([["paddingTop", 14], ["paddingRight", 14], ["paddingBottom", 14], ["paddingLeft", 14], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["borderTopWidth", 1], ["borderRightWidth", 1], ["borderBottomWidth", 1], ["borderLeftWidth", 1], ["borderTopStyle", "solid"], ["borderRightStyle", "solid"], ["borderBottomStyle", "solid"], ["borderLeftStyle", "solid"], ["borderTopColor", "#dddddd"], ["borderRightColor", "#dddddd"], ["borderBottomColor", "#dddddd"], ["borderLeftColor", "#dddddd"], ["fontSize", 16], ["fontWeight", "bold"], ["backgroundColor", "#ffffff"], ["color", "#333333"], ["boxShadow", "0 2px 8px rgba(0, 0, 0, 0.08)"], ["marginBottom", 24]])], [".primary", _uM([["backgroundColor", "#4CAF50"], ["borderTopColor", "#4CAF50"], ["borderRightColor", "#4CAF50"], ["borderBottomColor", "#4CAF50"], ["borderLeftColor", "#4CAF50"], ["color", "#ffffff"]])], [".danger", _uM([["backgroundColor", "#f44336"], ["borderTopColor", "#f44336"], ["borderRightColor", "#f44336"], ["borderBottomColor", "#f44336"], ["borderLeftColor", "#f44336"], ["color", "#ffffff"]])]])]])]

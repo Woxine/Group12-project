@@ -1,0 +1,60 @@
+{
+  "version": "1",
+  "env": {
+    "compiler_version": "4.87"
+  },
+  "files": {
+    "pages/admin/home.kt": {
+      "md5": "a8dd67e7b4e9f94dfb663e56edf08abca5754c98",
+      "class": "GenPagesAdminHome"
+    },
+    "pages/admin/revenue.kt": {
+      "class": "GenPagesAdminRevenue",
+      "md5": "3cfa34cc143b2017e83ded457c6fa3cd22080ead"
+    },
+    "pages/login/login.kt": {
+      "class": "GenPagesLoginLogin",
+      "md5": "11179073ead7720d8c8fc06df86779d4e1d9639e"
+    },
+    "pages/orders/orders.kt": {
+      "md5": "cc97486c70cf8935e091b71c56663c162d02d518",
+      "class": "GenPagesOrdersOrders"
+    },
+    "index.kt": {
+      "class": "",
+      "md5": "4b91839e0ddb492288ab657e9c85676dee6f92b7"
+    },
+    "pages/me/me.kt": {
+      "md5": "3c7ddd92eb22ba57441473c21a1fdc2ff431cbba",
+      "class": "GenPagesMeMe"
+    },
+    "pages/price/price.kt": {
+      "md5": "0a8275fee03ae49be19937f43ae32c2dcaa26803",
+      "class": "GenPagesPricePrice"
+    },
+    "pages/payment/payment.kt": {
+      "class": "GenPagesPaymentPayment",
+      "md5": "1c5457becbef8d4983b1d7ea34424dae37563505"
+    },
+    "pages/register/register.kt": {
+      "class": "GenPagesRegisterRegister",
+      "md5": "a9601a67e5735f7b6da130b851f78ecde3028c7d"
+    },
+    "pages/index/index.kt": {
+      "class": "GenPagesIndexIndex",
+      "md5": "7c732c48bb171a9417f8b6f0f9544b4b962c5d3a"
+    },
+    "pages/admin/modify.kt": {
+      "class": "GenPagesAdminModify",
+      "md5": "72c7ce197a5e0ac511e504165376e6d208fdf441"
+    },
+    "pages/bikelist/bikelist.kt": {
+      "md5": "44c06c8672a14d1e0d08d8df13602396e41a9abc",
+      "class": "GenPagesBikelistBikelist"
+    },
+    "pages/feedback/feedback.kt": {
+      "class": "GenPagesFeedbackFeedback",
+      "md5": "c50a3fcea0d500246d48d18b5d7705db48f5484c"
+    }
+  }
+}

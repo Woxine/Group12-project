@@ -16,28 +16,12 @@ public class DurationRevenueDTO {
         this.totalOrders = totalOrders;
     }
 
-    public String getDurationType() {
-        return durationType;
-    }
+    public String getDurationType() { return durationType; }
+    public void setDurationType(String durationType) { this.durationType = durationType; }
 
-    public void setDurationType(String durationType) {
-        this.durationType = durationType;
-    }
+    public BigDecimal getTotalRevenue() { return totalRevenue; }
+    public void setTotalRevenue(BigDecimal totalRevenue) { this.totalRevenue = totalRevenue; }
 
-    public BigDecimal getTotalRevenue() {
-        return totalRevenue;
-    }
-
-    public void setTotalRevenue(BigDecimal totalRevenue) {
-        this.totalRevenue = totalRevenue;
-    }
-
-    public Integer getTotalOrders() {
-        return totalOrders;
-    }
-
-    public void setTotalOrders(Integer totalOrders) {
-        this.totalOrders = totalOrders;
-    }
+    public Integer getTotalOrders() { return totalOrders; }
+    public void setTotalOrders(Integer totalOrders) { this.totalOrders = totalOrders; }
 }
-

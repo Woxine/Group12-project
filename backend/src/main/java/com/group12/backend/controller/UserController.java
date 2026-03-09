@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.RegisterRequest;
@@ -21,7 +20,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
-
+    
     @Autowired
     private UserService userService;
 
@@ -37,25 +36,12 @@ public class UserController {
 
     // API-005
     /**
-     * 获取用户历史订单（分页，每页默认 10 条）
+     * 获取用户历史订单
      * 查询指定用户的预订记录
      */
     @GetMapping("/{userId}/bookings")
-    public ResponseEntity<Object> getHistory(
-            @PathVariable String userId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        return ResponseEntity.ok(userService.getUserBookings(userId, page, size));
-    }
-
-    /**
-     * Get a single booking by id (for route page). Returns 404 if not owner.
-     */
-    @GetMapping("/{userId}/bookings/{bookingId}")
-    public ResponseEntity<Object> getBookingById(
-            @PathVariable String userId,
-            @PathVariable String bookingId) {
-        return ResponseEntity.ok(userService.getBookingById(userId, bookingId));
+    public ResponseEntity<Object> getHistory(@PathVariable String userId) {
+        return ResponseEntity.ok(Map.of("data", userService.getUserBookings(userId)));
     }
 
     // API-012
@@ -68,4 +54,3 @@ public class UserController {
         return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));
     }
 }
-

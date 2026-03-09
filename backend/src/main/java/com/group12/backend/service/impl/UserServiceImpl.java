@@ -1,15 +1,9 @@
 package com.group12.backend.service.impl;
 
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -36,145 +30,37 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Object register(RegisterRequest request) {
-        // 1. 检查邮箱是否已存在
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already registered");
         }
 
-        // 2. 创建用户实体
         User user = new User();
         user.setEmail(request.getEmail());
-        // 使用 BCrypt 加密密码
+        user.setName(request.getName());
         user.setPassword(passwordEncoder.encode(request.getPassword())); 
-        user.setRole("CUSTOMER"); // 默认角色
+        user.setRole("CUSTOMER");
         
-        // 3. 保存入库
         User savedUser = userRepository.save(user);
 
-        // 4. 返回响应 DTO
         return new RegisterResponse(
             String.valueOf(savedUser.getId()), 
             savedUser.getEmail(), 
-            request.getName() // 注意：User目前可能没有 name 字段，直接返回请求中的 name
+            savedUser.getName()
         );
     }
 
     @Override
-    public Object getUserBookings(String userId, Integer page, Integer size) {
+    public List<Object> getUserBookings(String userId) {
         Long uId = Long.parseLong(userId);
-        int pageNum = (page != null && page > 0) ? page : 1;
-        int pageSize = (size != null && size > 0) ? size : 10;
+        List<Booking> bookings = bookingRepository.findByUserId(uId);
 
-        Page<Booking> pageResult = bookingRepository.findByUser_IdOrderByStartTimeDesc(uId, PageRequest.of(pageNum - 1, pageSize));
-        List<Booking> bookings = pageResult.getContent();
-
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        List<Map<String, Object>> data = new ArrayList<>();
-        for (Booking booking : bookings) {
-            String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
-            String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
-            String durationStr = formatDuration(booking.getDurationHours());
-            Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
-
-            BookingResponse r = new BookingResponse(
-                String.valueOf(booking.getId()),
-                String.valueOf(booking.getScooter().getId()),
-                String.valueOf(booking.getUser().getId()),
-                booking.getStatus(),
-                startStr
-            );
-            r.setStartTime(startStr);
-            r.setEndTime(endStr);
-            r.setDuration(durationStr);
-            r.setTotalPrice(price);
-            r.setCreatedAt(startStr);
-            r.setStartLat(booking.getStartLat());
-            r.setStartLng(booking.getStartLng());
-            r.setEndLat(booking.getEndLat());
-            r.setEndLng(booking.getEndLng());
-
-            Map<String, Object> m = new HashMap<>();
-            m.put("id", r.getId());
-            m.put("scooterId", r.getScooterId());
-            m.put("userId", r.getUserId());
-            m.put("status", r.getStatus());
-            m.put("startTime", r.getStartTime());
-            m.put("endTime", r.getEndTime());
-            m.put("duration", r.getDuration());
-            m.put("total_price", r.getTotalPrice());
-            m.put("price", r.getTotalPrice());
-            m.put("createdAt", r.getCreatedAt());
-            m.put("start_lat", r.getStartLat());
-            m.put("start_lng", r.getStartLng());
-            m.put("end_lat", r.getEndLat());
-            m.put("end_lng", r.getEndLng());
-            data.add(m);
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", data);
-        result.put("total", pageResult.getTotalElements());
-        return result;
-    }
-
-    @Override
-    public Object getBookingById(String userId, String bookingId) {
-        Long uId = Long.parseLong(userId);
-        Long bId = Long.parseLong(bookingId);
-        Booking booking = bookingRepository.findById(bId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
-        if (!booking.getUser().getId().equals(uId)) {
-            throw new RuntimeException("Booking not found");
-        }
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
-        String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
-        String durationStr = formatDuration(booking.getDurationHours());
-        Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
-        BookingResponse r = new BookingResponse(
-                String.valueOf(booking.getId()),
-                String.valueOf(booking.getScooter().getId()),
-                String.valueOf(booking.getUser().getId()),
-                booking.getStatus(),
-                startStr
-        );
-        r.setStartTime(startStr);
-        r.setEndTime(endStr);
-        r.setDuration(durationStr);
-        r.setTotalPrice(price);
-        r.setCreatedAt(startStr);
-        r.setStartLat(booking.getStartLat());
-        r.setStartLng(booking.getStartLng());
-        r.setEndLat(booking.getEndLat());
-        r.setEndLng(booking.getEndLng());
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", r.getId());
-        m.put("scooterId", r.getScooterId());
-        m.put("userId", r.getUserId());
-        m.put("status", r.getStatus());
-        m.put("startTime", r.getStartTime());
-        m.put("endTime", r.getEndTime());
-        m.put("duration", r.getDuration());
-        m.put("total_price", r.getTotalPrice());
-        m.put("price", r.getTotalPrice());
-        m.put("createdAt", r.getCreatedAt());
-        m.put("start_lat", r.getStartLat());
-        m.put("start_lng", r.getStartLng());
-        m.put("end_lat", r.getEndLat());
-        m.put("end_lng", r.getEndLng());
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", m);
-        return result;
-    }
-
-    private static String formatDuration(Double hours) {
-        if (hours == null) return "1H";
-        if (hours > 0 && hours <= 10.0 / 60.0 + 0.01) return "10M";
-        if (hours <= 1) return "1H";
-        if (hours <= 4) return "4H";
-        if (hours <= 24) return "1D";
-        if (hours <= 168) return "1W";
-        return hours.intValue() + "H";
+        return bookings.stream().map(booking -> new BookingResponse(
+            String.valueOf(booking.getId()),
+            String.valueOf(booking.getScooter().getId()),
+            String.valueOf(booking.getUser().getId()),
+            booking.getStatus(),
+            booking.getStartTime()
+        )).collect(Collectors.toList());
     }
 
     @Override
@@ -183,11 +69,10 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(uId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        // 简单返回用户基本信息 map
-        // 实际项目应封装 UserProfileDTO
         return java.util.Map.of(
             "id", user.getId(),
             "email", user.getEmail(),
+            "name", user.getName(),
             "role", user.getRole(),
             "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false
         );

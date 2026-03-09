@@ -1,0 +1,1 @@
+{"version":3,"sources":["pages/orders/orders.uvue"],"sourcesContent":["<template>\r\n\r\n\t<scroll-view style=\"flex:1\">\r\n\r\n\t\t\r\n\r\n\t</scroll-view>\r\n\r\n</template>\r\n\r\n<script setup>\r\n\t\t\r\n</script>\r\n\r\n<style>\r\n\t\t\r\n</style>\r\n"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;eAEC,IAIc,eAAA,IAJD,WAAc,IAAd,IAAA,UAAA"}

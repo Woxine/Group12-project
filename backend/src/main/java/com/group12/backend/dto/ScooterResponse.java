@@ -22,8 +22,6 @@ public class ScooterResponse {
     // Getters
     public Long getId() { return id; }
     public String getStatus() { return status; }
-    /** 供前端 bikelist 直接判断是否已租，避免只依赖 status 字符串解析 */
-    public boolean getRented() { return status != null && "RENTED".equalsIgnoreCase(status); }
     public Double getLocationLat() { return locationLat; }
     public Double getLocationLng() { return locationLng; }
     public BigDecimal getHourRate() { return hourRate; }

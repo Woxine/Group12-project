@@ -44,18 +44,6 @@ public class Booking implements Serializable {
     @Column(nullable = false)
     private String status; // CONFIRMED, COMPLETED, CANCELLED
 
-    @Column(name = "start_lat")
-    private Double startLat;
-
-    @Column(name = "start_lng")
-    private Double startLng;
-
-    @Column(name = "end_lat")
-    private Double endLat;
-
-    @Column(name = "end_lng")
-    private Double endLng;
-
     public Booking() {}
 
     public Long getId() { return id; }
@@ -81,13 +69,4 @@ public class Booking implements Serializable {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-
-    public Double getStartLat() { return startLat; }
-    public void setStartLat(Double startLat) { this.startLat = startLat; }
-    public Double getStartLng() { return startLng; }
-    public void setStartLng(Double startLng) { this.startLng = startLng; }
-    public Double getEndLat() { return endLat; }
-    public void setEndLat(Double endLat) { this.endLat = endLat; }
-    public Double getEndLng() { return endLng; }
-    public void setEndLng(Double endLng) { this.endLng = endLng; }
 }

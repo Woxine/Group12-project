@@ -1,12 +1,12 @@
 package com.group12.backend.service.impl;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.ScooterResponse;
-import com.group12.backend.dto.UpdateScooterRequest;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.ScooterService;
@@ -19,7 +19,6 @@ public class ScooterServiceImpl implements ScooterService {
 
     @Override
     public List<Object> getScooters(String status, Integer page, Integer limit) {
-        // 简化处理：如果状态存在则按状态查，否则查所有
         List<Scooter> scooters;
         if (status != null && !status.isEmpty()) {
             scooters = scooterRepository.findByStatus(status);
@@ -27,8 +26,6 @@ public class ScooterServiceImpl implements ScooterService {
             scooters = scooterRepository.findAll();
         }
 
-        // 简单的 Java 内存分页 (Stream API)
-        // 注意：生产环境应该使用 JPA Pageable 进行数据库分页
         if (page != null && limit != null && page > 0 && limit > 0) {
             int skip = (page - 1) * limit;
             return scooters.stream()
@@ -55,22 +52,21 @@ public class ScooterServiceImpl implements ScooterService {
     }
 
     @Override
-    public Object updateScooter(String scooterId, UpdateScooterRequest request) {
-        Long id = Long.parseLong(scooterId);
+    public Object updateScooter(Long id, String status, BigDecimal hourRate, Double locationLat, Double locationLng) {
         Scooter scooter = scooterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Scooter not found"));
+                .orElseThrow(() -> new RuntimeException("Scooter not found with id: " + id));
 
-        if (request.getStatus() != null && !request.getStatus().isEmpty()) {
-            scooter.setStatus(request.getStatus());
+        if (status != null && !status.isEmpty()) {
+            scooter.setStatus(status);
         }
-        if (request.getLocation_lat() != null) {
-            scooter.setLocationLat(request.getLocation_lat());
+        if (hourRate != null) {
+            scooter.setHourRate(hourRate);
         }
-        if (request.getLocation_lng() != null) {
-            scooter.setLocationLng(request.getLocation_lng());
+        if (locationLat != null) {
+            scooter.setLocationLat(locationLat);
         }
-        if (request.getHour_rate() != null) {
-            scooter.setHourRate(request.getHour_rate());
+        if (locationLng != null) {
+            scooter.setLocationLng(locationLng);
         }
 
         Scooter saved = scooterRepository.save(scooter);

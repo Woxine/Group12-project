@@ -1,0 +1,362 @@
+import { ref, computed } from 'vue';
+import { buildApiUrl } from '../../common/apiConfig.uts';
+
+// --- Types ---
+// We don't need to define a specific RegisterResponse type since we'll handle the response as a generic object
+type GenericResponse = Record<string, any>;
+
+// --- Data ---
+type FormData = { __$originalPosition?: UTSSourceMapPosition<"FormData", "pages/register/register.uvue", 79, 6>;
+	name: string
+	email: string
+	password: string
+}
+
+const __sfc__ = defineComponent({
+  __name: 'register',
+  setup(__props) {
+const __ins = getCurrentInstance()!;
+const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+const _cache = __ins.renderCache;
+
+const formData = ref<FormData>({
+	name: '',
+	email: '',
+	password: ''
+});
+const confirmPassword = ref('');
+const isSubmitting = ref(false);
+
+// Server configuration
+const serverUrl = buildApiUrl('/api/v1/users');
+
+// --- Computed Properties ---
+
+// Name validation: Must not be empty (backend requires non-empty name)
+const isNameValid = computed((): boolean => {
+	return formData.value.name.trim().length > 0;
+});
+
+// Email validation: Must be a valid email format (backend uses @Email annotation)
+const isEmailValid = computed((): boolean => {
+	if (formData.value.email == null || formData.value.email == '') return false;
+	const emailRegex = /^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+	return emailRegex.test(formData.value.email.trim());
+});
+
+// Password validation: Must be at least 6 characters (backend uses @Size(min=6))
+const isPasswordValid = computed((): boolean => {
+	return formData.value.password.length >= 6;
+});
+
+// Confirm password validation: Must match the password
+const passwordsMatch = computed((): boolean => {
+	return formData.value.password == confirmPassword.value;
+});
+
+// Overall form validity
+const isFormValid = computed((): boolean => {
+	return (
+		isNameValid.value &&
+		isEmailValid.value &&
+		isPasswordValid.value &&
+		passwordsMatch.value
+	);
+});
+
+// --- Methods ---
+const showToast = (message: string): void => {
+	uni.showToast({
+		title: message,
+		icon: 'none',
+		duration: 3000
+	});
+};
+
+const handleRegister = async (): Promise<void> => {
+	if (!isNameValid.value) {
+		showToast('Please enter your name.');
+		return;
+	}
+
+	if (!isEmailValid.value) {
+		showToast('Please enter a valid email address.');
+		return;
+	}
+
+	if (!isPasswordValid.value) {
+		showToast('Password must be at least 6 characters long.');
+		return;
+	}
+
+	if (!passwordsMatch.value) {
+		showToast('Passwords do not match.');
+		return;
+	}
+
+	if (isSubmitting.value) return;
+
+	// Prepare request payload
+	const payload = {__$originalPosition: new UTSSourceMapPosition("payload", "pages/register/register.uvue", 162, 8),
+		name: formData.value.name.trim(),
+		email: formData.value.email.trim(),
+		password: formData.value.password
+	};
+
+	console.log('Attempting to register with payload:', {
+		name: payload.name,
+		email: payload.email,
+		password: '[REDACTED]'
+	}, " at pages/register/register.uvue:168");
+
+	try {
+		isSubmitting.value = true;
+
+		uni.request({
+			url: serverUrl,
+			method: 'POST',
+			data: payload,
+			header: {
+				'Content-Type': 'application/json',
+			},
+			timeout: 15000, // 15 seconds timeout
+			success: (response) => {
+				console.log('Registration API success response:', response, " at pages/register/register.uvue:186");
+
+				if (response.statusCode >= 200 && response.statusCode < 300) {
+					// Handle the response data without type assertion
+					const resultObj = response.data as UTSJSONObject; // This is now of type UTSJSONObject
+					console.log('Registration successful:', resultObj, " at pages/register/register.uvue:191");
+					
+					// 兼容 { "data": { "id": "...", "name": "..." } } 和直接返回 { "id": "...", "name": "..." }
+					let regData: UTSJSONObject | null = null;
+					if (resultObj['data'] != null) {
+						regData = resultObj['data'] as UTSJSONObject;
+					} else {
+						regData = resultObj;
+					}
+					
+					// 从注册返回中读取用户 id 并保存到本地，用于后续预订接口
+					if (regData != null && regData['id'] != null) {
+						const rawRegId = regData['id'];
+						const registeredId = '' + rawRegId; // 统一转成字符串，兼容 number/string
+						try {
+							uni.setStorageSync('userId', registeredId);
+							console.log('Saved userId from register:', registeredId, " at pages/register/register.uvue:207");
+						} catch (e) {
+							console.error('Failed to save userId from register:', e, " at pages/register/register.uvue:209");
+						}
+					}
+					
+					// Access the response properties dynamically if they exist
+					let welcomeName = formData.value.name;
+					if (regData != null && regData['name'] != null) {
+						welcomeName = regData['name'] as string;
+					}
+					
+					showToast('Registration successful! Welcome, ' + welcomeName + '!');
+					
+					// Optionally navigate to login page
+					setTimeout(() => {
+						uni.navigateTo({ url: '/pages/login/login' });
+					}, 1500);
+				} else {
+					let errorMessage = '';
+					switch(response.statusCode) {
+						case 400:
+							errorMessage = 'Invalid request data. ';
+							break;
+						case 409:
+							errorMessage = 'Account already exists. ';
+							break;
+						case 422:
+							errorMessage = 'Validation error. ';
+							break;
+						case 500:
+							errorMessage = 'Server error. ';
+							break;
+						default:
+							errorMessage = `Error ${response.statusCode}. `;
+					}
+					
+					const responseData = response.data;
+					if (responseData != null) {
+						if (typeof responseData === 'object') {
+							const responseObj = responseData as UTSJSONObject;
+							const messageFromServer = responseObj['message'] as string | null;
+							const errorFromServer = responseObj['error'] as string | null;
+							const detailsFromServer = responseObj['details'] as string | null;
+							
+							if (messageFromServer != null) {
+								errorMessage += messageFromServer;
+							} else if (errorFromServer != null) {
+								errorMessage += errorFromServer;
+							} else if (detailsFromServer != null) {
+								errorMessage += detailsFromServer;
+							} else {
+								// Safely convert the response to string
+								try {
+									errorMessage += JSON.stringify(responseData);
+								} catch(e) {
+									errorMessage += '[Unable to parse response]';
+								}
+							}
+						} else if (typeof responseData == 'string') {
+							errorMessage += responseData;
+						}
+					} else {
+						errorMessage += 'Server returned empty response.';
+					}
+					
+					console.error('Registration failed (HTTP Status):', errorMessage, " at pages/register/register.uvue:273");
+					showToast(errorMessage);
+				}
+			},
+			fail: (error) => {
+				console.error('Network error during registration:', error, " at pages/register/register.uvue:278");
+				
+				if (error.errMsg != null && error.errMsg.includes('request:fail')) {
+					showToast('Failed to connect to server. Please check your network connection.');
+				} else if (error.errMsg != null && error.errMsg.includes('timeout')) {
+					showToast('Request timed out. Please check your server and try again.');
+				} else {
+					showToast('A network error occurred. Please check your connection and try again.');
+				}
+			},
+			complete: () => {
+				isSubmitting.value = false;
+			}
+		});
+
+	} catch (error) {
+		console.error('Unexpected error during registration attempt:', error, " at pages/register/register.uvue:294");
+		showToast('An unexpected error occurred.');
+		isSubmitting.value = false;
+	}
+};
+
+return (): any | null => {
+
+const _component_navigator = resolveComponent("navigator")
+
+  return _cE(Fragment, null, [
+    _cE("view", _uM({ class: "back" }), [
+      _cE("image", _uM({
+        src: "/static/login_back1.jpg",
+        mode: "",
+        class: "backpic"
+      })),
+      _cE("view", _uM({ class: "login_title" }), [
+        _cE("text", _uM({ class: "title_text" }), "register")
+      ]),
+      _cE("view", _uM({ class: "login_container" }), [
+        _cE("input", _uM({
+          modelValue: formData.value.name,
+          onInput: ($event: UniInputEvent) => {(formData.value.name) = $event.detail.value},
+          type: "text",
+          placeholder: "please enter your name",
+          "confirm-type": "next",
+          class: "input"
+        }), null, 40 /* PROPS, NEED_HYDRATION */, ["modelValue", "onInput"]),
+        _cE("view", _uM({ class: "span1" })),
+        _cE("input", _uM({
+          modelValue: formData.value.email,
+          onInput: ($event: UniInputEvent) => {(formData.value.email) = $event.detail.value},
+          type: "text",
+          placeholder: "please enter account (email)",
+          "confirm-type": "next",
+          class: "input"
+        }), null, 40 /* PROPS, NEED_HYDRATION */, ["modelValue", "onInput"]),
+        _cE("view", _uM({ class: "span1" })),
+        _cE("input", _uM({
+          modelValue: formData.value.password,
+          onInput: ($event: UniInputEvent) => {(formData.value.password) = $event.detail.value},
+          type: "password",
+          placeholder: "please enter password",
+          class: "input"
+        }), null, 40 /* PROPS, NEED_HYDRATION */, ["modelValue", "onInput"]),
+        _cE("view", _uM({ class: "span2" })),
+        _cE("input", _uM({
+          modelValue: confirmPassword.value,
+          onInput: ($event: UniInputEvent) => {(confirmPassword).value = $event.detail.value},
+          type: "password",
+          placeholder: "please check password",
+          class: "input"
+        }), null, 40 /* PROPS, NEED_HYDRATION */, ["modelValue", "onInput"]),
+        _cE("view", _uM({ class: "span2" })),
+        _cE("view", _uM({ class: "validation-info" }), [
+          _cE("text", _uM({
+            class: _nC(["validation-message", _uM({'valid': isNameValid.value, 'invalid': formData.value.name != '' && !isNameValid.value})])
+          }), _tD(formData.value.name != '' ? (isNameValid.value ? '✓ Name is valid' : '✗ Name cannot be empty') : 'Name required'), 3 /* TEXT, CLASS */),
+          _cE("text", _uM({
+            class: _nC(["validation-message", _uM({'valid': isEmailValid.value, 'invalid': formData.value.email != '' && !isEmailValid.value})])
+          }), _tD(formData.value.email != '' ? (isEmailValid.value ? '✓ Valid email format' : '✗ Invalid email format') : 'Email required'), 3 /* TEXT, CLASS */),
+          _cE("text", _uM({
+            class: _nC(["validation-message", _uM({'valid': isPasswordValid.value, 'invalid': formData.value.password != '' && !isPasswordValid.value})])
+          }), _tD(formData.value.password != '' ? (isPasswordValid.value ? '✓ Password meets requirements' : '✗ Password must be at least 6 characters') : 'Password required'), 3 /* TEXT, CLASS */),
+          _cE("text", _uM({
+            class: _nC(["validation-message", _uM({'valid': passwordsMatch.value, 'invalid': confirmPassword.value != '' && !passwordsMatch.value})])
+          }), _tD(confirmPassword.value != '' ? (passwordsMatch.value ? '✓ Passwords match' : '✗ Passwords do not match') : 'Confirm password'), 3 /* TEXT, CLASS */)
+        ]),
+        _cE("view", _uM({ class: "span2" })),
+        _cE("button", _uM({
+          onClick: handleRegister,
+          disabled: isSubmitting.value || !isFormValid.value,
+          size: "default",
+          style: _nS(_uM({"color":"white","background-color":"rgba(60, 60, 60, 0.7)"}))
+        }), _tD(isSubmitting.value ? 'Registering...' : 'Sign Up'), 13 /* TEXT, STYLE, PROPS */, ["disabled"])
+      ])
+    ]),
+    _cE("view", _uM({ class: "bottom" }), [
+      _cV(_component_navigator, _uM({
+        url: "/pages/index/index",
+        "open-type": "reLaunch",
+        class: "bottom_left"
+      }), _uM({
+        default: withSlotCtx((): any[] => [
+          _cE("image", _uM({
+            src: "/static/home.png",
+            mode: "aspectFit",
+            class: "icon2"
+          })),
+          _cE("view", _uM({ class: "left_down" }), [
+            _cE("text", _uM({ class: "text3" }), "Home")
+          ])
+        ]),
+        _: 1 /* STABLE */
+      })),
+      _cV(_component_navigator, _uM({
+        url: "/pages/bikelist/bikelist",
+        "open-type": "reLaunch",
+        class: "bottom_center"
+      }), _uM({
+        default: withSlotCtx((): any[] => [
+          _cE("image", _uM({
+            src: "/static/bike.png",
+            mode: "aspectFit",
+            class: "bike_icon"
+          })),
+          _cE("view", _uM({ class: "center_down" }), [
+            _cE("text", _uM({ class: "text3" }), "Bike")
+          ])
+        ]),
+        _: 1 /* STABLE */
+      })),
+      _cE("view", _uM({ class: "bottom_right" }), [
+        _cE("image", _uM({
+          src: "/static/me.png",
+          mode: "aspectFit",
+          class: "icon2"
+        })),
+        _cE("view", _uM({ class: "right_down" }), [
+          _cE("text", _uM({ class: "text3" }), "Me")
+        ])
+      ])
+    ])
+  ], 64 /* STABLE_FRAGMENT */)
+}
+}
+
+})
+export default __sfc__
+const GenPagesRegisterRegisterStyles = [_uM([["back", _pS(_uM([["width", "100%"], ["height", "100%"]]))], ["backpic", _uM([[".back ", _uM([["width", "100%"], ["height", "100%"]])]])], ["login_title", _uM([[".back ", _uM([["position", "absolute"], ["top", 0], ["left", "50%"], ["transform", "translateX(-50%)"], ["zIndex", 10], ["paddingTop", 10], ["paddingRight", 10], ["paddingBottom", 10], ["paddingLeft", 10], ["backgroundColor", "rgba(0,0,0,0.3)"]])]])], ["title_text", _uM([[".back .login_title ", _uM([["height", "100%"], ["fontSize", 32], ["fontWeight", "bold"], ["color", "#FFFFFF"], ["textShadow", "1px 1px 3px rgba(0, 0, 0, 0.5)"]])]])], ["login_container", _uM([[".back ", _uM([["position", "absolute"], ["top", "50%"], ["left", "50%"], ["transform", "translate(-50%, -50%)"], ["width", 300], ["paddingTop", 30], ["paddingRight", 30], ["paddingBottom", 30], ["paddingLeft", 30], ["backgroundColor", "rgba(227,225,225,0.46)"], ["borderTopLeftRadius", 15], ["borderTopRightRadius", 15], ["borderBottomRightRadius", 15], ["borderBottomLeftRadius", 15], ["boxShadow", "0 10px 30px rgba(0, 0, 0, 0.3)"]])]])], ["input", _uM([[".back .login_container ", _uM([["width", "100%"], ["height", "10%"], ["paddingTop", 20], ["paddingRight", 20], ["paddingBottom", 20], ["paddingLeft", 20], ["borderTopWidth", "medium"], ["borderRightWidth", "medium"], ["borderBottomWidth", "medium"], ["borderLeftWidth", "medium"], ["borderTopStyle", "none"], ["borderRightStyle", "none"], ["borderBottomStyle", "none"], ["borderLeftStyle", "none"], ["borderTopColor", "#000000"], ["borderRightColor", "#000000"], ["borderBottomColor", "#000000"], ["borderLeftColor", "#000000"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8], ["backgroundColor", "rgba(60,60,60,0.7)"], ["color", "#FFFFFF"], ["fontSize", 16]])]])], ["span1", _uM([[".back .login_container ", _uM([["width", "100%"], ["height", 10], ["backgroundColor", "rgba(0,0,0,0)"]])]])], ["span2", _uM([[".back .login_container ", _uM([["width", "100%"], ["height", 10], ["backgroundColor", "rgba(0,0,0,0)"]])]])], ["validation-info", _uM([[".back .login_container ", _uM([["marginTop", 10], ["marginRight", 0], ["marginBottom", 10], ["marginLeft", 0], ["paddingTop", 10], ["paddingRight", 10], ["paddingBottom", 10], ["paddingLeft", 10], ["backgroundColor", "rgba(0,0,0,0.1)"], ["borderTopLeftRadius", 5], ["borderTopRightRadius", 5], ["borderBottomRightRadius", 5], ["borderBottomLeftRadius", 5]])]])], ["validation-message", _uM([[".back .login_container ", _uM([["fontSize", 12], ["marginBottom", 5]])], [".back .login_container .valid", _uM([["color", "#2ecc71"], ["fontWeight", "bold"]])], [".back .login_container .invalid", _uM([["color", "#e74c3c"], ["fontWeight", "bold"]])]])], ["server-config", _uM([[".back .login_container ", _uM([["marginTop", 20], ["paddingTop", 10], ["paddingRight", 10], ["paddingBottom", 10], ["paddingLeft", 10], ["backgroundColor", "rgba(255,255,255,0.2)"], ["borderTopLeftRadius", 8], ["borderTopRightRadius", 8], ["borderBottomRightRadius", 8], ["borderBottomLeftRadius", 8]])]])], ["config-label", _uM([[".back .login_container .server-config ", _uM([["color", "#FFFFFF"], ["fontSize", 14], ["marginBottom", 5]])]])], ["config-input", _uM([[".back .login_container .server-config ", _uM([["width", "100%"], ["paddingTop", 10], ["paddingRight", 10], ["paddingBottom", 10], ["paddingLeft", 10], ["borderTopLeftRadius", 5], ["borderTopRightRadius", 5], ["borderBottomRightRadius", 5], ["borderBottomLeftRadius", 5], ["backgroundColor", "rgba(255,255,255,0.8)"], ["fontSize", 14]])]])], ["bottom", _pS(_uM([["width", "100%"], ["height", "8%"], ["backgroundImage", "none"], ["backgroundColor", "#E3E1E1"], ["position", "absolute"], ["bottom", 0], ["borderTopLeftRadius", 25], ["borderTopRightRadius", 25], ["borderBottomRightRadius", 0], ["borderBottomLeftRadius", 0]]))], ["bottom_left", _uM([[".bottom ", _uM([["borderTopLeftRadius", 0], ["borderTopRightRadius", 0], ["borderBottomRightRadius", 0], ["borderBottomLeftRadius", 0], ["width", "20%"], ["height", "100%"], ["marginLeft", "5%"]])]])], ["icon2", _uM([[".bottom .bottom_left ", _uM([["position", "absolute"], ["left", "20%"], ["width", "60%"], ["height", "60%"]])], [".bottom .bottom_right ", _uM([["position", "absolute"], ["left", "20%"], ["width", "60%"], ["height", "60%"]])]])], ["left_down", _uM([[".bottom .bottom_left ", _uM([["display", "flex"], ["justifyContent", "center"], ["alignItems", "center"], ["position", "absolute"], ["bottom", "0%"], ["width", "100%"], ["height", "40%"]])]])], ["bottom_center", _uM([[".bottom ", _uM([["position", "absolute"], ["left", "40%"], ["borderTopLeftRadius", 0], ["borderTopRightRadius", 0], ["borderBottomRightRadius", 0], ["borderBottomLeftRadius", 0], ["width", "20%"], ["height", "100%"]])]])], ["bike_icon", _uM([[".bottom .bottom_center ", _uM([["position", "absolute"], ["left", "25%"], ["width", "50%"], ["height", "60%"]])]])], ["center_down", _uM([[".bottom .bottom_center ", _uM([["display", "flex"], ["justifyContent", "center"], ["alignItems", "center"], ["position", "absolute"], ["bottom", "0%"], ["width", "100%"], ["height", "40%"]])]])], ["bottom_right", _uM([[".bottom ", _uM([["position", "absolute"], ["right", "0%"], ["borderTopLeftRadius", 0], ["borderTopRightRadius", 0], ["borderBottomRightRadius", 0], ["borderBottomLeftRadius", 0], ["width", "20%"], ["height", "100%"], ["marginRight", "5%"]])]])], ["right_down", _uM([[".bottom .bottom_right ", _uM([["display", "flex"], ["justifyContent", "center"], ["alignItems", "center"], ["position", "absolute"], ["bottom", "0%"], ["width", "100%"], ["height", "40%"]])]])], ["text3", _pS(_uM([["fontSize", 12]]))]])]

@@ -1,5 +1,13 @@
 /**
  * 后端 API 根地址，修改此处即可全局生效
- * 例如: http://192.168.110.37:8080 或 http://你的新IP:8080
+ *
+ * 推荐方式（无需每次改IP）：
+ *   1. 用 USB 连接 Android 设备并开启 USB 调试
+ *   2. 在 PC 终端执行：adb reverse tcp:8080 tcp:8080
+ *   3. BASE_URL 保持 http://localhost:8080 即可，无需改 IP
+ *
+ * 备用方式（直连 IP）：
+ *   将 BASE_URL 改为 PC 的局域网 IP，例如 http://192.168.31.201:8080
+ *   Android 设备需与 PC 在同一 WiFi 网络下
  */
-export const BASE_URL = 'http://172.20.10.2:8080'
+export const BASE_URL = 'http://localhost:8080'

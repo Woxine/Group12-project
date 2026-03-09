@@ -23,6 +23,9 @@ public class User implements Serializable {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    private String name;
+
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'CUSTOMER'")
     private String role; // CUSTOMER, STAFF, ADMIN
 
@@ -42,6 +45,9 @@ public class User implements Serializable {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

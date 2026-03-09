@@ -1,0 +1,9 @@
+// USB debugging mode: use adb reverse so phone 127.0.0.1 maps to PC:8080
+export const BACKEND_BASE_URL = 'http://127.0.0.1:8080';
+export const buildApiUrl = (path: string): string => {
+    if (path.startsWith('/')) {
+        return `${BACKEND_BASE_URL}${path}`;
+    }
+    return `${BACKEND_BASE_URL}/${path}`;
+};
+//# sourceMappingURL=apiConfig.uts.map

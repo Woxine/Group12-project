@@ -48,15 +48,11 @@ public class AuthServiceImpl implements AuthService {
         // 3. 生成真实 JWT Token
         String token = jwtUtil.generateToken(user.getEmail(), user.getId());
 
-        // 4. 返回登录信息（role 必填，供前端区分管理员跳转）
-        String role = user.getRole();
-        if (role == null || role.isEmpty()) {
-            role = "CUSTOMER";
-        }
+        // 4. 返回登录信息
         return new LoginResponse(
             token,
             String.valueOf(user.getId()),
-            role
+            user.getRole()
         );
     }
 
