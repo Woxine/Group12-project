@@ -39,20 +39,7 @@
 		</view>
 	</view>
 	
-	<view class="bottom">
-		<navigator url="/pages/index/index" open-type="reLaunch" class="bottom_left">
-			<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
-			<view class="left_down"><text class="text3">Home</text></view>
-		</navigator>
-		<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" class="bottom_center">
-			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
-			<view class="center_down"><text class="text3">Bike</text></view>
-		</navigator>
-		<view class="bottom_right">
-			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
-			<view class="right_down"><text class="text3">Me</text></view>
-		</view>
-	</view>
+	<TabBar current="me" />
 </template>
 
 <script setup lang="uts">
@@ -316,78 +303,4 @@ const onSubmit = () => {
 		}
 	}
 	
-	.bottom{
-		width: 100%;
-		height: 80px;
-		background: #E3E1E1;
-		border-radius: 25px 25px 0px 0px;
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		flex-shrink: 0;
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		z-index: 10;
-		.bottom_left{
-			border-radius: 0px;
-			width: 33.33%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-			align-items: center;
-			.icon2{
-				width: 30px;
-				height: 30px;
-			}
-			.left_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				height: 40%;
-				width: 100%;
-			}
-		}
-		.bottom_center{
-			border-radius: 0px;
-			width: 33.33%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-			align-items: center;
-			.bike_icon{
-				width: 30px;
-				height: 30px;
-			}
-			.center_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				height: 40%;
-				width: 100%;
-			}
-		}
-		.bottom_right{
-			border-radius: 0px;
-			width: 33.33%;
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-			align-items: center;
-			.icon2{
-				width: 30px;
-				height: 30px;
-			}
-			.right_down{
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				height: 40%;
-				width: 100%;
-			}
-		}
-	}
 </style>

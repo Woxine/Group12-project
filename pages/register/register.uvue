@@ -51,20 +51,7 @@
 		</view>
 	</view>
 	
-	<view class="bottom">
-		<navigator url="/pages/index/index" open-type="reLaunch" class="bottom_left">
-			<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
-			<view class="left_down"><text class="text3">Home</text></view>
-		</navigator>
-		<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" class="bottom_center">
-			<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
-			<view class="center_down"><text class="text3">Bike</text></view>
-		</navigator>
-		<view class="bottom_right">
-			<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
-			<view class="right_down"><text class="text3">Me</text></view>
-		</view>
-	</view>
+	<TabBar current="me" />
 </template>
 
 <script setup lang="uts">
@@ -397,91 +384,4 @@ const handleRegister = async (): Promise<void> => {
 	}
 }
 
-.bottom {
-	width: 100%;
-	height: 8%;
-	background: #E3E1E1;
-	position: absolute;
-	bottom: 0px;
-	border-radius: 25px 25px 0px 0px;
-	
-	.bottom_left {
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		margin-left: 5%;
-		
-		.icon2 {
-			position: absolute;
-			left: 20%;
-			width: 60%;
-			height: 60%;
-		}
-		
-		.left_down {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			position: absolute;
-			bottom: 0%;
-			width: 100%;
-			height: 40%;
-		}
-	}
-	
-	.bottom_center {
-		position: absolute;
-		left: 40%;
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		
-		.bike_icon {
-			position: absolute;
-			left: 25%;
-			width: 50%;
-			height: 60%;
-		}
-		
-		.center_down {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			position: absolute;
-			bottom: 0%;
-			width: 100%;
-			height: 40%;
-		}
-	}
-	
-	.bottom_right {
-		position: absolute;
-		right: 0%;
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		margin-right: 5%;
-		
-		.icon2 {
-			position: absolute;
-			left: 20%;
-			width: 60%;
-			height: 60%;
-		}
-		
-		.right_down {
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			position: absolute;
-			bottom: 0%;
-			width: 100%;
-			height: 40%;
-		}
-	}
-}
-
-.text3 {
-	font-size: 12px;
-}
 </style>

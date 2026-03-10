@@ -34,6 +34,82 @@
 				</view>
 			</view>
 
+			<!-- Riding Activity Heatmap -->
+			<view class="heatmap-section">
+				<text class="heatmap-title">Riding Activity</text>
+
+				<!-- Stats Summary (2x2 grid) -->
+				<view class="stats-grid">
+					<view class="stats-row">
+						<view class="stat-item">
+							<text class="stat-value">{{ totalRides }}</text>
+							<text class="stat-label">Total Rides</text>
+						</view>
+						<view class="stat-item">
+							<text class="stat-value">£{{ totalSpent }}</text>
+							<text class="stat-label">Total Spent</text>
+						</view>
+					</view>
+					<view class="stats-row">
+						<view class="stat-item">
+							<text class="stat-value">{{ mostActiveDay }}</text>
+							<text class="stat-label">Most Active</text>
+						</view>
+						<view class="stat-item">
+							<text class="stat-value">{{ activeDays }}</text>
+							<text class="stat-label">Active Days</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- Loading State -->
+				<view v-if="heatmapLoading" class="heatmap-loading">
+					<text class="heatmap-loading-text">Loading activity data...</text>
+				</view>
+
+				<!-- Heatmap Grid -->
+				<view v-else-if="heatmapWeeks.length > 0" class="heatmap-container">
+					<!-- Weekday Labels -->
+					<view class="heatmap-body">
+					<view class="weekday-labels">
+						<text class="weekday-label">Mon</text>
+						<text class="weekday-label">Tue</text>
+						<text class="weekday-label">Wed</text>
+						<text class="weekday-label">Thu</text>
+						<text class="weekday-label">Fri</text>
+						<text class="weekday-label">Sat</text>
+						<text class="weekday-label">Sun</text>
+					</view>
+						<scroll-view class="heatmap-scroll" scroll-x="true" direction="horizontal">
+							<view class="heatmap-grid">
+								<view v-for="(week, wi) in heatmapWeeks" :key="wi" class="heatmap-col">
+									<view v-for="(day, di) in week" :key="di"
+										:class="['heatmap-cell', day.empty ? 'heatmap-cell-empty' : '']"
+										:style="{ backgroundColor: day.empty ? 'transparent' : getCellColor(day.count) }">
+									</view>
+								</view>
+							</view>
+						</scroll-view>
+					</view>
+					<!-- Legend -->
+					<view class="heatmap-legend">
+						<text class="legend-text">Less</text>
+						<view class="legend-cell" style="background-color: #ebedf0;"></view>
+						<view class="legend-cell" style="background-color: #9be9a8;"></view>
+						<view class="legend-cell" style="background-color: #40c463;"></view>
+						<view class="legend-cell" style="background-color: #30a14e;"></view>
+						<view class="legend-cell" style="background-color: #216e39;"></view>
+						<text class="legend-text">More</text>
+					</view>
+				</view>
+
+				<!-- Empty State -->
+				<view v-else class="heatmap-empty">
+					<text class="heatmap-empty-text">No riding data yet</text>
+					<text class="heatmap-empty-hint">Start riding to see your activity here</text>
+				</view>
+			</view>
+
 			<!-- Menu List -->
 			<view class="menu-list">
 				<navigator url="/pages/orders/orders" open-type="navigate" class="menu-item">
@@ -46,29 +122,13 @@
 				</navigator>
 			</view>
 
-			<!-- Orders Section (temporarily hidden in profile page) -->
-
 			<!-- Logout Button -->
 			<view class="action-section">
 				<button class="logout-btn" @click="handleLogout">Logout</button>
 			</view>
 		</scroll-view>
 
-		<!-- Bottom Navigation -->
-		<view class="bottom">
-			<navigator url="/pages/index/index" open-type="reLaunch" class="bottom_left">
-				<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
-				<view class="left_down"><text class="text3">Home</text></view>
-			</navigator>
-			<navigator url="/pages/bikelist/bikelist" open-type="reLaunch" class="bottom_center">
-				<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
-				<view class="center_down"><text class="text3">Bike</text></view>
-			</navigator>
-			<view class="bottom_right">
-				<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
-				<view class="right_down"><text class="text3">Me</text></view>
-			</view>
-		</view>
+		<TabBar current="me" />
 	</view>
 </template>
 
@@ -76,165 +136,245 @@
 import { ref, onMounted } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 
-type Order = {
-	id: string
-	bikeId: string
-	duration: string
-	price: number
-	date: string
-	status: string
-}
-
 type UserInfo = {
 	name: string
 	email: string
 }
 
+type HeatmapDay = {
+	date: string
+	count: number
+	empty: boolean
+}
+
 const userName = ref<string>('')
 const userEmail = ref<string>('')
-const orders = ref<Order[]>([])
-const isLoading = ref(false)
+const heatmapLoading = ref(false)
+const totalRides = ref(0)
+const totalSpent = ref('0.00')
+const mostActiveDay = ref('-')
+const activeDays = ref(0)
+const heatmapWeeks = ref<HeatmapDay[][]>([])
 
-// Get user info from storage or session
 const getUserInfo = () => {
-	// Try to get from local storage
 	const userInfoStr = uni.getStorageSync('userInfo')
-	console.log('Retrieved userInfoStr from storage:', userInfoStr)
-	
 	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
 		try {
 			const userInfo = JSON.parse<UserInfo>(userInfoStr)!!
-			console.log('Parsed userInfo:', userInfo)
-			
 			if (userInfo != null) {
 				if (userInfo['name'] != null) {
 					userName.value = userInfo['name'] as string
-					console.log('Set userName to:', userName.value)
 				}
 				if (userInfo['email'] != null) {
 					userEmail.value = userInfo['email'] as string
-					console.log('Set userEmail to:', userEmail.value)
 				}
 			}
 		} catch (e) {
 			console.error('Failed to parse user info:', e)
 		}
-	} else {
-		console.log('No user info found in storage or invalid format')
 	}
 }
 
-// Fetch user orders
-const fetchOrders = () => {
-	if (userName.value == '') {
+const padZero = (n: number): string => {
+	return n < 10 ? '0' + n : '' + n
+}
+
+const formatDateKey = (d: Date): string => {
+	return d.getFullYear() + '-' + padZero(d.getMonth() + 1) + '-' + padZero(d.getDate())
+}
+
+const getDayOfWeek = (d: Date): number => {
+	const day = d.getDay()
+	return day == 0 ? 6 : day - 1
+}
+
+const getCellColor = (count: number): string => {
+	if (count <= 0) return '#ebedf0'
+	if (count == 1) return '#9be9a8'
+	if (count == 2) return '#40c463'
+	if (count == 3) return '#30a14e'
+	return '#216e39'
+}
+
+const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+const buildHeatmap = (dateCountMap: UTSJSONObject, allDates: string[]) => {
+	const TOTAL_DAYS = 84
+	const today = new Date()
+	
+	const daysList: HeatmapDay[] = []
+	for (let i = TOTAL_DAYS - 1; i >= 0; i--) {
+		const d = new Date(today.getTime() - i * 86400000)
+		const key = formatDateKey(d)
+		const rawCount = dateCountMap[key]
+		const count = rawCount != null ? (rawCount as number) : 0
+		daysList.push({ date: key, count: count, empty: false })
+	}
+
+	// Pad the first week so columns align to Monday
+	const firstDate = new Date(today.getTime() - (TOTAL_DAYS - 1) * 86400000)
+	const firstDow = getDayOfWeek(firstDate)
+	for (let p = 0; p < firstDow; p++) {
+		daysList.splice(0, 0, { date: '', count: 0, empty: true } as HeatmapDay)
+	}
+
+	// Build column-based weeks (each column = 7 rows = Mon..Sun)
+	const weeks: HeatmapDay[][] = []
+	let col: HeatmapDay[] = []
+	for (let i = 0; i < daysList.length; i++) {
+		col.push(daysList[i])
+		if (col.length == 7) {
+			weeks.push(col)
+			col = []
+		}
+	}
+	if (col.length > 0) {
+		while (col.length < 7) {
+			col.push({ date: '', count: 0, empty: true } as HeatmapDay)
+		}
+		weeks.push(col)
+	}
+
+	heatmapWeeks.value = weeks
+
+	// Compute stats
+	let rides = 0
+	let spent = 0.0
+	let active = 0
+	const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0]
+
+	for (let i = 0; i < daysList.length; i++) {
+		const day = daysList[i]
+		if (day.empty) continue
+		if (day.count > 0) {
+			rides += day.count
+			active++
+			if (day.date.length >= 10) {
+				const dateObj = new Date(day.date)
+				const dow = getDayOfWeek(dateObj)
+				dayCounts[dow] += day.count
+			}
+		}
+	}
+
+	totalRides.value = rides
+	activeDays.value = active
+
+	let maxDow = 0
+	let maxCount = 0
+	for (let d = 0; d < 7; d++) {
+		if (dayCounts[d] > maxCount) {
+			maxCount = dayCounts[d]
+			maxDow = d
+		}
+	}
+	mostActiveDay.value = maxCount > 0 ? dayNames[maxDow] : '-'
+}
+
+const fetchBookingsForHeatmap = () => {
+	const userIdStorage = uni.getStorageSync('userId')
+	const tokenStorage = uni.getStorageSync('token')
+	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
+	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+
+	if (userId == null || userId.length == 0 || token == null || token.length == 0) {
 		return
 	}
 
-	isLoading.value = true
+	heatmapLoading.value = true
 
 	uni.request({
-		url: BASE_URL + '/api/v1/orders',
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=200',
 		method: 'GET',
 		header: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
 		},
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const responseData = res.data
 				if (responseData != null && typeof responseData === 'object') {
-					const responseObj = responseData as UTSJSONObject
-					const ordersData = responseObj['data']
-					if (ordersData != null && Array.isArray(ordersData)) {
-						const parsedOrders: Order[] = []
-						for (let i = 0; i < ordersData.length; i++) {
-							const orderItem = ordersData[i] as UTSJSONObject
-							const order: Order = {
-								id: (orderItem['id'] != null ? orderItem['id'] : i + 1) as string,
-								bikeId: (orderItem['bikeId'] != null ? orderItem['bikeId'] : 'SC000' + (i + 1)) as string,
-								duration: (orderItem['duration'] != null ? orderItem['duration'] : '1小时') as string,
-								price: (orderItem['price'] != null ? orderItem['price'] as number : 1),
-								date: (orderItem['date'] != null ? orderItem['date'] : new Date().toLocaleDateString()) as string,
-								status: (orderItem['status'] != null ? orderItem['status'] : 'Completed') as string
+					const obj = responseData as UTSJSONObject
+					const dataField = obj['data']
+					if (dataField != null && Array.isArray(dataField)) {
+						const arr = dataField as UTSJSONObject[]
+						const dateCountMap = {} as UTSJSONObject
+						const allDates: string[] = []
+						let spentSum = 0.0
+
+						for (let i = 0; i < arr.length; i++) {
+							const item = arr[i]
+							const rawStatus = item['status']
+							const status = rawStatus != null ? ('' + rawStatus).trim().toUpperCase() : ''
+							if (status != 'COMPLETED' && status != 'CONFIRMED') continue
+
+							const rawStart = item['startTime'] != null ? item['startTime'] : item['start_time']
+							if (rawStart == null) continue
+							const startStr = '' + rawStart
+							const dateKey = startStr.length >= 10 ? startStr.substring(0, 10) : ''
+							if (dateKey.length == 0) continue
+
+							const existing = dateCountMap[dateKey]
+							if (existing != null) {
+								dateCountMap[dateKey] = (existing as number) + 1
+							} else {
+								dateCountMap[dateKey] = 1
+								allDates.push(dateKey)
 							}
-							parsedOrders.push(order)
+
+							const rawPrice = item['total_price'] != null ? item['total_price'] : item['price']
+							if (rawPrice != null) {
+								spentSum += rawPrice as number
+							}
 						}
-						orders.value = parsedOrders
+
+						totalSpent.value = spentSum.toFixed(2)
+						buildHeatmap(dateCountMap, allDates)
+					} else {
+						buildHeatmap({} as UTSJSONObject, [])
 					}
+				} else {
+					buildHeatmap({} as UTSJSONObject, [])
 				}
 			} else {
-				console.error('Failed to fetch orders:', res.statusCode)
-				uni.showToast({
-					title: 'Failed to load orders',
-					icon: 'none'
-				})
+				console.error('Failed to fetch bookings for heatmap:', res.statusCode)
+				buildHeatmap({} as UTSJSONObject, [])
 			}
 		},
 		fail: (error) => {
-			console.error('Network error:', error)
-			// Load mock data for demo
-			loadMockOrders()
+			console.error('Heatmap network error:', error)
+			buildHeatmap({} as UTSJSONObject, [])
 		},
 		complete: () => {
-			isLoading.value = false
+			heatmapLoading.value = false
 		}
 	})
 }
 
-// Load mock orders for demo
-const loadMockOrders = () => {
-		const mockOrdersData: Order[] = [
-		{
-			id: '1',
-			bikeId: 'SC001',
-			duration: '1 hour',
-			price: 1,
-			date: '2024-02-10',
-			status: 'Completed'
-		},
-		{
-			id: '2',
-			bikeId: 'SC002',
-			duration: '4 hours',
-			price: 1,
-			date: '2024-02-08',
-			status: 'Completed'
-		},
-		{
-			id: '3',
-			bikeId: 'SC003',
-			duration: '1 day',
-			price: 1,
-			date: '2024-02-05',
-			status: 'Pending'
-		}
-	]
-	orders.value = mockOrdersData
-}
-
-// Handle logout
 const handleLogout = () => {
 	uni.showModal({
 		title: 'Logout',
 		content: 'Are you sure you want to logout?',
 		success: (res) => {
 			if (res.confirm) {
-				// Clear all user data
 				uni.removeStorageSync('userInfo')
 				uni.removeStorageSync('token')
 				uni.removeStorageSync('userId')
 				uni.removeStorageSync('selectedScooterId')
-				
-				// Reset page state
+
 				userName.value = ''
 				userEmail.value = ''
-				orders.value = []
-				
+				heatmapWeeks.value = []
+				totalRides.value = 0
+				totalSpent.value = '0.00'
+				mostActiveDay.value = '-'
+				activeDays.value = 0
+
 				uni.showToast({
 					title: 'Logged out successfully',
 					icon: 'success'
 				})
-				
-				// Navigate to me page (will show not logged in state)
+
 				uni.reLaunch({
 					url: '/pages/me/me'
 				})
@@ -245,10 +385,7 @@ const handleLogout = () => {
 
 onMounted(() => {
 	getUserInfo()
-	// Load mock orders for now
-	loadMockOrders()
-	// Uncomment this line when backend is ready
-	// fetchOrders()
+	fetchBookingsForHeatmap()
 })
 </script>
 
@@ -261,6 +398,8 @@ onMounted(() => {
 	display: flex;
 	flex-direction: column;
 }
+
+/* ── Not Logged In ── */
 
 .login-prompt-section {
 	width: 100%;
@@ -275,25 +414,25 @@ onMounted(() => {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 40px 20px;
+	padding: 40px 24px;
 	background-color: white;
 	border-radius: 12px;
-	margin: 20px;
+	margin: 16px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .large-icon {
 	width: 80px;
 	height: 80px;
-	margin-bottom: 20px;
-	opacity: 0.6;
+	margin-bottom: 24px;
+	opacity: 0.7;
 }
 
 .welcome-text {
 	font-size: 24px;
 	font-weight: bold;
 	color: #333;
-	margin-bottom: 10px;
+	margin-bottom: 8px;
 	text-align: center;
 }
 
@@ -301,30 +440,30 @@ onMounted(() => {
 	font-size: 14px;
 	color: #999;
 	text-align: center;
-	margin-bottom: 30px;
+	margin-bottom: 24px;
 }
 
 .login-btn {
 	width: 100%;
-	height: 45px;
+	height: 48px;
 	background-color: #4CAF50;
 	color: white;
 	border: none;
 	border-radius: 8px;
 	font-size: 16px;
 	font-weight: bold;
-	margin-bottom: 15px;
+	margin-bottom: 16px;
 }
 
 .divider-text {
 	font-size: 12px;
 	color: #999;
-	margin-bottom: 15px;
+	margin-bottom: 16px;
 }
 
 .register-btn {
 	width: 100%;
-	height: 45px;
+	height: 48px;
 	background-color: rgba(76, 175, 80, 0.2);
 	color: #4CAF50;
 	border: 1px solid #4CAF50;
@@ -333,30 +472,227 @@ onMounted(() => {
 	font-weight: bold;
 }
 
+/* ── Logged In Container ── */
+
 .logged-in-container {
 	width: 100%;
 	flex: 1;
 	padding-bottom: 90px;
 }
 
+/* ── Profile Header Card ── */
+
 .profile-section {
-	width: 100%;
+	margin: 16px 16px 0 16px;
 	background-color: white;
-	padding: 20px;
+	padding: 24px;
 	box-sizing: border-box;
-	border-bottom: 1px solid #e0e0e0;
+	border-top-left-radius: 12px;
+	border-top-right-radius: 12px;
 }
 
-.menu-list {
+.profile-header {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	width: 72px;
+	height: 72px;
+	border-radius: 36px;
+	background-color: #e0e0e0;
+	margin-right: 20px;
+}
+
+.user-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.user-name {
+	font-size: 18px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 6px;
+}
+
+.user-email {
+	font-size: 13px;
+	color: #999;
+}
+
+/* ── Heatmap Section (continues card group) ── */
+
+.heatmap-section {
+	margin: 0 16px;
+	background-color: white;
+	padding: 16px 24px;
+	box-sizing: border-box;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #f0f0f0;
+}
+
+.heatmap-title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 16px;
+}
+
+.stats-grid {
+	margin-bottom: 16px;
+}
+
+.stats-row {
+	display: flex;
+	flex-direction: row;
+}
+
+.stat-item {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10px 8px;
+}
+
+.stat-value {
+	font-size: 20px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 4px;
+}
+
+.stat-label {
+	font-size: 12px;
+	color: #999;
+}
+
+.heatmap-loading {
+	padding: 24px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.heatmap-loading-text {
+	font-size: 13px;
+	color: #999;
+}
+
+.heatmap-container {
 	width: 100%;
+}
+
+.heatmap-body {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+
+.weekday-labels {
+	display: flex;
+	flex-direction: column;
+	margin-right: 4px;
+	flex-shrink: 0;
+}
+
+.weekday-label {
+	width: 26px;
+	height: 11px;
+	line-height: 11px;
+	font-size: 9px;
+	color: #999;
+	text-align: right;
+	margin-bottom: 2px;
+}
+
+.heatmap-scroll {
+	flex: 1;
+	overflow: hidden;
+}
+
+.heatmap-grid {
+	display: flex;
+	flex-direction: row;
+}
+
+.heatmap-col {
+	display: flex;
+	flex-direction: column;
+	margin-right: 2px;
+}
+
+.heatmap-cell {
+	width: 11px;
+	height: 11px;
+	border-radius: 2px;
+	margin-bottom: 2px;
+}
+
+.heatmap-cell-empty {
+	background-color: transparent;
+}
+
+.heatmap-legend {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
 	margin-top: 12px;
+}
+
+.legend-text {
+	font-size: 10px;
+	color: #999;
+	margin-left: 4px;
+	margin-right: 4px;
+}
+
+.legend-cell {
+	width: 11px;
+	height: 11px;
+	border-radius: 2px;
+	margin-left: 2px;
+}
+
+.heatmap-empty {
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.heatmap-empty-text {
+	font-size: 14px;
+	color: #666;
+	margin-bottom: 4px;
+}
+
+.heatmap-empty-hint {
+	font-size: 12px;
+	color: #999;
+}
+
+/* ── Menu List (continues card group) ── */
+
+.menu-list {
+	margin: 0 16px;
 	background-color: white;
 	box-sizing: border-box;
+	border-bottom-left-radius: 12px;
+	border-bottom-right-radius: 12px;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #f0f0f0;
 }
 
 .menu-item {
 	width: 100%;
-	padding: 14px 20px;
+	padding: 16px 24px;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: row;
@@ -381,161 +717,13 @@ onMounted(() => {
 	color: #ccc;
 }
 
-.profile-header {
-	display: flex;
-	align-items: center;
-}
-
-.avatar {
-	width: 60px;
-	height: 60px;
-	border-radius: 30px;
-	background-color: #e0e0e0;
-	margin-right: 15px;
-}
-
-.user-info {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-}
-
-.user-name {
-	font-size: 16px;
-	font-weight: bold;
-	color: #333;
-	margin-bottom: 5px;
-}
-
-.user-email {
-	font-size: 12px;
-	color: #999;
-}
-
-.orders-section {
-	width: 100%;
-	padding: 20px;
-	box-sizing: border-box;
-}
-
-.section-title {
-	font-size: 16px;
-	font-weight: bold;
-	color: #333;
-	margin-bottom: 15px;
-	padding-bottom: 10px;
-	border-bottom: 2px solid #4CAF50;
-}
-
-.orders-list {
-	display: flex;
-	flex-direction: column;
-}
-
-.order-card {
-	background-color: white;
-	border-radius: 8px;
-	padding: 15px;
-	margin-bottom: 12px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.order-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 10px;
-}
-
-.order-id {
-	font-size: 14px;
-	font-weight: bold;
-	color: #333;
-}
-
-.order-status {
-	font-size: 12px;
-	padding: 4px 8px;
-	border-radius: 4px;
-	font-weight: bold;
-}
-
-.order-status.Completed {
-	background-color: #4CAF50;
-	color: white;
-}
-
-.order-status.Pending {
-	background-color: #FFC107;
-	color: white;
-}
-
-.order-status.Cancelled {
-	background-color: #f44336;
-	color: white;
-}
-
-.order-details {
-	display: flex;
-	flex-direction: column;
-}
-
-.detail-row {
-	display: flex;
-	justify-content: space-between;
-	padding: 5px 0;
-	font-size: 12px;
-}
-
-.label {
-	color: #999;
-	font-weight: bold;
-}
-
-.value {
-	color: #333;
-	font-weight: bold;
-}
-
-.empty-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 40px 20px;
-	background-color: white;
-	border-radius: 8px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.empty-text {
-	font-size: 16px;
-	font-weight: bold;
-	color: #333;
-	margin-bottom: 8px;
-}
-
-.empty-hint {
-	font-size: 12px;
-	color: #999;
-	margin-bottom: 20px;
-	text-align: center;
-}
-
-.explore-btn {
-	width: 100%;
-	padding: 10px 20px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	border-radius: 8px;
-	font-size: 14px;
-	font-weight: bold;
-}
+/* ── Logout Button ── */
 
 .action-section {
-	width: 90%;
-	margin: 30px auto 40px auto;
+	width: 100%;
+	padding: 0 16px;
+	box-sizing: border-box;
+	margin: 24px 0 48px 0;
 }
 
 .logout-btn {
@@ -549,92 +737,4 @@ onMounted(() => {
 	font-weight: bold;
 }
 
-.bottom {
-	width: 100%;
-	height: 80px;
-	background: #E3E1E1;
-	border-radius: 25px 25px 0px 0px;
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-	flex-shrink: 0;
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	z-index: 10;
-}
-
-.bottom_left {
-	border-radius: 0px;
-	width: 33.33%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-}
-
-.bottom_left .icon2 {
-	width: 30px;
-	height: 30px;
-}
-
-.bottom_left .left_down {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 40%;
-	width: 100%;
-}
-
-.bottom_center {
-	border-radius: 0px;
-	width: 33.33%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-}
-
-.bottom_center .bike_icon {
-	width: 30px;
-	height: 30px;
-}
-
-.bottom_center .center_down {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 40%;
-	width: 100%;
-}
-
-.bottom_right {
-	border-radius: 0px;
-	width: 33.33%;
-	height: 100%;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-}
-
-.bottom_right .icon2 {
-	width: 30px;
-	height: 30px;
-}
-
-.bottom_right .right_down {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 40%;
-	width: 100%;
-}
-
-.text3 {
-	font-size: 12px;
-	margin-top: 4px;
-}
 </style>

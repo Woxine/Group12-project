@@ -24,17 +24,19 @@
 			<view v-for="(scooter, index) in scooterList" :key="index" class="scooter-card" :class="{ 'scooter-card-disabled': scooter.rented }">
 				<view class="scooter-media">
 					<image src="/static/bikelist.jpg" mode="aspectFit" class="scooter-image"></image>
-					<view class="checkbox-container" :class="{ disabled: scooter.rented }" @click="toggleSelection(index)">
-						<view class="checkbox" :class="{ selected: selectedIndex === index, disabled: scooter.rented }">
-							<text v-if="selectedIndex === index" class="checkmark">✓</text>
-						</view>
-					</view>
 				</view>
 				<view class="card-content">
-					<text class="scooter-id">ID: {{ scooter.id }}</text>
-					<text class="scooter-status" :class="scooter.rented ? 'status-rented' : 'status-available'">
-						{{ scooter.rented ? 'Rented' : 'Available' }}
-					</text>
+					<view class="card-info-panel">
+						<text class="scooter-id">ID: {{ scooter.id }}</text>
+						<text class="scooter-status" :class="scooter.rented ? 'status-rented' : 'status-available'">
+							{{ scooter.rented ? 'Rented' : 'Available' }}
+						</text>
+					</view>
+				</view>
+				<view class="checkbox-container" :class="{ disabled: scooter.rented }" @click="toggleSelection(index)">
+					<view class="checkbox" :class="{ selected: selectedIndex === index, disabled: scooter.rented }">
+						<text v-if="selectedIndex === index" class="checkmark">✓</text>
+					</view>
 				</view>
 			</view>
 			
@@ -52,21 +54,7 @@
 			</view>
 		</scroll-view>
 		
-		<!-- 底部导航栏 -->
-		<view class="bottom">
-			<navigator url="/pages/index/index" open-type="reLaunch" class="bottom_left">
-				<image src="/static/home.png" mode="aspectFit" class="icon2"></image>
-				<view class="left_down"><text class="text3">Home</text></view>
-			</navigator>
-			<view class="bottom_center">
-				<image src="/static/bike.png" mode="aspectFit" class="bike_icon"></image>
-				<view class="center_down"><text class="text3">Bike</text></view>
-			</view>
-			<navigator url="/pages/me/me" class="bottom_right" open-type="reLaunch">
-				<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
-				<view class="right_down"><text class="text3">Profile</text></view>
-			</navigator>
-		</view>
+		<TabBar current="bike" />
 	</view>
 </template>
 
@@ -255,6 +243,7 @@ const bookScooter = () => {
 		flex: 1;
 		width: 100%;
 		padding: 20px;
+		padding-bottom: 90px;
 		box-sizing: border-box;
 	}
 
@@ -328,14 +317,16 @@ const bookScooter = () => {
 	}
 	
 	.scooter-card {
-		width: 90%;
-		margin: 20px auto;
-		padding: 15px;
+		width: 92%;
+		margin: 12px auto;
+		padding: 12px 14px;
 		background-color: white;
-		border-radius: 12px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		border-radius: 10px;
+		box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 		display: flex;
+		flex-direction: row;
 		align-items: center;
+		justify-content: space-between;
 	}
 
 	.scooter-card.scooter-card-disabled {
@@ -344,33 +335,46 @@ const bookScooter = () => {
 
 	.scooter-media {
 		display: flex;
+		flex-direction: row;
 		align-items: center;
-		margin-right: 15px;
-		gap: 12px;
+		margin-right: 12px;
+		flex-shrink: 0;
 	}
 
 	.scooter-card .scooter-image {
-		width: 100px;
-		height: 100px;
+		width: 72px;
+		height: 72px;
 		border-radius: 8px;
 	}
 		
 	.card-content {
 		flex: 1;
 		display: flex;
+		flex-direction: row;
+		align-items: center;
+		min-width: 0;
+		margin-right: 8px;
+	}
+
+	.card-info-panel {
+		width: 100%;
+		padding: 8px 10px;
+		background-color: #f8f9fb;
+		border-radius: 8px;
+		display: flex;
 		flex-direction: column;
+		justify-content: center;
 	}
 	
 	.card-content .scooter-id {
-		font-size: 18px;
+		font-size: 16px;
 		font-weight: bold;
 		color: #333;
-		margin-bottom: 5px;
+		margin-bottom: 4px;
 	}
 	
 	.card-content .scooter-status {
-		font-size: 14px;
-		margin-bottom: 5px;
+		font-size: 13px;
 	}
 
 	.card-content .scooter-status.status-available {
@@ -387,11 +391,13 @@ const bookScooter = () => {
 	}
 		
 	.checkbox-container {
-		width: 30px;
-		height: 30px;
+		width: 26px;
+		height: 26px;
+		margin-left: 12px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
 	}
 
 	.checkbox-container.disabled {
@@ -404,6 +410,7 @@ const bookScooter = () => {
 		border: 2px solid #ccc;
 		border-radius: 4px;
 		display: flex;
+		flex-direction: row;
 		justify-content: center;
 		align-items: center;
 		background-color: white;
@@ -421,7 +428,7 @@ const bookScooter = () => {
 	
 	.checkbox-container .checkbox .checkmark {
 		color: white;
-		font-size: 16px;
+		font-size: 14px;
 		font-weight: bold;
 	}
 	
@@ -449,90 +456,4 @@ const bookScooter = () => {
 		color: #666666;
 	}
 	
-	.bottom{
-		width: 100%;
-		height: 8%;
-		background: #E3E1E1;
-		border-radius: 25px 25px 0px 0px;
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		flex-shrink: 0;
-	}
-	
-	.bottom_left{
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-	}
-	
-	.bottom_left .icon2{
-		width: 30px;
-		height: 30px;
-	}
-	
-	.bottom_left .left_down{
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		height: 40%;
-		width: 100%;
-	}
-	
-	.bottom_center{
-		position: relative;
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-	}
-	
-	.bottom_center .bike_icon{
-		width: 30px;
-		height: 30px;
-	}
-	
-	.bottom_center .center_down{
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		height: 40%;
-		width: 100%;
-	}
-	
-	.bottom_right{
-		position: relative;
-		border-radius: 0px;
-		width: 20%;
-		height: 100%;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-	}
-	
-	.bottom_right .icon2{
-		width: 30px;
-		height: 30px;
-	}
-	
-	.bottom_right .right_down{
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		height: 40%;
-		width: 100%;
-	}
-
-	.text3 {
-		font-size: 12px;
-		margin-top: 4px;
-	}
 </style>
