@@ -1,18 +1,32 @@
 <template>
 	<view class="container">
+		<view class="title-section">
+			<text class="title-text">Ride Route</text>
+		</view>
 		<view v-if="loading" class="loading-section">
 			<text class="loading-text">Loading route...</text>
 		</view>
 		<view v-else-if="error.length > 0" class="error-section">
 			<text class="error-text">{{ error }}</text>
-			<button class="back-btn" @click="goBack">Back</button>
+			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else-if="!hasRoute" class="no-route-section">
-			<text class="no-route-text">Route data not available for this order.</text>
+			<text class="no-route-text">Route data not available for this booking.</text>
 			<text class="no-route-hint">Start and end locations are recorded when you start and end the ride.</text>
-			<button class="back-btn" @click="goBack">Back</button>
+			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else class="map-wrap">
+			<view class="route-summary">
+				<view class="summary-item">
+					<text class="summary-label">Booking</text>
+					<text class="summary-value">#{{ bookingId.length > 0 ? bookingId : '-' }}</text>
+				</view>
+				<view class="summary-divider"></view>
+				<view class="summary-item">
+					<text class="summary-label">Overview</text>
+					<text class="summary-value">Route details</text>
+				</view>
+			</view>
 			<view class="map-section">
 				<map
 					:key="mapKey"
@@ -27,19 +41,39 @@
 					@updated="onMapUpdated"
 				></map>
 				<cover-view class="map-controls">
-					<cover-view class="control-btn" @click="zoomIn">+</cover-view>
-					<cover-view class="control-btn" @click="zoomOut">-</cover-view>
+					<cover-view class="control-btn control-btn-plus" @click="zoomIn">
+						<text class="control-btn-text control-btn-text-plus">+</text>
+					</cover-view>
+					<cover-view class="control-btn control-btn-minus" @click="zoomOut">
+						<text class="control-btn-text control-btn-text-minus">-</text>
+					</cover-view>
 				</cover-view>
 			</view>
-			<view class="info-section">
-				<text class="info-label">Start</text>
-				<text class="info-value">{{ startLatText }}</text>
-				<text class="info-value">{{ startLngText }}</text>
-				<text class="info-label">End</text>
-				<text class="info-value">{{ endLatText }}</text>
-				<text class="info-value">{{ endLngText }}</text>
+			<view class="info-grid">
+				<view class="info-card">
+					<text class="info-card-title">Start Location</text>
+					<view class="info-chip">
+						<text class="info-label">Latitude</text>
+						<text class="info-value">{{ startLatText }}</text>
+					</view>
+					<view class="info-chip">
+						<text class="info-label">Longitude</text>
+						<text class="info-value">{{ startLngText }}</text>
+					</view>
+				</view>
+				<view class="info-card">
+					<text class="info-card-title">End Location</text>
+					<view class="info-chip">
+						<text class="info-label">Latitude</text>
+						<text class="info-value">{{ endLatText }}</text>
+					</view>
+					<view class="info-chip">
+						<text class="info-label">Longitude</text>
+						<text class="info-value">{{ endLngText }}</text>
+					</view>
+				</view>
 			</view>
-			<button class="back-btn" @click="goBack">Back to Orders</button>
+			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 	</view>
 </template>
@@ -77,10 +111,10 @@ const hasRoute = computed(() => {
 	return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng)
 })
 
-const startLatText = ref('Lat: -')
-const startLngText = ref('Lng: -')
-const endLatText = ref('Lat: -')
-const endLngText = ref('Lng: -')
+const startLatText = ref('-')
+const startLngText = ref('-')
+const endLatText = ref('-')
+const endLngText = ref('-')
 
 const zoomIn = () => {
 	if (scale.value < 18) {
@@ -108,10 +142,10 @@ const onMapUpdated = () => {
 }
 
 const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
-	startLatText.value = 'Lat: ' + slat.toFixed(6)
-	startLngText.value = 'Lng: ' + slng.toFixed(6)
-	endLatText.value = 'Lat: ' + elat.toFixed(6)
-	endLngText.value = 'Lng: ' + elng.toFixed(6)
+	startLatText.value = slat.toFixed(6)
+	startLngText.value = slng.toFixed(6)
+	endLatText.value = elat.toFixed(6)
+	endLngText.value = elng.toFixed(6)
 	const startPoint: LocationObject = { latitude: slat, longitude: slng }
 	const endPoint: LocationObject = { latitude: elat, longitude: elng }
 	const eps = 0.002
@@ -262,6 +296,16 @@ onLoad((options: UTSJSONObject) => {
 	box-sizing: border-box;
 }
 
+.title-section {
+	padding: 20px 16px 0;
+}
+
+.title-text {
+	font-size: 22px;
+	font-weight: bold;
+	color: #333;
+}
+
 .loading-section,
 .error-section,
 .no-route-section {
@@ -278,10 +322,16 @@ onLoad((options: UTSJSONObject) => {
 	color: #666;
 }
 
-.error-text,
-.no-route-text {
+.error-text {
 	font-size: 16px;
 	color: #f44336;
+	text-align: center;
+	margin-bottom: 12px;
+}
+
+.no-route-text {
+	font-size: 16px;
+	color: #666;
 	text-align: center;
 	margin-bottom: 12px;
 }
@@ -294,14 +344,19 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .back-btn {
-	margin-top: 16px;
-	padding: 10px 24px;
-	background-color: #2196F3;
-	color: white;
-	border: none;
-	border-radius: 8px;
+	margin-top: 0;
+	padding: 12px 24px;
+	background-color: rgba(255, 255, 255, 0.94);
+	color: #1f2937;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(15, 23, 42, 0.08);
+	border-radius: 12px;
 	font-size: 14px;
 	font-weight: bold;
+	min-width: 180px;
+	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+	backdrop-filter: blur(8px);
 }
 
 .map-wrap {
@@ -311,35 +366,102 @@ onLoad((options: UTSJSONObject) => {
 	padding: 16px;
 }
 
+.route-summary {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background-color: rgba(255, 255, 255, 0.94);
+	border-radius: 16px;
+	padding: 14px 16px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(15, 23, 42, 0.08);
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	backdrop-filter: blur(8px);
+	margin-bottom: 18px;
+}
+
+.summary-item {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.summary-label {
+	font-size: 12px;
+	color: #64748b;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	margin-bottom: 4px;
+}
+
+.summary-value {
+	font-size: 15px;
+	color: #0f172a;
+	font-weight: 700;
+}
+
+.summary-divider {
+	width: 1px;
+	align-self: stretch;
+	background-color: rgba(15, 23, 42, 0.08);
+	margin: 0 14px;
+}
+
 .map-section {
 	width: 100%;
 	position: relative;
-	border-radius: 8px;
+	border-radius: 16px;
 	overflow: hidden;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-	margin-bottom: 16px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	margin-bottom: 18px;
 }
 
 .map-controls {
 	position: absolute;
 	right: 12px;
 	bottom: 12px;
-	display: flex;
-	flex-direction: column;
 	z-index: 10;
+	background-color: rgba(255, 255, 255, 0.92);
+	border-radius: 12px;
+	overflow: hidden;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(15, 23, 42, 0.08);
+	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+	backdrop-filter: blur(8px);
 }
 
 .control-btn {
-	width: 36px;
-	height: 36px;
-	line-height: 36px;
+	width: 42px;
+	height: 42px;
+	background-color: transparent;
+	padding: 0;
 	text-align: center;
-	background-color: rgba(0, 0, 0, 0.55);
-	color: #fff;
-	border-radius: 8px;
-	margin-top: 8px;
-	font-size: 18px;
-	font-weight: bold;
+}
+
+.control-btn + .control-btn {
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+.control-btn-text {
+	display: inline-block;
+	width: 42px;
+	height: 42px;
+	line-height: 42px;
+	text-align: center;
+	color: #1f2937;
+	font-weight: 600;
+}
+
+.control-btn-text-plus {
+	font-size: 24px;
+}
+
+.control-btn-text-minus {
+	font-size: 26px;
 }
 
 .route-map {
@@ -348,29 +470,63 @@ onLoad((options: UTSJSONObject) => {
 	background-color: #e5e5e5;
 }
 
-.info-section {
-	background-color: #fff;
-	border-radius: 8px;
+.info-grid {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 18px;
+}
+
+.info-card {
+	flex: 1;
+	background-color: rgba(255, 255, 255, 0.94);
+	border-radius: 16px;
 	padding: 16px;
-	margin-bottom: 16px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(15, 23, 42, 0.08);
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	backdrop-filter: blur(8px);
+}
+
+.info-card + .info-card {
+	margin-left: 14px;
+}
+
+.info-card-title {
+	display: block;
+	font-size: 14px;
+	font-weight: 700;
+	color: #0f172a;
+	margin-bottom: 12px;
+}
+
+.info-chip {
+	background-color: rgba(248, 250, 252, 0.95);
+	border-radius: 12px;
+	padding: 10px 12px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(148, 163, 184, 0.18);
+	margin-bottom: 10px;
+}
+
+.info-chip:last-child {
+	margin-bottom: 0;
 }
 
 .info-label {
 	display: block;
 	font-size: 12px;
-	color: #999;
+	color: #64748b;
 	margin-bottom: 4px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
 }
 
 .info-value {
 	display: block;
 	font-size: 14px;
-	color: #333;
-	margin-bottom: 12px;
-}
-
-.info-value:last-of-type {
-	margin-bottom: 0;
+	color: #1f2937;
+	line-height: 1.5;
 }
 </style>

@@ -53,6 +53,10 @@
 | `duration_hours`| `Double` | `FLOAT` | | 时长 |
 | `total_price` | `BigDecimal` | `DECIMAL` | | 总价 |
 | `status` | `String` | `VARCHAR` | Not Null | `CONFIRMED`, `COMPLETED`, `CANCELLED` |
+| `start_lat` | `Double` | `DECIMAL` | Nullable | 开始用车时手机纬度（路线展示） |
+| `start_lng` | `Double` | `DECIMAL` | Nullable | 开始用车时手机经度 |
+| `end_lat` | `Double` | `DECIMAL` | Nullable | 结束还车时手机纬度 |
+| `end_lng` | `Double` | `DECIMAL` | Nullable | 结束还车时手机经度 |
 
 ### 2.4 支付表 (`payments`)
 **用途**：记录交易资金流，与订单强关联。

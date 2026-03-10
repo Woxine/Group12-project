@@ -30,9 +30,9 @@
 			<!-- Empty -->
 			<view v-else-if="bookings.length == 0" class="empty-section">
 				<text class="empty-text">No bookings yet</text>
-				<text class="empty-hint">Go to Bike to make your first booking</text>
+				<text class="empty-hint">Head over to the Bike List to book your first scooter</text>
 				<navigator url="/pages/bikelist/bikelist" open-type="reLaunch">
-					<button class="explore-btn">Explore Bikes</button>
+					<button class="explore-btn">Browse Scooters</button>
 				</navigator>
 			</view>
 
@@ -49,38 +49,39 @@
 					</view>
 					<view class="card-body">
 						<view class="detail-row">
-							<text class="label">Bike</text>
+							<text class="label">Scooter</text>
 							<text class="value">{{ formatBikeId(booking.scooterId) }}</text>
 						</view>
 						<view class="detail-row">
 							<text class="label">Duration</text>
 							<text class="value">{{ booking.duration }}</text>
 						</view>
-						<view class="detail-row">
-							<text class="label">Start</text>
-							<text class="value">{{ booking.startTime }}</text>
-						</view>
-						<view class="detail-row">
-							<text class="label">End</text>
-							<text class="value">{{ booking.endTime }}</text>
-						</view>
+					<view class="detail-row">
+						<text class="label">Start Time</text>
+						<text class="value">{{ booking.startTime }}</text>
+					</view>
+					<view class="detail-row">
+						<text class="label">End Time</text>
+						<text class="value">{{ booking.endTime }}</text>
+					</view>
 						<view class="detail-row">
 							<text class="label">Total</text>
 							<text class="value">£{{ booking.price }}</text>
 						</view>
-						<view v-if="canCancel(booking.status)" class="card-actions">
-							<button class="end-ride-btn" @click="endRide(booking)">End Ride</button>
-							<button class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Order</button>
-						</view>
-						<view v-if="isCompleted(booking.status) || isCancelled(booking.status)" class="card-actions">
-							<button class="view-route-btn" @click="goToRoute(booking)">View Route</button>
+						<view v-if="getOrderActions(booking).length > 0" class="card-actions">
+							<button v-if="hasAction(booking, 'endRide')" class="end-ride-btn" @click="endRide(booking)">End Ride</button>
+							<button v-if="hasAction(booking, 'cancelOrder')" class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Booking</button>
+							<button v-if="hasAction(booking, 'viewRoute')" class="view-route-btn" @click="goToRoute(booking)">View Route</button>
 						</view>
 					</view>
 				</view>
-				<view v-if="hasMore" class="load-more-wrap">
-					<button v-if="loadingMore" :class="['load-more-btn', 'load-more-btn-disabled']" disabled>Loading...</button>
-					<button v-else class="load-more-btn" @click="loadMore">Load more</button>
-				</view>
+			<view v-if="total > 0" class="pagination-info">
+				<text class="pagination-text">Showing {{ bookings.length }} of {{ total }} bookings</text>
+			</view>
+			<view v-if="hasMore" class="load-more-wrap">
+				<button v-if="loadingMore" :class="['load-more-btn', 'load-more-btn-disabled']" disabled>Loading...</button>
+				<button v-else class="load-more-btn" @click="loadMore">Load more</button>
+			</view>
 			</view>
 			</scroll-view>
 		</view>
@@ -133,7 +134,7 @@ const formatStatus = (status: string | null): string => {
 	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED') return 'Confirmed'
 	if (s == 'PENDING') return 'Pending'
-	if (s == 'CANCELLED') return 'Cancelled'
+	if (s == 'CANCELLED' || s == 'CANCELED') return 'Cancelled'
 	if (s == 'COMPLETED') return 'Completed'
 	return status
 }
@@ -196,7 +197,7 @@ const hasActiveBookings = (): boolean => {
 	const list = bookings.value
 	for (let i = 0; i < list.length; i++) {
 		const s = ('' + list[i].status).trim().toUpperCase()
-		if (s === 'CONFIRMED' || s === 'PENDING') return true
+		if (s == 'CONFIRMED' || s == 'PENDING') return true
 	}
 	return false
 }
@@ -326,24 +327,15 @@ const onPullRefresh = () => {
 	fetchBookings(true)
 }
 
-const canCancel = (status: string | null): boolean => {
-	if (status == null || status.length === 0) return true
-	const s = ('' + status).trim().toUpperCase()
-	if (s === 'CANCELLED' || s === 'COMPLETED') return false
-	return true
-}
-
-const isCompleted = (status: string | null): boolean => {
-	if (status == null || status.length === 0) return false
-	const s = ('' + status).trim().toUpperCase()
-	return s == 'COMPLETED'
-}
-
-const isCancelled = (status: string | null): boolean => {
-	if (status == null || status.length === 0) return false
-	const s = ('' + status).trim().toUpperCase()
-	return s == 'CANCELLED' || s == 'CANCELED'
-}
+/**
+ * Status -> visible actions mapping (single source of truth)
+ *   CONFIRMED  => endRide, cancelOrder
+ *   PENDING    => endRide, cancelOrder
+ *   COMPLETED  => viewRoute (only when all 4 GPS coordinates are present)
+ *   CANCELLED  => (none)
+ *   Unknown/empty => (none)
+ */
+type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute'
 
 const hasRoute = (booking: Booking): boolean => {
 	const slat = booking.startLat
@@ -351,6 +343,24 @@ const hasRoute = (booking: Booking): boolean => {
 	const elat = booking.endLat
 	const elng = booking.endLng
 	return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng)
+}
+
+const getOrderActions = (booking: Booking): ActionType[] => {
+	const status = booking.status
+	if (status == null || status.length === 0) return []
+	const s = ('' + status).trim().toUpperCase()
+	if (s == 'CONFIRMED' || s == 'PENDING') return ['endRide', 'cancelOrder']
+	if (s == 'COMPLETED') return hasRoute(booking) ? ['viewRoute'] : []
+	if (s == 'CANCELLED' || s == 'CANCELED') return []
+	return []
+}
+
+const hasAction = (booking: Booking, action: ActionType): boolean => {
+	const actions = getOrderActions(booking)
+	for (let i = 0; i < actions.length; i++) {
+		if (actions[i] == action) return true
+	}
+	return false
 }
 
 const goToRoute = (booking: Booking) => {
@@ -368,6 +378,11 @@ const cancelOrder = (booking: Booking) => {
 		uni.showToast({ title: 'Invalid booking', icon: 'none' })
 		return
 	}
+	const cs = ('' + booking.status).trim().toUpperCase()
+	if (cs != 'CONFIRMED' && cs != 'PENDING') {
+		uni.showToast({ title: 'This booking cannot be cancelled', icon: 'none' })
+		return
+	}
 	const tokenRaw = uni.getStorageSync('token')
 	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
 	if (token === '') {
@@ -375,7 +390,7 @@ const cancelOrder = (booking: Booking) => {
 		return
 	}
 	uni.showModal({
-		title: 'Cancel Order',
+		title: 'Cancel Booking',
 		content: 'Are you sure you want to cancel this booking?',
 		success: (res) => {
 			const confirm = res.confirm === true
@@ -396,7 +411,7 @@ const cancelOrder = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
-								uni.showToast({ title: 'Order cancelled', icon: 'success' })
+								uni.showToast({ title: 'Booking cancelled', icon: 'success' })
 								fetchBookings(false)
 							} else {
 								let msg = 'Failed to cancel'
@@ -427,6 +442,11 @@ const endRide = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length === 0) {
 		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		return
+	}
+	const es = ('' + booking.status).trim().toUpperCase()
+	if (es != 'CONFIRMED' && es != 'PENDING') {
+		uni.showToast({ title: 'This booking cannot be ended', icon: 'none' })
 		return
 	}
 	const tokenRaw = uni.getStorageSync('token')
@@ -640,6 +660,16 @@ onHide(() => {
 	flex-direction: column;
 }
 
+.pagination-info {
+	margin-bottom: 8px;
+}
+
+.pagination-text {
+	font-size: 12px;
+	color: #999;
+	text-align: center;
+}
+
 .load-more-wrap {
 	margin-top: 8px;
 	margin-bottom: 24px;
@@ -648,9 +678,11 @@ onHide(() => {
 
 .load-more-btn {
 	padding: 10px 28px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
+	background-color: #FFFFFF;
+	color: #4CAF50;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #4CAF50;
 	border-radius: 8px;
 	font-size: 14px;
 }
@@ -729,12 +761,12 @@ onHide(() => {
 	border-top-style: solid;
 	border-top-color: #eee;
 	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	flex-direction: row;
+	gap: 10px;
 }
 
 .end-ride-btn {
-	width: 100%;
+	flex: 1;
 	padding: 10px 16px;
 	background-color: #4CAF50;
 	color: white;
@@ -745,7 +777,7 @@ onHide(() => {
 }
 
 .cancel-order-btn {
-	width: 100%;
+	flex: 1;
 	padding: 10px 16px;
 	background-color: #f44336;
 	color: white;
@@ -758,28 +790,30 @@ onHide(() => {
 .view-route-btn {
 	width: 100%;
 	padding: 10px 16px;
-	background-color: #2196F3;
-	color: white;
-	border: none;
+	background-color: #FFFFFF;
+	color: #2196F3;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #2196F3;
 	border-radius: 8px;
 	font-size: 14px;
 	font-weight: bold;
-	margin-top: 8px;
 }
 
 .detail-row {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
-	font-size: 14px;
 	margin-bottom: 6px;
 }
 
 .detail-row .label {
+	font-size: 14px;
 	color: #999;
 }
 
 .detail-row .value {
+	font-size: 14px;
 	color: #333;
 	font-weight: 400;
 }

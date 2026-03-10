@@ -21,4 +21,12 @@ public class CreateBookingRequest {
     
     public String getDuration() { return duration; }
     public void setDuration(String duration) { this.duration = duration; }
+
+    private Double startLat;
+    private Double startLng;
+
+    public Double getStartLat() { return startLat; }
+    public void setStartLat(Double startLat) { this.startLat = startLat; }
+    public Double getStartLng() { return startLng; }
+    public void setStartLng(Double startLng) { this.startLng = startLng; }
 }

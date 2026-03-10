@@ -3,55 +3,55 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "uni-app x"
+				"navigationBarTitleText": "Uni-App X"
 			}
 		},
 		{
 			"path": "pages/bikelist/bikelist",
 			"style": {
-				"navigationBarTitleText": "bikelist"
+				"navigationBarTitleText": "Bike List"
 			}
 		},
 		{
 			"path": "pages/login/login",
 			"style": {
-				"navigationBarTitleText": "login"
+				"navigationBarTitleText": "Login"
 			}
 		},
 		{
 			"path": "pages/register/register",
 			"style": {
-				"navigationBarTitleText": "register"
+				"navigationBarTitleText": "Register"
 			}
 		},
 		{
 			"path": "pages/price/price",
 			"style": {
-				"navigationBarTitleText": "price"
+				"navigationBarTitleText": "Price"
 			}
 		},
 		{
 			"path": "pages/me/me",
 			"style": {
-				"navigationBarTitleText": "me"
+				"navigationBarTitleText": "Profile"
 			}
 		},
 		{
 			"path": "pages/orders/orders",
 			"style": {
-				"navigationBarTitleText": "orders"
+				"navigationBarTitleText": "My Bookings"
 			}
 		},
 		{
 			"path": "pages/feedback/feedback",
 			"style": {
-				"navigationBarTitleText": "feedback"
+				"navigationBarTitleText": "Feedback"
 			}
 		},
 		{
 			"path": "pages/payment/payment",
 			"style": {
-				"navigationBarTitleText": "payment"
+				"navigationBarTitleText": "Payment"
 			}
 		},
 		{
@@ -75,13 +75,13 @@
 		{
 			"path": "pages/orders/route",
 			"style": {
-				"navigationBarTitleText": "route"
+				"navigationBarTitleText": "Ride Route"
 			}
 		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "uni-app x",
+		"navigationBarTitleText": "Uni-App X",
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
 	},

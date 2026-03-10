@@ -2,6 +2,9 @@
 	<view class="page-wrapper">
 		<!-- 可滚动的内容区域 -->
 		<scroll-view class="scroll-container" scroll-y="true" refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onPullRefresh">
+			<view class="title-section">
+				<text class="title-text">Choose a Scooter</text>
+			</view>
 			<!-- 加载中 -->
 			<view v-if="isLoading" class="loading-section">
 				<text class="loading-text">Loading scooters...</text>
@@ -11,32 +14,41 @@
 				<text class="error-text">{{ loadError }}</text>
 				<button class="retry-btn" @click="fetchScooters">Retry</button>
 			</view>
+			<!-- 空列表 -->
+			<view v-else-if="scooterList.length == 0" class="empty-section">
+				<text class="empty-text">No scooters available</text>
+				<text class="empty-hint">Pull down to refresh and check again</text>
+			</view>
 			<!-- 电动滑板车选择卡片列表 -->
-			<view v-else v-for="(scooter, index) in scooterList" :key="index" class="scooter-card">
-				<image src="/static/bikelist.jpg" mode="aspectFit" class="scooter-image"></image>
+			<template v-else>
+			<view v-for="(scooter, index) in scooterList" :key="index" class="scooter-card" :class="{ 'scooter-card-disabled': scooter.rented }">
+				<view class="scooter-media">
+					<image src="/static/bikelist.jpg" mode="aspectFit" class="scooter-image"></image>
+					<view class="checkbox-container" :class="{ disabled: scooter.rented }" @click="toggleSelection(index)">
+						<view class="checkbox" :class="{ selected: selectedIndex === index, disabled: scooter.rented }">
+							<text v-if="selectedIndex === index" class="checkmark">✓</text>
+						</view>
+					</view>
+				</view>
 				<view class="card-content">
 					<text class="scooter-id">ID: {{ scooter.id }}</text>
-					<text class="scooter-status">{{ scooter.rented ? 'Rented' : 'Available' }}</text>
-				</view>
-				<view class="checkbox-container" @click="toggleSelection(index)">
-					<view class="checkbox" :class="{ selected: selectedIndex === index }">
-						<text v-if="selectedIndex === index" class="checkmark">✓</text>
-					</view>
+					<text class="scooter-status" :class="scooter.rented ? 'status-rented' : 'status-available'">
+						{{ scooter.rented ? 'Rented' : 'Available' }}
+					</text>
 				</view>
 			</view>
 			
 			<!-- 预订按钮 -->
+			</template>
 			<view class="booking-section">
-				<navigator url="/pages/price/price">
-					<button 
-						class="booking-button"
-						:class="{ disabled: selectedIndex === -1 }"
-						:disabled="selectedIndex === -1"
-						@click="bookScooter"
-					>
-						appoint
-					</button>
-				</navigator>
+				<button 
+					class="booking-button"
+					:class="{ disabled: isBookingDisabled() }"
+					:disabled="isBookingDisabled()"
+					@click="bookScooter"
+				>
+				Book Scooter
+				</button>
 			</view>
 		</scroll-view>
 		
@@ -52,7 +64,7 @@
 			</view>
 			<navigator url="/pages/me/me" class="bottom_right" open-type="reLaunch">
 				<image src="/static/me.png" mode="aspectFit" class="icon2"></image>
-				<view class="right_down"><text class="text3">Me</text></view>
+				<view class="right_down"><text class="text3">Profile</text></view>
 			</navigator>
 		</view>
 	</view>
@@ -73,6 +85,9 @@ const scooterList = ref<Scooter[]>([]);
 const isLoading = ref(false);
 const loadError = ref('');
 const isRefreshing = ref(false);
+
+// 选中的滑板车索引
+const selectedIndex = ref<number>(-1);
 
 const fetchScooters = (fromPullRefresh: boolean) => {
 	if (fromPullRefresh === false) {
@@ -140,6 +155,11 @@ const fetchScooters = (fromPullRefresh: boolean) => {
 					list.push({ id, rented });
 				}
 				scooterList.value = list;
+				if (selectedIndex.value >= list.length) {
+					selectedIndex.value = -1;
+				} else if (selectedIndex.value !== -1 && list[selectedIndex.value].rented) {
+					selectedIndex.value = -1;
+				}
 			} else {
 				const hasSc: boolean = (res.statusCode !== null);
 				const sc = hasSc ? ('' + res.statusCode) : '';
@@ -171,11 +191,15 @@ onShow(() => {
 	fetchScooters(false);
 });
 
-// 选中的滑板车索引
-const selectedIndex = ref<number>(-1);
-
 // 切换选择状态
 const toggleSelection = (index: number) => {
+	if (scooterList.value[index].rented) {
+		uni.showToast({
+			title: 'This scooter is rented',
+			icon: 'none'
+		});
+		return;
+	}
 	if (selectedIndex.value === index) {
 		selectedIndex.value = -1;
 	} else {
@@ -183,9 +207,19 @@ const toggleSelection = (index: number) => {
 	}
 };
 
+const isBookingDisabled = (): boolean => {
+	if (selectedIndex.value === -1) {
+		return true;
+	}
+	if (selectedIndex.value >= scooterList.value.length) {
+		return true;
+	}
+	return scooterList.value[selectedIndex.value].rented;
+};
+
 // 预订滑板车
 const bookScooter = () => {
-	if (selectedIndex.value !== -1) {
+	if (!isBookingDisabled()) {
 		const selectedScooter = scooterList.value[selectedIndex.value]
 		console.log('预订滑板车 ID:', selectedScooter.id);
 		
@@ -198,8 +232,11 @@ const bookScooter = () => {
 		}
 		
 		uni.showToast({
-			title: 'appoint ' + selectedScooter.id + ' successfully',
+			title: 'Scooter ' + selectedScooter.id + ' selected',
 			icon: 'success'
+		});
+		uni.navigateTo({
+			url: '/pages/price/price'
 		});
 	}
 };
@@ -217,6 +254,18 @@ const bookScooter = () => {
 	.scroll-container {
 		flex: 1;
 		width: 100%;
+		padding: 20px;
+		box-sizing: border-box;
+	}
+
+	.title-section {
+		margin-bottom: 20px;
+	}
+
+	.title-text {
+		font-size: 22px;
+		font-weight: bold;
+		color: #333;
 	}
 
 	.loading-section,
@@ -248,6 +297,30 @@ const bookScooter = () => {
 		border-radius: 8px;
 		font-size: 14px;
 	}
+
+	.empty-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 60px 24px;
+		background-color: white;
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	}
+
+	.empty-text {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 8px;
+	}
+
+	.empty-hint {
+		font-size: 14px;
+		color: #999;
+		text-align: center;
+	}
 	
 	.container {
 		width: 100%;
@@ -265,11 +338,21 @@ const bookScooter = () => {
 		align-items: center;
 	}
 
+	.scooter-card.scooter-card-disabled {
+		opacity: 0.7;
+	}
+
+	.scooter-media {
+		display: flex;
+		align-items: center;
+		margin-right: 15px;
+		gap: 12px;
+	}
+
 	.scooter-card .scooter-image {
 		width: 100px;
 		height: 100px;
 		border-radius: 8px;
-		margin-right: 15px;
 	}
 		
 	.card-content {
@@ -287,8 +370,15 @@ const bookScooter = () => {
 	
 	.card-content .scooter-status {
 		font-size: 14px;
-		color: #666;
 		margin-bottom: 5px;
+	}
+
+	.card-content .scooter-status.status-available {
+		color: #2e7d32;
+	}
+
+	.card-content .scooter-status.status-rented {
+		color: #d32f2f;
 	}
 	
 	.card-content .scooter-location {
@@ -299,6 +389,13 @@ const bookScooter = () => {
 	.checkbox-container {
 		width: 30px;
 		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.checkbox-container.disabled {
+		opacity: 0.5;
 	}
 	
 	.checkbox-container .checkbox {
@@ -310,6 +407,11 @@ const bookScooter = () => {
 		justify-content: center;
 		align-items: center;
 		background-color: white;
+	}
+
+	.checkbox-container .checkbox.disabled {
+		background-color: #f0f0f0;
+		border-color: #d0d0d0;
 	}
 	
 	.checkbox-container .checkbox.selected {

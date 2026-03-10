@@ -1,6 +1,7 @@
 package com.group12.backend.service.impl;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,44 +34,50 @@ public class BookingServiceImpl implements BookingService {
     public Object createBooking(CreateBookingRequest request) {
         Long userId = Long.parseLong(request.getUser_id());
         Long scooterId = Long.parseLong(request.getScooter_id());
-        String durationRequest = request.getDuration(); // 1H, 4H, 1D, 1W
+        String durationRequest = request.getDuration();
 
-        // 1. 校验用户
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2. 校验车辆
+        java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(userId, "CONFIRMED");
+        if (activeBookings != null && !activeBookings.isEmpty()) {
+            throw new RuntimeException("You already have an active booking. Please cancel it or wait until it ends before booking again.");
+        }
+
         Scooter scooter = scooterRepository.findById(scooterId)
                 .orElseThrow(() -> new RuntimeException("Scooter not found"));
 
-        // 3. 校验车辆状态
         if (!"AVAILABLE".equalsIgnoreCase(scooter.getStatus())) {
             throw new RuntimeException("Scooter is not available (Current status: " + scooter.getStatus() + ")");
         }
 
-        // 4. 计算固定期限的结束时间和价格
         LocalDateTime startTime = LocalDateTime.now();
         LocalDateTime endTime;
         Double durationHours;
-        
-        if ("1H".equalsIgnoreCase(durationRequest)) {
+
+        if ("10M".equalsIgnoreCase(durationRequest)) {
+            durationHours = 10.0 / 60.0;
+            endTime = startTime.plusMinutes(10);
+        } else if ("1H".equalsIgnoreCase(durationRequest)) {
             durationHours = 1.0;
+            endTime = startTime.plusHours(1);
         } else if ("4H".equalsIgnoreCase(durationRequest)) {
             durationHours = 4.0;
+            endTime = startTime.plusHours(4);
         } else if ("1D".equalsIgnoreCase(durationRequest)) {
             durationHours = 24.0;
+            endTime = startTime.plusHours(24);
         } else if ("1W".equalsIgnoreCase(durationRequest)) {
             durationHours = 168.0;
+            endTime = startTime.plusHours(168);
         } else {
-            durationHours = 1.0; 
+            durationHours = 1.0;
+            endTime = startTime.plusHours(1);
         }
-        
-        endTime = startTime.plusHours(durationHours.longValue());
-        
+
         java.math.BigDecimal rate = scooter.getHourRate();
         java.math.BigDecimal totalPrice = rate.multiply(java.math.BigDecimal.valueOf(durationHours));
 
-        // 5. 创建订单
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setScooter(scooter);
@@ -79,26 +86,28 @@ public class BookingServiceImpl implements BookingService {
         booking.setDurationHours(durationHours);
         booking.setTotalPrice(totalPrice);
         booking.setStatus("CONFIRMED");
-        
+        if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
+        if (request.getStartLng() != null) booking.setStartLng(request.getStartLng());
+
         Booking savedBooking = bookingRepository.save(booking);
 
-        // 6. 更新车辆状态为占用
         scooter.setStatus("RENTED");
         scooterRepository.save(scooter);
 
-        // 7. 返回结果
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        String createdAtStr = savedBooking.getStartTime() == null ? "" : savedBooking.getStartTime().format(fmt);
         return new BookingResponse(
             String.valueOf(savedBooking.getId()),
             String.valueOf(scooter.getId()),
             String.valueOf(user.getId()),
             savedBooking.getStatus(),
-            savedBooking.getStartTime()
+            createdAtStr
         );
     }
 
     @Override
     @Transactional
-    public Object cancelBooking(String bookingId) {
+    public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
@@ -109,6 +118,8 @@ public class BookingServiceImpl implements BookingService {
 
         booking.setStatus("CANCELLED");
         booking.setEndTime(LocalDateTime.now());
+        if (endLat != null) booking.setEndLat(endLat);
+        if (endLng != null) booking.setEndLng(endLng);
         bookingRepository.save(booking);
 
         Scooter scooter = booking.getScooter();
@@ -116,5 +127,25 @@ public class BookingServiceImpl implements BookingService {
         scooterRepository.save(scooter);
 
         return "Booking cancelled successfully";
+    }
+
+    @Override
+    @Transactional
+    public Object completeBooking(String bookingId, Double endLat, Double endLng) {
+        Long id = Long.parseLong(bookingId);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        if (!"CONFIRMED".equals(booking.getStatus())) {
+            throw new RuntimeException("Cannot complete booking with status: " + booking.getStatus());
+        }
+        booking.setStatus("COMPLETED");
+        booking.setEndTime(LocalDateTime.now());
+        if (endLat != null) booking.setEndLat(endLat);
+        if (endLng != null) booking.setEndLng(endLng);
+        bookingRepository.save(booking);
+        Scooter scooter = booking.getScooter();
+        scooter.setStatus("AVAILABLE");
+        scooterRepository.save(scooter);
+        return "Booking completed successfully";
     }
 }
