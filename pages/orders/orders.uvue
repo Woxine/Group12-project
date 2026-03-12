@@ -1,4 +1,5 @@
 <template>
+	<!-- 订单列表页：展示用户所有预订记录，支持结束骑行、取消及查看路线 -->
 	<view class="container">
 		<!-- Not Logged In -->
 		<view v-if="!isLoggedIn" class="login-prompt">
@@ -89,6 +90,7 @@
 </template>
 
 <script setup lang="uts">
+// 订单列表逻辑：分页获取用户预订、自动刷新活跃订单、结束/取消订单操作
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
@@ -112,6 +114,16 @@ type Booking = {
 type BookingsResult = {
 	list: Booking[]
 	totalCount: number
+}
+
+const readStorageString = (key: string): string => {
+	const raw = uni.getStorageSync(key)
+	return raw == null ? '' : ('' + raw).trim()
+}
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const value = readStorageString(key)
+	return value.length < 1 ? null : value
 }
 
 const isLoggedIn = ref(false)
@@ -160,10 +172,10 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 	const price = rawPrice != null ? (rawPrice as number) : 0
 	const rawStatus = item['status']
 	const statusVal = rawStatus != null ? ('' + rawStatus).trim() : 'Unknown'
-	const startLat = item['start_lat'] != null && typeof item['start_lat'] === 'number' ? item['start_lat'] as number : null
-	const startLng = item['start_lng'] != null && typeof item['start_lng'] === 'number' ? item['start_lng'] as number : null
-	const endLat = item['end_lat'] != null && typeof item['end_lat'] === 'number' ? item['end_lat'] as number : null
-	const endLng = item['end_lng'] != null && typeof item['end_lng'] === 'number' ? item['end_lng'] as number : null
+	const startLat = item['start_lat'] != null && typeof item['start_lat'] == 'number' ? item['start_lat'] as number : null
+	const startLng = item['start_lng'] != null && typeof item['start_lng'] == 'number' ? item['start_lng'] as number : null
+	const endLat = item['end_lat'] != null && typeof item['end_lat'] == 'number' ? item['end_lat'] as number : null
+	const endLng = item['end_lng'] != null && typeof item['end_lng'] == 'number' ? item['end_lng'] as number : null
 	return {
 		id: id,
 		scooterId: scooterId,
@@ -223,11 +235,9 @@ const startAutoRefresh = () => {
 }
 
 const fetchBookings = (fromPullRefresh: boolean) => {
-	const userIdStorage = uni.getStorageSync('userId')
-	console.log('[orders] uni.getStorageSync("userId") =', userIdStorage)
-	const tokenStorage = uni.getStorageSync('token')
-	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
-	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	const userId = readStorageStringOrNull('userId')
+	console.log('[orders] uni.getStorageSync("userId") =', userId)
+	const token = readStorageStringOrNull('token')
 
 	if (userId == null || userId.length == 0) {
 		isLoggedIn.value = false
@@ -243,7 +253,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 	}
 
 	isLoggedIn.value = true
-	if (fromPullRefresh === false) {
+	if (!fromPullRefresh) {
 		isLoading.value = true
 	}
 	loadError.value = ''
@@ -259,7 +269,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const responseData = res.data
-				if (responseData != null && typeof responseData === 'object') {
+				if (responseData != null && typeof responseData == 'object') {
 					const obj = responseData as UTSJSONObject
 					const { list, totalCount } = applyBookingsResponse(obj)
 					bookings.value = list
@@ -287,10 +297,8 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 fetchBookingsRef.value = fetchBookings
 
 const loadMore = () => {
-	const userIdStorage = uni.getStorageSync('userId')
-	const tokenStorage = uni.getStorageSync('token')
-	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
-	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
 	if (userId == null || token == null || loadingMore.value || !hasMore.value) return
 
 	loadingMore.value = true
@@ -306,7 +314,7 @@ const loadMore = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const responseData = res.data
-				if (responseData != null && typeof responseData === 'object') {
+				if (responseData != null && typeof responseData == 'object') {
 					const obj = responseData as UTSJSONObject
 					const { list, totalCount } = applyBookingsResponse(obj)
 					bookings.value = bookings.value.concat(list)
@@ -347,7 +355,7 @@ const hasRoute = (booking: Booking): boolean => {
 
 const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
-	if (status == null || status.length === 0) return []
+	if (status == null || status.length < 1) return []
 	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED' || s == 'PENDING') return ['endRide', 'cancelOrder']
 	if (s == 'COMPLETED') return hasRoute(booking) ? ['viewRoute'] : []
@@ -365,7 +373,7 @@ const hasAction = (booking: Booking, action: ActionType): boolean => {
 
 const goToRoute = (booking: Booking) => {
 	const bid = booking.id
-	if (bid == null || bid.length === 0) {
+	if (bid == null || bid.length < 1) {
 		uni.showToast({ title: 'Invalid booking', icon: 'none' })
 		return
 	}
@@ -374,7 +382,7 @@ const goToRoute = (booking: Booking) => {
 
 const cancelOrder = (booking: Booking) => {
 	const bid = booking.id
-	if (bid == null || bid.length === 0) {
+	if (bid == null || bid.length < 1) {
 		uni.showToast({ title: 'Invalid booking', icon: 'none' })
 		return
 	}
@@ -383,9 +391,8 @@ const cancelOrder = (booking: Booking) => {
 		uni.showToast({ title: 'This booking cannot be cancelled', icon: 'none' })
 		return
 	}
-	const tokenRaw = uni.getStorageSync('token')
-	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
-	if (token === '') {
+	const token = readStorageString('token')
+	if (token == '') {
 		uni.showToast({ title: 'Please login again', icon: 'none' })
 		return
 	}
@@ -393,7 +400,7 @@ const cancelOrder = (booking: Booking) => {
 		title: 'Cancel Booking',
 		content: 'Are you sure you want to cancel this booking?',
 		success: (res) => {
-			const confirm = res.confirm === true
+			const confirm = !!res.confirm
 			if (confirm) {
 				const doCancel = (endLatVal: number | null, endLngVal: number | null) => {
 					const body: UTSJSONObject = {}
@@ -416,7 +423,7 @@ const cancelOrder = (booking: Booking) => {
 							} else {
 								let msg = 'Failed to cancel'
 								const data = resp.data as UTSJSONObject | null
-								if (data !== null && data['message'] !== null) {
+								if (data != null && data['message'] != null) {
 									msg = '' + data['message']
 								}
 								uni.showToast({ title: msg, icon: 'none', duration: 3000 })
@@ -440,7 +447,7 @@ const cancelOrder = (booking: Booking) => {
 
 const endRide = (booking: Booking) => {
 	const bid = booking.id
-	if (bid == null || bid.length === 0) {
+	if (bid == null || bid.length < 1) {
 		uni.showToast({ title: 'Invalid booking', icon: 'none' })
 		return
 	}
@@ -449,9 +456,8 @@ const endRide = (booking: Booking) => {
 		uni.showToast({ title: 'This booking cannot be ended', icon: 'none' })
 		return
 	}
-	const tokenRaw = uni.getStorageSync('token')
-	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
-	if (token === '') {
+	const token = readStorageString('token')
+	if (token == '') {
 		uni.showToast({ title: 'Please login again', icon: 'none' })
 		return
 	}
@@ -505,7 +511,7 @@ const setScrollHeight = () => {
 onMounted(() => {
 	setScrollHeight()
 	const userId = uni.getStorageSync('userId')
-	const hasUser = userId != null && userId != '' && typeof userId === 'string'
+	const hasUser = userId != null && userId != '' && typeof userId == 'string'
 	if (hasUser) {
 		fetchBookings(false)
 	} else {
@@ -516,7 +522,7 @@ onMounted(() => {
 onShow(() => {
 	setScrollHeight()
 	const userId = uni.getStorageSync('userId')
-	const hasUser = userId != null && userId != '' && typeof userId === 'string'
+	const hasUser = userId != null && userId != '' && typeof userId == 'string'
 	if (hasUser) {
 		fetchBookings(false)
 	}
@@ -528,6 +534,7 @@ onHide(() => {
 </script>
 
 <style lang="scss">
+/* 订单列表样式：卡片布局、状态徽标颜色、操作按钮、分页提示 */
 .container {
 	width: 100%;
 	height: 100%;

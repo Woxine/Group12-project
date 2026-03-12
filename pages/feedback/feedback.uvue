@@ -1,4 +1,5 @@
 <template>
+	<!-- 反馈页：输入滑板车ID、问题描述和位置，提交用户反馈 -->
 	<view class="container">
 		<view class="title-section">
 			<text class="title-text">Submit Feedback</text>
@@ -46,6 +47,7 @@
 </template>
 
 <script setup lang="uts">
+// 反馈提交逻辑：表单校验、调用反馈接口提交数据、成功后重置表单
 import { ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 
@@ -57,16 +59,16 @@ const submitError = ref('')
 
 const onSubmit = () => {
 	submitError.value = ''
-	const sid = scooterId.value != null ? scooterId.value.trim() : ''
-	const desc = description.value != null ? description.value.trim() : ''
-	const loc = location.value != null ? location.value.trim() : ''
+	const sid = scooterId.value.trim()
+	const desc = description.value.trim()
+	const loc = location.value.trim()
 
-	if (sid.length === 0) {
+	if (sid.length < 1) {
 		submitError.value = 'Please enter Scooter ID'
 		uni.showToast({ title: 'Please enter Scooter ID', icon: 'none' })
 		return
 	}
-	if (desc.length === 0) {
+	if (desc.length < 1) {
 		submitError.value = 'Please enter a description'
 		uni.showToast({ title: 'Please enter a description', icon: 'none' })
 		return
@@ -75,7 +77,7 @@ const onSubmit = () => {
 	isSubmitting.value = true
 
 	const tokenRaw = uni.getStorageSync('token')
-	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
+	const token = tokenRaw != null ? ('' + tokenRaw).trim() : ''
 	const header: UTSJSONObject = {
 		'Content-Type': 'application/json'
 	}
@@ -126,6 +128,7 @@ const onSubmit = () => {
 </script>
 
 <style>
+/* 反馈页样式：表单卡片、输入框、字数计数、错误提示、提交按钮 */
 .container {
 	display: flex;
 	flex-direction: column;

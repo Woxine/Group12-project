@@ -1,7 +1,8 @@
 <template>
+	<!-- 个人中心：未登录提示，或已登录时展示用户信息、骑行热力图与菜单 -->
 	<view class="container">
 		<!-- Not Logged In State -->
-		<view v-if="userName.length == 0" class="login-prompt-section">
+		<view v-if="!isLoggedIn" class="login-prompt-section">
 			<view class="not-logged-wrapper">
 				<image src="/static/me.png" mode="aspectFit" class="large-icon"></image>
 				<text class="welcome-text">Welcome to Bike Sharing</text>
@@ -133,7 +134,9 @@
 </template>
 
 <script setup lang="uts">
+// 个人中心逻辑：读取用户信息、获取订单数据构建骑行热力图、处理登出
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 
 type UserInfo = {
@@ -147,6 +150,7 @@ type HeatmapDay = {
 	empty: boolean
 }
 
+const isLoggedIn = ref<boolean>(false)
 const userName = ref<string>('')
 const userEmail = ref<string>('')
 const heatmapLoading = ref(false)
@@ -156,9 +160,21 @@ const mostActiveDay = ref('-')
 const activeDays = ref(0)
 const heatmapWeeks = ref<HeatmapDay[][]>([])
 
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
 const getUserInfo = () => {
+	userName.value = ''
+	userEmail.value = ''
+	const token = uni.getStorageSync('token')
+	isLoggedIn.value = token != null && token != '' && typeof token == 'string'
+	if (!isLoggedIn.value) return
 	const userInfoStr = uni.getStorageSync('userInfo')
-	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
+	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr == 'string') {
 		try {
 			const userInfo = JSON.parse<UserInfo>(userInfoStr)!!
 			if (userInfo != null) {
@@ -272,10 +288,8 @@ const buildHeatmap = (dateCountMap: UTSJSONObject, allDates: string[]) => {
 }
 
 const fetchBookingsForHeatmap = () => {
-	const userIdStorage = uni.getStorageSync('userId')
-	const tokenStorage = uni.getStorageSync('token')
-	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
-	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
 
 	if (userId == null || userId.length == 0 || token == null || token.length == 0) {
 		return
@@ -293,7 +307,7 @@ const fetchBookingsForHeatmap = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const responseData = res.data
-				if (responseData != null && typeof responseData === 'object') {
+				if (responseData != null && typeof responseData == 'object') {
 					const obj = responseData as UTSJSONObject
 					const dataField = obj['data']
 					if (dataField != null && Array.isArray(dataField)) {
@@ -362,6 +376,7 @@ const handleLogout = () => {
 				uni.removeStorageSync('userId')
 				uni.removeStorageSync('selectedScooterId')
 
+				isLoggedIn.value = false
 				userName.value = ''
 				userEmail.value = ''
 				heatmapWeeks.value = []
@@ -387,9 +402,17 @@ onMounted(() => {
 	getUserInfo()
 	fetchBookingsForHeatmap()
 })
+
+onShow(() => {
+	getUserInfo()
+	if (isLoggedIn.value) {
+		fetchBookingsForHeatmap()
+	}
+})
 </script>
 
 <style lang="scss">
+/* 个人中心样式：登录提示、用户卡片、热力图网格、菜单列表、登出按钮 */
 .container {
 	width: 100%;
 	height: 100%;

@@ -1,23 +1,9 @@
 <template>
+	<!-- 时长选择页：选择开始/结束时间，显示费用预估及定价参考卡片 -->
 	<view class="container">
 		<scroll-view scroll-y="true" class="scroll-area">
 			<view class="title">
 				<text class="title-text">Select Booking Duration</text>
-			</view>
-			
-			<view class="duration-cards">
-				<view 
-					v-for="(duration, index) in durations" 
-					:key="index" 
-					class="card"
-				>
-					<view class="card-header">
-						<text class="duration">{{ duration.time }}</text>
-					</view>
-					<view class="card-body">
-						<text class="price">£{{ duration.price }}</text>
-					</view>
-				</view>
 			</view>
 
 			<!-- Start Time Selection -->
@@ -41,23 +27,51 @@
 					<text class="time-value">{{ endTime.length > 0 ? endTime : 'Not Selected' }}</text>
 				</view>
 			</view>
-			
+
+			<!-- Estimated Total -->
+			<view v-if="startTime.length > 0 && endTime.length > 0" class="estimated-total-section">
+				<view class="estimated-total-row">
+					<text class="estimated-total-label">Estimated Total</text>
+					<text class="estimated-total-value">£{{ estimatedTotalDisplay }}</text>
+				</view>
+			</view>
+
 			<view class="button-group">
 				<button class="confirm-btn" @click="confirm">Confirm</button>
 				<button class="cancel-btn" @click="cancel">Cancel</button>
+			</view>
+
+			<!-- Pricing Reference (moved to bottom) -->
+			<view class="pricing-ref-title">
+				<text class="pricing-ref-title-text">Pricing Reference</text>
+			</view>
+			<view class="duration-cards">
+				<view 
+					v-for="(duration, index) in durations" 
+					:key="index" 
+					class="card"
+				>
+					<view class="card-header">
+						<text class="duration">{{ duration.time }}</text>
+					</view>
+					<view class="card-body">
+						<text class="price">£{{ duration.price }}</text>
+					</view>
+				</view>
 			</view>
 		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-import { ref } from 'vue';
+// 时长选择逻辑：获取时价、计算费用、校验滑板车可用性并创建预订记录
+import { ref, onMounted } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 
-// Define types
 type DurationItem = {
 	time: string;
-	price: number;
+	price: string;
 }
 
 type UserInfo = {
@@ -65,206 +79,274 @@ type UserInfo = {
 	email: string;
 }
 
-// Booking duration data
+const hourRate = ref<number>(1.0);
+
+const formatPrice = (val: number): string => {
+	const rounded = Math.round(val * 100) / 100;
+	const intPart = Math.floor(rounded);
+	const decPart = Math.round((rounded - intPart) * 100);
+	const decStr = decPart < 10 ? '0' + decPart : '' + decPart;
+	return intPart + '.' + decStr;
+};
+
 const durations = ref<DurationItem[]>([
-	{ time: '10 Minutes', price: 0.2 },
-	{ time: '1 Hour', price: 1 },
-	{ time: '4 Hours', price: 1 },
-	{ time: '1 Day', price: 1 },
-	{ time: '1 Week', price: 1 }
+	{ time: '10 Minutes', price: '0.00' } as DurationItem,
+	{ time: '1 Hour', price: '0.00' } as DurationItem,
+	{ time: '4 Hours', price: '0.00' } as DurationItem,
+	{ time: '1 Day', price: '0.00' } as DurationItem,
+	{ time: '1 Week', price: '0.00' } as DurationItem
 ]);
 
-// Start and end time
+const updateDurations = () => {
+	const rate = hourRate.value;
+	const items: DurationItem[] = [
+		{ time: '10 Minutes', price: formatPrice(rate * 10 / 60) } as DurationItem,
+		{ time: '1 Hour', price: formatPrice(rate * 1) } as DurationItem,
+		{ time: '4 Hours', price: formatPrice(rate * 4) } as DurationItem,
+		{ time: '1 Day', price: formatPrice(rate * 24) } as DurationItem,
+		{ time: '1 Week', price: formatPrice(rate * 168) } as DurationItem
+	];
+	durations.value = items;
+};
+
 const startTime = ref<string>('');
 const endTime = ref<string>('');
-const durationCode = ref<string>(''); // Store duration code (1H, 4H, 1D, 1W)
+const durationCode = ref<string>('');
+const estimatedTotalDisplay = ref<string>('0.00');
 
-// Select start time
+const updateEstimatedTotal = () => {
+	if (startTime.value.length > 0 && endTime.value.length > 0) {
+		const startDateObj = new Date(startTime.value);
+		const endDateObj = new Date(endTime.value);
+		const durationMs = endDateObj.getTime() - startDateObj.getTime();
+		const durationHours = durationMs / (1000 * 60 * 60);
+		const total = durationHours * hourRate.value;
+		estimatedTotalDisplay.value = formatPrice(total);
+	}
+};
+
+const fetchHourRate = () => {
+	const selectedScooterId = uni.getStorageSync('selectedScooterId');
+	if (selectedScooterId == null || selectedScooterId == '') {
+		updateDurations();
+		return;
+	}
+	let scooterId: string = '' + selectedScooterId;
+	let numericId: string = '';
+	for (let i = 0; i < scooterId.length; i++) {
+		const ch = scooterId.charAt(i);
+		if (ch >= '0' && ch <= '9') {
+			numericId += ch;
+		}
+	}
+	if (numericId.length == 0) {
+		numericId = scooterId;
+	}
+	uni.request({
+		url: BASE_URL + '/api/v1/scooters/' + numericId + '/location?_t=' + Date.now(),
+		method: 'GET',
+		header: { 'Cache-Control': 'no-cache' },
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null) {
+				const resObj = res.data as UTSJSONObject;
+				const dataObj = resObj['data'] as UTSJSONObject | null;
+				if (dataObj != null) {
+					const rateVal = dataObj['hourRate'];
+					if (rateVal != null) {
+						hourRate.value = rateVal as number;
+					}
+				}
+			}
+			updateDurations();
+			updateEstimatedTotal();
+		},
+		fail: () => {
+			updateDurations();
+		}
+	});
+};
+
+onMounted(() => {
+	fetchHourRate();
+});
+
+onShow(() => {
+	fetchHourRate();
+});
+
 const selectStartTime = () => {
 	const now = new Date();
 	const currentHour = now.getHours().toString().padStart(2, '0');
 	const currentMinute = now.getMinutes().toString().padStart(2, '0');
-	const currentDate = now.getFullYear() + '-' + 
-		(now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+	const currentDate = now.getFullYear() + '-' +
+		(now.getMonth() + 1).toString().padStart(2, '0') + '-' +
 		now.getDate().toString().padStart(2, '0');
-	
+
 	uni.showActionSheet({
 		itemList: ['Start Now', '1 Hour Later', '2 Hours Later', '3 Hours Later'],
 		success: (res) => {
-			if (res.tapIndex === 0) {
-				// Start Now
+			if (res.tapIndex == 0) {
 				startTime.value = currentDate + ' ' + currentHour + ':' + currentMinute;
-			} else if (res.tapIndex === 1) {
-				// 1 Hour Later
+			} else if (res.tapIndex == 1) {
 				const time1 = new Date(now.getTime() + 60 * 60 * 1000);
-				const hour1 = time1.getHours().toString().padStart(2, '0');
-				const minute1 = time1.getMinutes().toString().padStart(2, '0');
-				startTime.value = currentDate + ' ' + hour1 + ':' + minute1;
-			} else if (res.tapIndex === 2) {
-				// 2 Hours Later
+				startTime.value = currentDate + ' ' + time1.getHours().toString().padStart(2, '0') + ':' + time1.getMinutes().toString().padStart(2, '0');
+			} else if (res.tapIndex == 2) {
 				const time2 = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-				const hour2 = time2.getHours().toString().padStart(2, '0');
-				const minute2 = time2.getMinutes().toString().padStart(2, '0');
-				startTime.value = currentDate + ' ' + hour2 + ':' + minute2;
-			} else if (res.tapIndex === 3) {
-				// 3 Hours Later
+				startTime.value = currentDate + ' ' + time2.getHours().toString().padStart(2, '0') + ':' + time2.getMinutes().toString().padStart(2, '0');
+			} else if (res.tapIndex == 3) {
 				const time3 = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-				const hour3 = time3.getHours().toString().padStart(2, '0');
-				const minute3 = time3.getMinutes().toString().padStart(2, '0');
-				startTime.value = currentDate + ' ' + hour3 + ':' + minute3;
+				startTime.value = currentDate + ' ' + time3.getHours().toString().padStart(2, '0') + ':' + time3.getMinutes().toString().padStart(2, '0');
 			}
+			endTime.value = '';
+			durationCode.value = '';
+			estimatedTotalDisplay.value = '0.00';
 		}
-	})
+	});
 };
 
-// Select end time
 const selectEndTime = () => {
 	if (startTime.value == '') {
-		uni.showToast({
-			title: 'Please select start time first',
-			icon: 'none'
-		});
+		uni.showToast({ title: 'Please select start time first', icon: 'none' });
 		return;
 	}
 
-	const now = new Date();
-	const currentDate = now.getFullYear() + '-' + 
-		(now.getMonth() + 1).toString().padStart(2, '0') + '-' + 
-		now.getDate().toString().padStart(2, '0');
-	
+	const startDate = new Date(startTime.value);
+
 	uni.showActionSheet({
 		itemList: ['10 Minutes Later', '1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
 		success: (res) => {
 			let endDateTime: Date | null = null;
 			let duration: string = '';
-			
-			if (res.tapIndex === 0) {
-				// 10 minutes from start time so actual duration is 10 minutes
-				const startDate = new Date(startTime.value);
+
+			if (res.tapIndex == 0) {
 				endDateTime = new Date(startDate.getTime() + 10 * 60 * 1000);
 				duration = '10M';
-			} else if (res.tapIndex === 1) {
-				endDateTime = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+			} else if (res.tapIndex == 1) {
+				endDateTime = new Date(startDate.getTime() + 1 * 60 * 60 * 1000);
 				duration = '1H';
-			} else if (res.tapIndex === 2) {
-				endDateTime = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+			} else if (res.tapIndex == 2) {
+				endDateTime = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
 				duration = '4H';
-			} else if (res.tapIndex === 3) {
-				endDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+			} else if (res.tapIndex == 3) {
+				endDateTime = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
 				duration = '1D';
-			} else if (res.tapIndex === 4) {
-				endDateTime = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+			} else if (res.tapIndex == 4) {
+				endDateTime = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
 				duration = '1W';
 			}
-			
+
 			if (endDateTime != null) {
-				const endDate = endDateTime.getFullYear() + '-' + 
-					(endDateTime.getMonth() + 1).toString().padStart(2, '0') + '-' + 
-					endDateTime.getDate().toString().padStart(2, '0');
-				const endHour = endDateTime.getHours().toString().padStart(2, '0');
-				const endMinute = endDateTime.getMinutes().toString().padStart(2, '0');
-				endTime.value = endDate + ' ' + endHour + ':' + endMinute;
+				const ed = endDateTime as Date;
+				const endDateStr = ed.getFullYear() + '-' +
+					(ed.getMonth() + 1).toString().padStart(2, '0') + '-' +
+					ed.getDate().toString().padStart(2, '0');
+				endTime.value = endDateStr + ' ' + ed.getHours().toString().padStart(2, '0') + ':' + ed.getMinutes().toString().padStart(2, '0');
 				durationCode.value = duration;
+				updateEstimatedTotal();
 			}
 		}
-	})
+	});
 };
 
-// Confirm selection
-const confirm = () => {
-	if (startTime.value == '') {
-		uni.showToast({
-			title: 'Please select start time',
-			icon: 'none'
-		});
-		return;
-	}
-	
-	if (endTime.value == '') {
-		uni.showToast({
-			title: 'Please select end time',
-			icon: 'none'
-		});
-		return;
-	}
+const pendingScooterId = ref<string>('');
+const pendingUserId = ref<string>('');
+const pendingToken = ref<string>('');
+const pendingTotalPrice = ref<number>(0);
 
-	// Get user info and token（确保 token 为字符串并去除首尾空格）
-	const userInfoStr = uni.getStorageSync('userInfo')
-	const tokenRaw = uni.getStorageSync('token')
-	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : '';
-	const userIdStorage = uni.getStorageSync('userId')
-	
-	let userId: string = '';
-	let userName: string = '';
-	
-	// Prefer userId saved in storage
-	if (userIdStorage != null && userIdStorage != '') {
-		userId = '' + userIdStorage;
-	}
-	
-	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr === 'string') {
-		try {
-			const userInfo = JSON.parse<UserInfo>(userInfoStr)!!
-			if (userInfo != null) {
-				const nameValue = userInfo['name'] as string
-				userName = nameValue.length > 0 ? nameValue : 'Guest';
+const stepSendBooking = () => {
+	const token = pendingToken.value;
+	const bookingData: UTSJSONObject = {
+		'user_id': pendingUserId.value,
+		'userId': pendingUserId.value,
+		'scooter_id': pendingScooterId.value,
+		'start_time': startTime.value,
+		'end_time': endTime.value,
+		'duration': durationCode.value,
+		'total_price': pendingTotalPrice.value,
+		'status': 'CONFIRMED'
+	};
+	console.log('Booking info:', bookingData);
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings',
+		method: 'POST',
+		data: bookingData,
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			console.log('Booking response:', res.statusCode);
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.showToast({ title: 'Booking successful, proceed to payment', icon: 'success' });
+				setTimeout(() => { uni.navigateTo({ url: '/pages/payment/payment' }); }, 1000);
+			} else {
+				let errorMsg: string = 'Booking failed, please try again';
+				const errorData = res.data as UTSJSONObject | null;
+				if (errorData != null) {
+					const msg = errorData['message'];
+					const err = errorData['error'];
+					const detail = errorData['detail'];
+					if (msg != null) {
+						errorMsg = '' + msg;
+					} else if (err != null) {
+						errorMsg = '' + err;
+					} else if (detail != null) {
+						errorMsg = '' + detail;
+					}
+				}
+				if (res.statusCode == 401) {
+					uni.showToast({ title: 'Login expired, please login again', icon: 'none', duration: 2500 });
+					setTimeout(() => { uni.reLaunch({ url: '/pages/login/login' }); }, 2500);
+				} else {
+					const msgLower = errorMsg.toLowerCase();
+					if (msgLower.indexOf('bookingresponse') >= 0 || msgLower.indexOf('type definition error') >= 0) {
+						errorMsg = 'Booking service error, please try again later';
+					}
+					uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 });
+					const isScooterUnavailable = msgLower.indexOf('overlapping') >= 0 || msgLower.indexOf('not available') >= 0;
+					if (isScooterUnavailable) {
+						setTimeout(() => { uni.navigateBack({}); }, 3000);
+					}
+				}
 			}
-		} catch (e) {
-			console.error('Failed to parse user info:', e);
+		},
+		fail: () => {
+			uni.showToast({ title: 'Network error, please try again', icon: 'none' });
 		}
-	}
-	
-	if (token === '' || token.length === 0) {
-		uni.showToast({
-			title: 'Please login first',
-			icon: 'none'
-		});
-		return;
-	}
-	
-	console.log('Token:', token);
-	console.log('User ID:', userId);
-	console.log('User Name:', userName);
-	
-	// Get selected scooter ID (frontend stores code like SC001, backend needs numeric ID)
-	const selectedScooterId = uni.getStorageSync('selectedScooterId')
-	let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
-	// Extract numeric part as backend ID, e.g., SC002 -> 2
-	let numericScooterId: string = '';
-	for (let i = 0; i < scooterId.length; i++) {
-		const ch = scooterId.charAt(i);
-		if (ch >= '0' && ch <= '9') {
-			numericScooterId += ch;
-		}
-	}
-	if (numericScooterId.length == 0) {
-		numericScooterId = scooterId; // Fallback: if no numbers, use original string
-	}
-	
-	// Calculate booking duration (hours)
-	const startDate = new Date(startTime.value);
-	const endDate = new Date(endTime.value);
-	const durationMs = endDate.getTime() - startDate.getTime();
-	const durationHours = durationMs / (1000 * 60 * 60);
-	
-	// Calculate total price (assume £1/hour)
-	const totalPrice = durationHours * 1;
-	
-	console.log('Start Time:', startTime.value);
-	console.log('End Time:', endTime.value);
-	console.log('Duration Hours:', durationHours);
-	console.log('Total Price:', totalPrice);
-	
-	// If still cannot get userId, prompt user to login again
-	if (userId == null || userId == '') {
-		uni.showToast({
-			title: 'User information missing, please login again before booking',
-			icon: 'none'
-		});
-		return;
-	}
+	});
+};
 
-	// Check if user already has an active booking — do not allow duplicate booking
+const stepGetLocationAndBook = () => {
+	uni.getLocation({
+		type: 'gcj02',
+		success: (locRes) => {
+			pendingScooterId.value = pendingScooterId.value;
+			console.log('Got location, creating booking');
+			stepSendBooking();
+		},
+		fail: () => {
+			console.log('Location unavailable, creating booking without location');
+			stepSendBooking();
+		}
+	});
+};
+
+const hasActivePending = ref<boolean>(false);
+
+const stepAfterActiveCheck = () => {
+	console.log('stepAfterActiveCheck, hasActive:', hasActivePending.value);
+	if (hasActivePending.value) {
+		uni.showToast({ title: 'You already have an active booking.', icon: 'none', duration: 3000 });
+	} else {
+		setTimeout(() => { stepGetLocationAndBook(); }, 10);
+	}
+};
+
+const stepCheckActiveBooking = () => {
+	const userId = pendingUserId.value;
+	const token = pendingToken.value;
+	console.log('Checking active bookings for user:', userId);
+	hasActivePending.value = false;
 	uni.request({
 		url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
 		method: 'GET',
@@ -273,8 +355,8 @@ const confirm = () => {
 			'Authorization': 'Bearer ' + token
 		},
 		success: (checkRes) => {
-			let hasActiveBooking = false;
-			if (checkRes.statusCode >= 200 && checkRes.statusCode < 300 && checkRes.data != null && typeof checkRes.data === 'object') {
+			console.log('Active booking check response:', checkRes.statusCode);
+			if (checkRes.statusCode >= 200 && checkRes.statusCode < 300 && checkRes.data != null && typeof checkRes.data == 'object') {
 				const obj = checkRes.data as UTSJSONObject;
 				const list = obj['data'];
 				if (list != null && Array.isArray(list)) {
@@ -282,145 +364,121 @@ const confirm = () => {
 					for (let i = 0; i < arr.length; i++) {
 						const rawStatus = arr[i]['status'];
 						const s = rawStatus != null ? ('' + rawStatus).toUpperCase() : '';
-						if (s === 'CONFIRMED' || s === 'PENDING') {
-							hasActiveBooking = true;
+						if (s == 'CONFIRMED' || s == 'PENDING') {
+							hasActivePending.value = true;
 							break;
 						}
 					}
 				}
 			}
-			if (hasActiveBooking === true) {
-				uni.showToast({
-					title: 'You already have an active booking. Cancel it or wait until it ends.',
-					icon: 'none',
-					duration: 3000
-				});
-				return;
-			}
-
-			const doCreateBooking = (startLatVal: number | null, startLngVal: number | null) => {
-			const bookingData: UTSJSONObject = {
-				'user_id': userId,
-				'userId': userId,
-				'scooter_id': numericScooterId,
-				'start_time': startTime.value,
-				'end_time': endTime.value,
-				'duration': durationCode.value,
-				'total_price': totalPrice,
-				'status': 'CONFIRMED'
-			};
-			if (startLatVal != null && startLngVal != null) {
-				bookingData['startLat'] = startLatVal;
-				bookingData['startLng'] = startLngVal;
-			}
-			console.log('Booking info:', bookingData);
-			uni.request({
-				url: BASE_URL + '/api/v1/bookings',
-				method: 'POST',
-				data: bookingData,
-				header: {
-					'Content-Type': 'application/json',
-					'Authorization': 'Bearer ' + token
-				},
-				success: (res) => {
-					console.log('Booking API Response:', res);
-					console.log('Status Code:', res.statusCode);
-					console.log('Response Data:', res.data);
-			
-			if (res.statusCode >= 200 && res.statusCode < 300) {
-				console.log('Booking successfully saved to database');
-				uni.showToast({
-					title: 'Booking successful, proceed to payment',
-					icon: 'success'
-				});
-				setTimeout(() => {
-					uni.navigateTo({
-						url: '/pages/payment/payment'
-					});
-				}, 1000);
-			} else {
-				console.error('Booking failed:', res.statusCode);
-				let errorMsg: string = 'Booking failed, please try again';
-				const errorData = res.data as UTSJSONObject | null;
-				if (errorData !== null) {
-					const msg = errorData['message'];
-					const err = errorData['error'];
-					const detail = errorData['detail'];
-					if (msg !== null) {
-						errorMsg = '' + msg;
-					} else if (err !== null) {
-						errorMsg = '' + err;
-					} else if (detail !== null) {
-						errorMsg = '' + detail;
-					}
-				}
-				// 401 提示重新登录
-				if (res.statusCode === 401) {
-					errorMsg = 'Login expired or invalid, please login again';
-					uni.showToast({
-						title: errorMsg,
-						icon: 'none',
-						duration: 2500
-					});
-					setTimeout(() => {
-						uni.reLaunch({ url: '/pages/login/login' });
-					}, 2500);
-				} else {
-					// 后端其他错误时的友好提示
-					const msgLower = errorMsg.toLowerCase();
-					if (msgLower.indexOf('bookingresponse') >= 0 || msgLower.indexOf('type definition error') >= 0) {
-						errorMsg = 'Booking service error, please try again later';
-					}
-					uni.showToast({
-						title: errorMsg,
-						icon: 'none',
-						duration: 3000
-					});
-				}
-			}
-		},
-		fail: (error) => {
-			console.error('Network error during booking:', error);
-			uni.showToast({
-				title: 'Network error (simulated booking), proceed to payment',
-				icon: 'none'
-			});
-			setTimeout(() => {
-				uni.navigateTo({
-					url: '/pages/payment/payment'
-				});
-			}, 1000);
-		}
-			});
-			};
-			uni.getLocation({
-				type: 'gcj02',
-				success: (res) => { doCreateBooking(res.latitude, res.longitude); },
-				fail: () => { doCreateBooking(null, null); }
-			});
+			setTimeout(() => { stepAfterActiveCheck(); }, 10);
 		},
 		fail: () => {
+			console.log('Active booking check FAILED');
 			uni.showToast({ title: 'Failed to check bookings', icon: 'none' });
 		}
 	});
 };
 
-// Cancel selection
+const scooterAvailable = ref<boolean>(true);
+
+const stepAfterScooterCheck = () => {
+	console.log('stepAfterScooterCheck, available:', scooterAvailable.value);
+	if (scooterAvailable.value) {
+		setTimeout(() => { stepCheckActiveBooking(); }, 10);
+	} else {
+		uni.showToast({ title: 'This scooter is no longer available.', icon: 'none', duration: 3000 });
+		setTimeout(() => { uni.navigateBack({}); }, 3000);
+	}
+};
+
+const stepCheckScooter = () => {
+	const scooterId = pendingScooterId.value;
+	console.log('Checking scooter availability:', scooterId);
+	scooterAvailable.value = true;
+	uni.request({
+		url: BASE_URL + '/api/v1/scooters/' + scooterId + '/location?_t=' + Date.now(),
+		method: 'GET',
+		header: { 'Cache-Control': 'no-cache' },
+		success: (scooterRes) => {
+			console.log('Scooter check response:', scooterRes.statusCode);
+			if (scooterRes.statusCode >= 200 && scooterRes.statusCode < 300 && scooterRes.data != null) {
+				const scooterObj = scooterRes.data as UTSJSONObject;
+				const scooterData = scooterObj['data'] as UTSJSONObject | null;
+				if (scooterData != null) {
+					const currentStatus = scooterData['status'];
+					if (currentStatus != null && ('' + currentStatus).toUpperCase() != 'AVAILABLE') {
+						scooterAvailable.value = false;
+					}
+				}
+			}
+			setTimeout(() => { stepAfterScooterCheck(); }, 10);
+		},
+		fail: () => {
+			console.log('Scooter check FAILED');
+			uni.showToast({ title: 'Failed to verify scooter availability', icon: 'none' });
+		}
+	});
+};
+
+const confirm = () => {
+	if (startTime.value == '' || endTime.value == '') {
+		const msg = startTime.value == '' ? 'Please select start time' : 'Please select end time';
+		uni.showToast({ title: msg, icon: 'none' });
+	} else {
+		const tokenRaw = uni.getStorageSync('token');
+		const token = tokenRaw != null ? ('' + tokenRaw).trim() : '';
+		const userIdStorage = uni.getStorageSync('userId');
+		let userId: string = '';
+		if (userIdStorage != null) {
+			userId = '' + userIdStorage;
+		}
+
+		if (token.length == 0) {
+			uni.showToast({ title: 'Please login first', icon: 'none' });
+		} else if (userId.length == 0) {
+			uni.showToast({ title: 'User information missing', icon: 'none' });
+		} else {
+			const selectedScooterId = uni.getStorageSync('selectedScooterId');
+			let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
+			let numericScooterId: string = '';
+			for (let i = 0; i < scooterId.length; i++) {
+				const ch = scooterId.charAt(i);
+				if (ch >= '0' && ch <= '9') {
+					numericScooterId += ch;
+				}
+			}
+			if (numericScooterId.length == 0) {
+				numericScooterId = scooterId;
+			}
+
+			const startDateObj = new Date(startTime.value);
+			const endDateObj = new Date(endTime.value);
+			const durationMs = endDateObj.getTime() - startDateObj.getTime();
+			const durationHours = durationMs / (1000 * 60 * 60);
+			const totalPrice = durationHours * hourRate.value;
+
+			console.log('Total Price:', totalPrice, 'Scooter:', numericScooterId);
+
+			pendingScooterId.value = numericScooterId;
+			pendingUserId.value = userId;
+			pendingToken.value = token;
+			pendingTotalPrice.value = totalPrice;
+			setTimeout(() => { stepCheckScooter(); }, 10);
+		}
+	}
+};
+
 const cancel = () => {
 	startTime.value = '';
 	endTime.value = '';
-	uni.showToast({
-		title: 'Cancelled',
-		icon: 'none'
-	});
-	// Return to home page
-	uni.reLaunch({
-		url: '/pages/index/index'
-	});
+	uni.showToast({ title: 'Cancelled', icon: 'none' });
+	uni.reLaunch({ url: '/pages/index/index' });
 };
 </script>
 
 <style lang="scss">
+/* 时长选择样式：时间选择卡片、费用展示、确认取消按钮、定价参考卡片 */
 	.container {
 		width: 100%;
 		height: 100%;
@@ -439,57 +497,16 @@ const cancel = () => {
 	}
 
 	.title {
-		text-align: center;
 		margin-bottom: 30px;
+		display: flex;
+		justify-content: center;
 	}
 
 	.title-text {
 		font-size: 24px;
 		font-weight: bold;
 		color: #333;
-	}
-
-	.duration-cards {
-		display: flex;
-		flex-direction: column;
-		margin-bottom: 30px;
-	}
-
-	.card {
-		background-color: white;
-		border-radius: 12px;
-		padding: 20px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		transition: all 0.3s ease;
-		margin-bottom: 15px;
-	}
-
-	.card.selected {
-		background-color: #e8f5e9;
-		border: 2px solid #4CAF50;
-		transform: translateY(-2px);
-		box-shadow: 0 6px 16px rgba(76, 175, 80, 0.2);
-	}
-
-	.card-header {
 		text-align: center;
-		margin-bottom: 10px;
-	}
-
-	.duration {
-		font-size: 18px;
-		font-weight: bold;
-		color: #333;
-	}
-
-	.card-body {
-		text-align: center;
-	}
-
-	.price {
-		font-size: 20px;
-		font-weight: bold;
-		color: #4CAF50;
 	}
 
 	.time-section {
@@ -502,7 +519,6 @@ const cancel = () => {
 
 	.section-title {
 		margin-bottom: 12px;
-		text-align: left;
 	}
 
 	.section-title-text {
@@ -530,6 +546,32 @@ const cancel = () => {
 		font-size: 14px;
 		color: #333;
 		font-weight: bold;
+	}
+
+	.estimated-total-section {
+		background-color: white;
+		border-radius: 12px;
+		padding: 20px;
+		margin-bottom: 20px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.estimated-total-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.estimated-total-label {
+		font-size: 16px;
+		font-weight: bold;
+		color: #333;
+	}
+
+	.estimated-total-value {
+		font-size: 22px;
+		font-weight: bold;
+		color: #4CAF50;
 	}
 
 	.button-group {
@@ -561,5 +603,57 @@ const cancel = () => {
 		border-radius: 8px;
 		font-size: 16px;
 		font-weight: bold;
+	}
+
+	.pricing-ref-title {
+		margin-top: 10px;
+		margin-bottom: 15px;
+		display: flex;
+		justify-content: center;
+	}
+
+	.pricing-ref-title-text {
+		font-size: 16px;
+		font-weight: bold;
+		color: #999;
+	}
+
+	.duration-cards {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 30px;
+	}
+
+	.card {
+		background-color: white;
+		border-radius: 12px;
+		padding: 20px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		margin-bottom: 15px;
+	}
+
+	.card-header {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 10px;
+	}
+
+	.duration {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333;
+		text-align: center;
+	}
+
+	.card-body {
+		display: flex;
+		justify-content: center;
+	}
+
+	.price {
+		font-size: 20px;
+		font-weight: bold;
+		color: #4CAF50;
+		text-align: center;
 	}
 </style>

@@ -1,4 +1,5 @@
 <template>
+	<!-- 注册页：背景图、姓名/邮箱/密码输入框及实时校验提示 -->
 	<view class="back">
 		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
 		
@@ -55,6 +56,7 @@
 </template>
 
 <script setup lang="uts">
+// 注册逻辑：实时校验表单、调用注册接口、保存用户ID并跳转登录页
 import { ref, computed } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
 
@@ -224,7 +226,7 @@ const handleRegister = async (): Promise<void> => {
 					
 					const responseData = response.data;
 					if (responseData != null) {
-						if (typeof responseData === 'object') {
+						if (typeof responseData == 'object') {
 							const responseObj = responseData as UTSJSONObject;
 							const messageFromServer = responseObj['message'] as string | null;
 							const errorFromServer = responseObj['error'] as string | null;
@@ -280,6 +282,7 @@ const handleRegister = async (): Promise<void> => {
 </script>
 
 <style lang="scss">
+/* 注册页样式：背景图、标题定位、输入框、校验提示文字颜色 */
 .back {
 	width: 100%;
 	height: 100%;

@@ -1,4 +1,5 @@
 <template>
+	<!-- 登录页：背景图、邮箱/密码输入框、登录与注册跳转按钮 -->
 	<view class="back">
 		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
 		
@@ -43,6 +44,7 @@
 </template>
 
 <script setup lang="uts">
+// 登录逻辑：表单校验、请求登录接口、存储 token/用户信息、按角色跳转页面
 import { reactive, ref } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
 
@@ -92,7 +94,7 @@ const onSubmit = () => {
 			const ret = res.data as UTSJSONObject
 			
 			// 只要状态码是 200，且 data 字段存在，就认为成功
-			if (res.statusCode === 200) {
+			if (res.statusCode == 200) {
 				// 检查是一层结构还是两层结构
 				// 如果后端直接返回对象，或者包了一层 'data'
 				let loginData: UTSJSONObject | null = null;
@@ -145,8 +147,9 @@ const onSubmit = () => {
 							console.error('Failed to save user ID:', e)
 						}
 					
-						// 保存用户信息
-						const userName = loginData['name'] != null ? loginData['name'] as string : userInfo.email
+						// 保存用户信息（name 为空字符串时退回使用 email）
+						const rawName = loginData['name']
+						const userName = (rawName != null && ('' + rawName).trim().length > 0) ? (rawName as string).trim() : userInfo.email
 						const userEmail = userInfo.email
 						
 						const userInfoData = {
@@ -171,9 +174,9 @@ const onSubmit = () => {
 						} catch (e) {
 							console.error('Failed to save role:', e)
 						}
-						// 强制按字符串比较（UTS 中 JSON 取出的值可能与字面量 === 不相等，用 indexOf 判定）
+						// 用前缀匹配判断管理员角色，避免依赖 JSON 字段与字面量的严格相等比较
 						const roleForCheck = ('' + role).trim().toUpperCase()
-						const isAdmin = roleForCheck.indexOf('ADMIN') === 0 && roleForCheck.length === 5
+						const isAdmin = roleForCheck.indexOf('ADMIN') == 0 && roleForCheck.length == 5
 						const targetUrl = isAdmin ? '/pages/admin/home' : '/pages/index/index'
 						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
 						
@@ -230,6 +233,7 @@ const onSubmit = () => {
 </script>
 
 <style lang="scss">
+/* 登录页样式：背景图、标题定位、输入容器、按钮间距 */
 	.back{
 		width: 100%;
 		height: 100%;

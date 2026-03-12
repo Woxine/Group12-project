@@ -1,4 +1,5 @@
 <template>
+	<!-- 支付页：展示订单金额，选择支付方式并填写信息，完成付款后跳转首页 -->
 	<view class="back">
 		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
 		
@@ -33,7 +34,7 @@
 				<view class="span1"></view>
 				
 				<!-- 银行卡支付表单 -->
-				<view v-if="paymentMethodIndex === 0" class="payment_form">
+				<view v-if="paymentMethodIndex == 0" class="payment_form">
 					<!-- 选择银行 -->
 					<view class="form_group">
 						<text class="label">Bank</text>
@@ -76,7 +77,7 @@
 				</view>
 				
 				<!-- 支付宝支付表单 -->
-				<view v-else-if="paymentMethodIndex === 1" class="payment_form">
+				<view v-else-if="paymentMethodIndex == 1" class="payment_form">
 					<view class="form_section_title">
 						<text class="section_title_text">Alipay Account</text>
 					</view>
@@ -105,7 +106,7 @@
 				</view>
 				
 				<!-- 微信支付表单 -->
-				<view v-else-if="paymentMethodIndex === 2" class="payment_form">
+				<view v-else-if="paymentMethodIndex == 2" class="payment_form">
 					<view class="info_box">
 						<text class="info_text">WeChat Pay</text>
 						<view class="qr_code_placeholder">
@@ -144,6 +145,7 @@
 </template>
 
 <script setup lang="uts">
+// 支付逻辑：读取订单金额、验证支付信息、模拟支付流程并跳转首页
 import { reactive, ref } from 'vue';
 
 // 支付方式列表
@@ -219,10 +221,10 @@ const formatCardNumber = (e: UTSJSONObject) => {
 const validatePaymentInfo = (): boolean => {
 	const method = paymentMethodIndex.value;
 	
-	if (method === 0) {
+	if (method == 0) {
 		// 银行卡验证
 		const cardNum = paymentInfo.cardNumber.replace(/\s/g, '');
-		if (cardNum == '' || cardNum.length !== 16) {
+		if (cardNum == '' || cardNum.length != 16) {
 			uni.showToast({
 				title: 'Please enter a valid 16-digit card number',
 				icon: 'none'
@@ -237,7 +239,7 @@ const validatePaymentInfo = (): boolean => {
 			});
 			return false;
 		}
-	} else if (method === 1) {
+	} else if (method == 1) {
 		// 支付宝验证
 		if (paymentInfo.alipayAccount == '' || paymentInfo.alipayAccount.trim().length == 0) {
 			uni.showToast({
@@ -254,7 +256,7 @@ const validatePaymentInfo = (): boolean => {
 			});
 			return false;
 		}
-	} else if (method === 2) {
+	} else if (method == 2) {
 		// 微信支付不需要验证，直接可以支付
 		return true;
 	}
@@ -299,6 +301,7 @@ const onCancel = () => {
 </script>
 
 <style scoped>
+/* 支付页样式：背景图、订单摘要卡片、支付表单、确认与取消按钮 */
 .back {
 	position: relative;
 	width: 100%;

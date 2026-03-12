@@ -1,4 +1,5 @@
 <template>
+	<!-- 收入统计页：按租用时长分组展示本周收入和订单数 -->
 	<view class="container">
 		<view class="title-section">
 			<text class="title-text">Weekly Revenue by Duration</text>
@@ -32,6 +33,7 @@
 </template>
 
 <script setup lang="uts">
+// 收入统计逻辑：请求管理员收入接口、按租用时长分组解析并展示数据
 import { ref, onMounted } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 
@@ -49,9 +51,9 @@ const loadData = () => {
 	isLoading.value = true
 
 	const tokenRaw = uni.getStorageSync('token')
-	const token = (tokenRaw != null && tokenRaw !== '') ? ('' + tokenRaw).trim() : ''
+	const token = tokenRaw != null ? ('' + tokenRaw).trim() : ''
 
-	if (token.length === 0) {
+	if (token.length < 1) {
 		uni.showToast({ title: 'Please login first', icon: 'none' })
 		isLoading.value = false
 		return
@@ -125,6 +127,7 @@ onMounted(() => {
 </script>
 
 <style>
+/* 收入统计样式：卡片列表、时长/收入行、金额高亮、重新加载按钮 */
 .container {
 	display: flex;
 	flex-direction: column;

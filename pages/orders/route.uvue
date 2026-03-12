@@ -1,4 +1,5 @@
 <template>
+	<!-- 骑行路线页：地图展示骑行起终点标记与连线，显示坐标详情 -->
 	<view class="container">
 		<view class="title-section">
 			<text class="title-text">Ride Route</text>
@@ -79,6 +80,7 @@
 </template>
 
 <script setup lang="uts">
+// 骑行路线逻辑：解析起终点坐标、渲染地图标记与折线、支持手动缩放
 import { ref, computed, getCurrentInstance } from 'vue'
 import { onLoad, onReady } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
@@ -102,6 +104,13 @@ const includePoints = ref([] as LocationObject[])
 const mapKey = ref(0)
 const mapUpdatedOnce = ref(false)
 const mapContext = ref(null as MapContext | null)
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
 
 const hasRoute = computed(() => {
 	const slat = startLat.value
@@ -190,10 +199,8 @@ onReady(() => {
 })
 
 const loadBooking = () => {
-	const userIdStorage = uni.getStorageSync('userId')
-	const tokenStorage = uni.getStorageSync('token')
-	const userId = userIdStorage != null && userIdStorage != '' ? ('' + userIdStorage) : null
-	const token = tokenStorage != null && tokenStorage != '' ? ('' + tokenStorage) : null
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
 	if (userId == null || token == null || bookingId.value.length == 0) {
 		error.value = 'Please log in first'
 		loading.value = false
@@ -214,10 +221,10 @@ const loadBooking = () => {
 				const slngVal = data['start_lng']
 				const elatVal = data['end_lat']
 				const elngVal = data['end_lng']
-				let slat = slatVal != null && typeof slatVal === 'number' ? slatVal as number : null
-				let slng = slngVal != null && typeof slngVal === 'number' ? slngVal as number : null
-				let elat = elatVal != null && typeof elatVal === 'number' ? elatVal as number : null
-				let elng = elngVal != null && typeof elngVal === 'number' ? elngVal as number : null
+				let slat = slatVal != null && typeof slatVal == 'number' ? slatVal as number : null
+				let slng = slngVal != null && typeof slngVal == 'number' ? slngVal as number : null
+				let elat = elatVal != null && typeof elatVal == 'number' ? elatVal as number : null
+				let elng = elngVal != null && typeof elngVal == 'number' ? elngVal as number : null
 				// If we have start but no end (e.g. auto-completed order), use start as end so map can show
 				if (slat != null && slng != null && (elat == null || elng == null)) {
 					elat = slat
@@ -287,6 +294,7 @@ onLoad((options: UTSJSONObject) => {
 </script>
 
 <style lang="scss">
+/* 路线页样式：地图区域、路线摘要卡片、坐标信息卡片、缩放控件、返回按钮 */
 .container {
 	width: 100%;
 	height: 100%;

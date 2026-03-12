@@ -1,0 +1,94 @@
+<template>
+	<view class="tabbar">
+		<view class="tab-item" @click="switchTab('home')">
+			<image src="/static/home.png" mode="aspectFit" :class="current == 'home' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<text :class="current == 'home' ? 'tab-label tab-label-active' : 'tab-label'">Home</text>
+		</view>
+
+		<view class="tab-item" @click="switchTab('bike')">
+			<image src="/static/bike.png" mode="aspectFit" :class="current == 'bike' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<text :class="current == 'bike' ? 'tab-label tab-label-active' : 'tab-label'">Bike</text>
+		</view>
+
+		<view class="tab-item" @click="switchTab('me')">
+			<image src="/static/me.png" mode="aspectFit" :class="current == 'me' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<text :class="current == 'me' ? 'tab-label tab-label-active' : 'tab-label'">Me</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+const props = defineProps<{
+	current: string
+}>()
+
+const tabRoutes: Map<string, string> = new Map([
+	['home', '/pages/index/index'],
+	['bike', '/pages/bikelist/bikelist'],
+	['me', '/pages/me/me']
+])
+
+const switchTab = (tab: string) => {
+	if (tab == props.current) return
+	const url = tabRoutes.get(tab)
+	if (url != null) {
+		uni.reLaunch({ url: url })
+	}
+}
+</script>
+
+<style lang="scss">
+.tabbar {
+	width: 100%;
+	height: 80px;
+	background: transparent;
+	border-radius: 0;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-around;
+	align-items: center;
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	z-index: 10;
+}
+
+.tab-item {
+	flex: 1;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.tab-item-active {
+	flex: 1;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.tab-icon {
+	width: 28px;
+	height: 28px;
+	opacity: 0.45;
+}
+
+.tab-icon-active {
+	opacity: 1;
+}
+
+.tab-label {
+	font-size: 12px;
+	margin-top: 4px;
+	color: #999;
+}
+
+.tab-label-active {
+	color: #4CAF50;
+	font-weight: bold;
+}
+</style>

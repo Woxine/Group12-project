@@ -1,4 +1,5 @@
 <template>
+	<!-- 管理员首页：地图展示所有滑板车位置，提供修改/收入/登出入口 -->
 	<view class="container">
 		<view class="title-section">
 			<text class="title-text">Admin Home</text>
@@ -24,6 +25,7 @@
 </template>
 
 <script setup lang="uts">
+// 管理员首页逻辑：获取定位与滑板车列表、渲染地图标记、导航跳转与登出
 import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
@@ -157,7 +159,7 @@ const logout = () => {
 		title: 'Logout',
 		content: 'Are you sure you want to logout?',
 		success: (res) => {
-			if (res.confirm === true) {
+			if (res.confirm) {
 				uni.removeStorageSync('userInfo')
 				uni.removeStorageSync('token')
 				uni.removeStorageSync('userId')
@@ -181,6 +183,7 @@ const logout = () => {
 </script>
 
 <style>
+/* 管理员首页样式：页面容器、地图区域、标题文字、菜单按钮 */
 .container {
 	display: flex;
 	flex-direction: column;
