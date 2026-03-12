@@ -1,2 +1,3 @@
 # Build artifacts and generated caches
 unpackage/
+.cursor/
