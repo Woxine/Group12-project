@@ -44,7 +44,7 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("You already have an active booking. Please cancel it or wait until it ends before booking again.");
         }
 
-        Scooter scooter = scooterRepository.findById(scooterId)
+        Scooter scooter = scooterRepository.findByIdForUpdate(scooterId)
                 .orElseThrow(() -> new RuntimeException("Scooter not found"));
 
         if (!"AVAILABLE".equalsIgnoreCase(scooter.getStatus())) {
@@ -73,6 +73,11 @@ public class BookingServiceImpl implements BookingService {
         } else {
             durationHours = 1.0;
             endTime = startTime.plusHours(1);
+        }
+
+        java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
+        if (overlapping != null && !overlapping.isEmpty()) {
+            throw new RuntimeException("Scooter has overlapping reservation. Please try another scooter or time.");
         }
 
         java.math.BigDecimal rate = scooter.getHourRate();
