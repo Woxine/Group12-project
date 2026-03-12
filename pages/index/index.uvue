@@ -1,4 +1,5 @@
 <template>
+	<!-- 首页：滚动公告、图片轮播、地图及预约入口按钮 -->
 	<view class="slogan1">
 		<text class="text1">We offer you a variety of options.</text>
 	</view>
@@ -39,6 +40,7 @@
 
 
 <script setup lang="uts">
+	// 首页逻辑：获取定位、加载滑板车地图标记、定时刷新、跳转滑板车列表
 	import { ref, onMounted, getCurrentInstance } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import { BASE_URL } from '../../common/api.uts'
@@ -153,6 +155,7 @@
 </script>
 
 <style lang="scss">
+/* 首页样式：公告栏、轮播图、地图容器、预约按钮 */
 	.slogan1{
 		display: flex;
 		align-items: center;
