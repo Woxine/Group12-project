@@ -17,14 +17,14 @@
 				</view>
 			</view>
 
-			<!-- End Time Selection -->
+			<!-- Duration Selection -->
 			<view class="time-section">
 				<view class="section-title">
-					<text class="section-title-text">End Time</text>
+					<text class="section-title-text">Duration</text>
 				</view>
 				<view class="time-input" @click="selectEndTime">
-					<text class="time-label">Select End Time</text>
-					<text class="time-value">{{ endTime.length > 0 ? endTime : 'Not Selected' }}</text>
+					<text class="time-label">Select Duration</text>
+					<text class="time-value">{{ durationLabel.length > 0 ? durationLabel : 'Not Selected' }}</text>
 				</view>
 			</view>
 
@@ -112,6 +112,7 @@ const updateDurations = () => {
 const startTime = ref<string>('');
 const endTime = ref<string>('');
 const durationCode = ref<string>('');
+const durationLabel = ref<string>('');
 const estimatedTotalDisplay = ref<string>('0.00');
 
 const updateEstimatedTotal = () => {
@@ -199,6 +200,7 @@ const selectStartTime = () => {
 			}
 			endTime.value = '';
 			durationCode.value = '';
+			durationLabel.value = '';
 			estimatedTotalDisplay.value = '0.00';
 		}
 	});
@@ -212,36 +214,23 @@ const selectEndTime = () => {
 
 	const startDate = new Date(startTime.value);
 
+	const durationOptions = ['10 Minutes', '1 Hour', '4 Hours', '1 Day', '1 Week'];
+	const durationCodes  = ['10M', '1H', '4H', '1D', '1W'];
+	const durationMs     = [10 * 60 * 1000, 1 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 24 * 60 * 60 * 1000, 7 * 24 * 60 * 60 * 1000];
+
 	uni.showActionSheet({
-		itemList: ['10 Minutes Later', '1 Hour Later', '4 Hours Later', '1 Day Later', '1 Week Later'],
+		itemList: durationOptions,
 		success: (res) => {
-			let endDateTime: Date | null = null;
-			let duration: string = '';
-
-			if (res.tapIndex == 0) {
-				endDateTime = new Date(startDate.getTime() + 10 * 60 * 1000);
-				duration = '10M';
-			} else if (res.tapIndex == 1) {
-				endDateTime = new Date(startDate.getTime() + 1 * 60 * 60 * 1000);
-				duration = '1H';
-			} else if (res.tapIndex == 2) {
-				endDateTime = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
-				duration = '4H';
-			} else if (res.tapIndex == 3) {
-				endDateTime = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
-				duration = '1D';
-			} else if (res.tapIndex == 4) {
-				endDateTime = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-				duration = '1W';
-			}
-
-			if (endDateTime != null) {
-				const ed = endDateTime as Date;
+			const idx = res.tapIndex;
+			if (idx >= 0 && idx < durationOptions.length) {
+				const endDateTime = new Date(startDate.getTime() + durationMs[idx]);
+				const ed = endDateTime;
 				const endDateStr = ed.getFullYear() + '-' +
 					(ed.getMonth() + 1).toString().padStart(2, '0') + '-' +
 					ed.getDate().toString().padStart(2, '0');
 				endTime.value = endDateStr + ' ' + ed.getHours().toString().padStart(2, '0') + ':' + ed.getMinutes().toString().padStart(2, '0');
-				durationCode.value = duration;
+				durationCode.value = durationCodes[idx];
+				durationLabel.value = durationOptions[idx];
 				updateEstimatedTotal();
 			}
 		}
@@ -265,7 +254,6 @@ const stepSendBooking = () => {
 		'total_price': pendingTotalPrice.value,
 		'status': 'CONFIRMED'
 	};
-	console.log('Booking info:', bookingData);
 	uni.request({
 		url: BASE_URL + '/api/v1/bookings',
 		method: 'POST',
@@ -275,10 +263,22 @@ const stepSendBooking = () => {
 			'Authorization': 'Bearer ' + token
 		},
 		success: (res) => {
-			console.log('Booking response:', res.statusCode);
 			if (res.statusCode >= 200 && res.statusCode < 300) {
+				let confirmedPrice: number = pendingTotalPrice.value;
+				const resData = res.data as UTSJSONObject | null;
+				if (resData != null) {
+					const dataObj = resData['data'] as UTSJSONObject | null;
+					if (dataObj != null) {
+						const serverPrice = dataObj['totalPrice'];
+						if (serverPrice != null) {
+							confirmedPrice = serverPrice as number;
+						}
+					}
+				}
+				const priceStr = confirmedPrice.toFixed(2);
+				uni.setStorageSync('totalPrice', priceStr);
 				uni.showToast({ title: 'Booking successful, proceed to payment', icon: 'success' });
-				setTimeout(() => { uni.navigateTo({ url: '/pages/payment/payment' }); }, 1000);
+				setTimeout(() => { uni.navigateTo({ url: '/pages/payment/payment?amount=' + priceStr }); }, 1000);
 			} else {
 				let errorMsg: string = 'Booking failed, please try again';
 				const errorData = res.data as UTSJSONObject | null;
@@ -319,13 +319,10 @@ const stepSendBooking = () => {
 const stepGetLocationAndBook = () => {
 	uni.getLocation({
 		type: 'gcj02',
-		success: (locRes) => {
-			pendingScooterId.value = pendingScooterId.value;
-			console.log('Got location, creating booking');
+		success: (_locRes) => {
 			stepSendBooking();
 		},
 		fail: () => {
-			console.log('Location unavailable, creating booking without location');
 			stepSendBooking();
 		}
 	});
@@ -334,7 +331,6 @@ const stepGetLocationAndBook = () => {
 const hasActivePending = ref<boolean>(false);
 
 const stepAfterActiveCheck = () => {
-	console.log('stepAfterActiveCheck, hasActive:', hasActivePending.value);
 	if (hasActivePending.value) {
 		uni.showToast({ title: 'You already have an active booking.', icon: 'none', duration: 3000 });
 	} else {
@@ -345,7 +341,6 @@ const stepAfterActiveCheck = () => {
 const stepCheckActiveBooking = () => {
 	const userId = pendingUserId.value;
 	const token = pendingToken.value;
-	console.log('Checking active bookings for user:', userId);
 	hasActivePending.value = false;
 	uni.request({
 		url: BASE_URL + '/api/v1/users/' + userId + '/bookings',
@@ -355,7 +350,6 @@ const stepCheckActiveBooking = () => {
 			'Authorization': 'Bearer ' + token
 		},
 		success: (checkRes) => {
-			console.log('Active booking check response:', checkRes.statusCode);
 			if (checkRes.statusCode >= 200 && checkRes.statusCode < 300 && checkRes.data != null && typeof checkRes.data == 'object') {
 				const obj = checkRes.data as UTSJSONObject;
 				const list = obj['data'];
@@ -374,7 +368,6 @@ const stepCheckActiveBooking = () => {
 			setTimeout(() => { stepAfterActiveCheck(); }, 10);
 		},
 		fail: () => {
-			console.log('Active booking check FAILED');
 			uni.showToast({ title: 'Failed to check bookings', icon: 'none' });
 		}
 	});
@@ -383,7 +376,6 @@ const stepCheckActiveBooking = () => {
 const scooterAvailable = ref<boolean>(true);
 
 const stepAfterScooterCheck = () => {
-	console.log('stepAfterScooterCheck, available:', scooterAvailable.value);
 	if (scooterAvailable.value) {
 		setTimeout(() => { stepCheckActiveBooking(); }, 10);
 	} else {
@@ -394,14 +386,12 @@ const stepAfterScooterCheck = () => {
 
 const stepCheckScooter = () => {
 	const scooterId = pendingScooterId.value;
-	console.log('Checking scooter availability:', scooterId);
 	scooterAvailable.value = true;
 	uni.request({
 		url: BASE_URL + '/api/v1/scooters/' + scooterId + '/location?_t=' + Date.now(),
 		method: 'GET',
 		header: { 'Cache-Control': 'no-cache' },
 		success: (scooterRes) => {
-			console.log('Scooter check response:', scooterRes.statusCode);
 			if (scooterRes.statusCode >= 200 && scooterRes.statusCode < 300 && scooterRes.data != null) {
 				const scooterObj = scooterRes.data as UTSJSONObject;
 				const scooterData = scooterObj['data'] as UTSJSONObject | null;
@@ -415,7 +405,6 @@ const stepCheckScooter = () => {
 			setTimeout(() => { stepAfterScooterCheck(); }, 10);
 		},
 		fail: () => {
-			console.log('Scooter check FAILED');
 			uni.showToast({ title: 'Failed to verify scooter availability', icon: 'none' });
 		}
 	});
@@ -456,15 +445,14 @@ const confirm = () => {
 			const endDateObj = new Date(endTime.value);
 			const durationMs = endDateObj.getTime() - startDateObj.getTime();
 			const durationHours = durationMs / (1000 * 60 * 60);
-			const totalPrice = durationHours * hourRate.value;
+		const totalPrice = durationHours * hourRate.value;
 
-			console.log('Total Price:', totalPrice, 'Scooter:', numericScooterId);
-
-			pendingScooterId.value = numericScooterId;
-			pendingUserId.value = userId;
-			pendingToken.value = token;
-			pendingTotalPrice.value = totalPrice;
-			setTimeout(() => { stepCheckScooter(); }, 10);
+		pendingScooterId.value = numericScooterId;
+		pendingUserId.value = userId;
+		pendingToken.value = token;
+		pendingTotalPrice.value = totalPrice;
+		uni.setStorageSync('totalPrice', totalPrice.toFixed(2));
+		setTimeout(() => { stepCheckScooter(); }, 10);
 		}
 	}
 };

@@ -147,6 +147,7 @@
 <script setup lang="uts">
 // 支付逻辑：读取订单金额、验证支付信息、模拟支付流程并跳转首页
 import { reactive, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
 
 // 支付方式列表
 const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay'];
@@ -156,9 +157,32 @@ const paymentMethodIndex = ref(0);
 const banks = ['ICBC', 'ABC', 'BOC', 'CCB', 'BCM'];
 const bankIndex = ref(0);
 
-// 订单金额 - 从本地存储获取或使用默认值
-let storedAmount = uni.getStorageSync('totalPrice');
-const orderAmount = ref<number>(storedAmount != null && storedAmount != '' ? parseFloat(storedAmount as string) : 1.0);
+// 订单金额 - 优先从 URL 参数读取（服务端计算值），其次从本地存储兜底
+const orderAmount = ref<number>(1.0);
+
+onLoad((options) => {
+	const params = options as UTSJSONObject | null;
+	let resolved = false;
+	if (params != null) {
+		const amountParam = params['amount'];
+		if (amountParam != null && ('' + amountParam).length > 0) {
+			const parsed = parseFloat('' + amountParam);
+			if (!isNaN(parsed) && parsed > 0) {
+				orderAmount.value = parsed;
+				resolved = true;
+			}
+		}
+	}
+	if (!resolved) {
+		const storedAmount = uni.getStorageSync('totalPrice');
+		if (storedAmount != null && ('' + storedAmount).length > 0) {
+			const parsed = parseFloat('' + storedAmount);
+			if (!isNaN(parsed) && parsed > 0) {
+				orderAmount.value = parsed;
+			}
+		}
+	}
+});
 
 // 支付信息对象
 type PaymentInfo = {
@@ -282,6 +306,7 @@ const onPayment = () => {
 		});
 		
 		isPaymentProcessing.value = false;
+		uni.removeStorageSync('totalPrice');
 		
 		// 支付成功后跳转到首页
 		setTimeout(() => {

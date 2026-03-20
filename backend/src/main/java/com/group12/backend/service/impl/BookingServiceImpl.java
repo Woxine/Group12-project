@@ -101,13 +101,15 @@ public class BookingServiceImpl implements BookingService {
 
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
         String createdAtStr = savedBooking.getStartTime() == null ? "" : savedBooking.getStartTime().format(fmt);
-        return new BookingResponse(
+        BookingResponse response = new BookingResponse(
             String.valueOf(savedBooking.getId()),
             String.valueOf(scooter.getId()),
             String.valueOf(user.getId()),
             savedBooking.getStatus(),
             createdAtStr
         );
+        response.setTotalPrice(savedBooking.getTotalPrice() != null ? savedBooking.getTotalPrice().doubleValue() : null);
+        return response;
     }
 
     @Override

@@ -10,8 +10,8 @@ public class CreateBookingRequest {
     private String user_id;
 
     @NotBlank(message = "Duration is required")
-    @jakarta.validation.constraints.Pattern(regexp = "^(1H|4H|1D|1W)$", message = "Duration must be one of: 1H, 4H, 1D, 1W")
-    private String duration; // 1H, 4H, 1D, 1W
+    @jakarta.validation.constraints.Pattern(regexp = "^(10M|1H|4H|1D|1W)$", message = "Duration must be one of: 10M, 1H, 4H, 1D, 1W")
+    private String duration; // 10M, 1H, 4H, 1D, 1W
 
     public String getScooter_id() { return scooter_id; }
     public void setScooter_id(String scooter_id) { this.scooter_id = scooter_id; }
