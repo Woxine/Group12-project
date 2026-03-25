@@ -50,6 +50,7 @@
 // 反馈提交逻辑：表单校验、调用反馈接口提交数据、成功后重置表单
 import { ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
+import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts'
 
 const scooterId = ref('')
 const description = ref('')
@@ -64,13 +65,13 @@ const onSubmit = () => {
 	const loc = location.value.trim()
 
 	if (sid.length < 1) {
-		submitError.value = 'Please enter Scooter ID'
-		uni.showToast({ title: 'Please enter Scooter ID', icon: 'none' })
+		submitError.value = APP_MESSAGES.feedback.enterScooterId
+		uni.showToast({ title: APP_MESSAGES.feedback.enterScooterId, icon: 'none' })
 		return
 	}
 	if (desc.length < 1) {
-		submitError.value = 'Please enter a description'
-		uni.showToast({ title: 'Please enter a description', icon: 'none' })
+		submitError.value = APP_MESSAGES.feedback.enterDescription
+		uni.showToast({ title: APP_MESSAGES.feedback.enterDescription, icon: 'none' })
 		return
 	}
 
@@ -100,25 +101,19 @@ const onSubmit = () => {
 		data: body,
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				uni.showToast({ title: 'Feedback submitted', icon: 'success' })
+				uni.showToast({ title: APP_MESSAGES.feedback.submitSuccess, icon: 'success' })
 				scooterId.value = ''
 				description.value = ''
 				location.value = ''
 			} else {
-				let msg = 'Failed to submit feedback'
-				const data = res.data as UTSJSONObject | null
-				if (data != null && data['message'] != null) {
-					msg = '' + data['message']
-				} else if (data != null && data['error'] != null) {
-					msg = '' + data['error']
-				}
+				const msg = getResponseMessage(res.data, APP_MESSAGES.feedback.submitFailed)
 				submitError.value = msg
 				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 			}
 		},
 		fail: () => {
-			submitError.value = 'Network error. Please try again.'
-			uni.showToast({ title: 'Network error', icon: 'none' })
+			submitError.value = APP_MESSAGES.network.requestFailed
+			uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
 		},
 		complete: () => {
 			isSubmitting.value = false

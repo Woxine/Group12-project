@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,8 @@ import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.entity.User;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
@@ -37,18 +40,18 @@ public class BookingServiceImpl implements BookingService {
         String durationRequest = request.getDuration();
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(userId, "CONFIRMED");
         if (activeBookings != null && !activeBookings.isEmpty()) {
-            throw new RuntimeException("You already have an active booking. Please cancel it or wait until it ends before booking again.");
+            throw new BusinessException(ErrorMessages.ACTIVE_BOOKING_EXISTS);
         }
 
         Scooter scooter = scooterRepository.findByIdForUpdate(scooterId)
-                .orElseThrow(() -> new RuntimeException("Scooter not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.SCOOTER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         if (!"AVAILABLE".equalsIgnoreCase(scooter.getStatus())) {
-            throw new RuntimeException("Scooter is not available (Current status: " + scooter.getStatus() + ")");
+            throw new BusinessException(ErrorMessages.scooterUnavailable(scooter.getStatus()));
         }
 
         LocalDateTime startTime = LocalDateTime.now();
@@ -77,7 +80,7 @@ public class BookingServiceImpl implements BookingService {
 
         java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
         if (overlapping != null && !overlapping.isEmpty()) {
-            throw new RuntimeException("Scooter has overlapping reservation. Please try another scooter or time.");
+            throw new BusinessException(ErrorMessages.OVERLAPPING_BOOKING);
         }
 
         java.math.BigDecimal rate = scooter.getHourRate();
@@ -117,10 +120,10 @@ public class BookingServiceImpl implements BookingService {
     public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         if (!"CONFIRMED".equals(booking.getStatus())) {
-            throw new RuntimeException("Cannot cancel booking with status: " + booking.getStatus());
+            throw new BusinessException(ErrorMessages.cannotCancelBooking(booking.getStatus()));
         }
 
         booking.setStatus("CANCELLED");
@@ -141,9 +144,9 @@ public class BookingServiceImpl implements BookingService {
     public Object completeBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
         if (!"CONFIRMED".equals(booking.getStatus())) {
-            throw new RuntimeException("Cannot complete booking with status: " + booking.getStatus());
+            throw new BusinessException(ErrorMessages.cannotCompleteBooking(booking.getStatus()));
         }
         booking.setStatus("COMPLETED");
         booking.setEndTime(LocalDateTime.now());

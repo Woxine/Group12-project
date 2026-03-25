@@ -47,6 +47,7 @@
 // 登录逻辑：表单校验、请求登录接口、存储 token/用户信息、按角色跳转页面
 import { reactive, ref } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
+import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts';
 
 // 响应式数据对象，用于存储用户输入
 type UserInfo = {
@@ -69,7 +70,7 @@ const onSubmit = () => {
 	// 简单校验
 	if (userInfo.email == null || userInfo.email == '' || userInfo.password == null || userInfo.password == '') {
 		uni.showToast({
-			title: 'Please fill in both email and password.',
+			title: APP_MESSAGES.auth.fillCredentials,
 			icon: 'none'
 		});
 		return;
@@ -181,7 +182,7 @@ const onSubmit = () => {
 						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
 						
 						uni.showToast({
-							title: isAdmin ? 'Admin login' : 'Login successful!',
+							title: isAdmin ? APP_MESSAGES.auth.adminLoginSuccess : APP_MESSAGES.auth.loginSuccess,
 							icon: 'success'
 						});
 						
@@ -196,18 +197,7 @@ const onSubmit = () => {
 			// 失败流程
 			const retObj = res.data as UTSJSONObject
 			// 默认错误消息
-			let msg = 'Login failed. Please check your credentials.';
-			
-			// 尝试提取后端详细错误信息
-			// 后端通常返回 { "message": "...", "error": "..." }
-			const backendMsg = retObj['message'];
-			const backendErr = retObj['error'];
-			
-			if (backendMsg != null) {
-				msg = backendMsg as string;
-			} else if (backendErr != null) {
-				msg = `Error: ${backendErr}`;
-			}
+			const msg = getResponseMessage(retObj, APP_MESSAGES.auth.loginFailed);
 			
 			console.error('Login failed. Status:', res.statusCode, 'Response:', JSON.stringify(retObj));
 			
@@ -220,7 +210,7 @@ const onSubmit = () => {
 		fail: (err) => {
 			console.error('Login request failed:', err);
 			uni.showToast({
-				title: 'Network error, please try again later.',
+				title: APP_MESSAGES.network.requestFailedLater,
 				icon: 'none'
 			});
 		},

@@ -3,6 +3,7 @@ package com.group12.backend.service.impl;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.FeedbackRequest;
@@ -10,6 +11,8 @@ import com.group12.backend.dto.FeedbackResponse;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
 import com.group12.backend.entity.Scooter;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.FeedbackService;
@@ -61,7 +64,7 @@ public class FeedbackServiceImpl implements FeedbackService {
             Feedback saved = feedbackRepository.save(feedback);
             return mapToDTO(saved);
         } else {
-            throw new RuntimeException("Feedback not found with id: " + feedbackId);
+            throw new BusinessException(ErrorMessages.feedbackNotFound(feedbackId), HttpStatus.NOT_FOUND);
         }
     }
 

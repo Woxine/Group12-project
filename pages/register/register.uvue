@@ -59,6 +59,7 @@
 // 注册逻辑：实时校验表单、调用注册接口、保存用户ID并跳转登录页
 import { ref, computed } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
+import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts';
 
 // --- Types ---
 // We don't need to define a specific RegisterResponse type since we'll handle the response as a generic object
@@ -124,22 +125,22 @@ const showToast = (message: string): void => {
 
 const handleRegister = async (): Promise<void> => {
 	if (!isNameValid.value) {
-		showToast('Please enter your name.');
+		showToast(APP_MESSAGES.register.enterName);
 		return;
 	}
 
 	if (!isEmailValid.value) {
-		showToast('Please enter a valid email address.');
+		showToast(APP_MESSAGES.register.enterValidEmail);
 		return;
 	}
 
 	if (!isPasswordValid.value) {
-		showToast('Password must be at least 6 characters long.');
+		showToast(APP_MESSAGES.register.passwordTooShort);
 		return;
 	}
 
 	if (!passwordsMatch.value) {
-		showToast('Passwords do not match.');
+		showToast(APP_MESSAGES.register.passwordsMismatch);
 		return;
 	}
 
@@ -209,16 +210,16 @@ const handleRegister = async (): Promise<void> => {
 					let errorMessage = '';
 					switch(response.statusCode) {
 						case 400:
-							errorMessage = 'Invalid request data. ';
+							errorMessage = APP_MESSAGES.register.invalidRequest;
 							break;
 						case 409:
-							errorMessage = 'Account already exists. ';
+							errorMessage = APP_MESSAGES.register.accountExists;
 							break;
 						case 422:
-							errorMessage = 'Validation error. ';
+							errorMessage = APP_MESSAGES.register.validationError;
 							break;
 						case 500:
-							errorMessage = 'Server error. ';
+							errorMessage = APP_MESSAGES.register.serverError;
 							break;
 						default:
 							errorMessage = `Error ${response.statusCode}. `;
@@ -227,17 +228,9 @@ const handleRegister = async (): Promise<void> => {
 					const responseData = response.data;
 					if (responseData != null) {
 						if (typeof responseData == 'object') {
-							const responseObj = responseData as UTSJSONObject;
-							const messageFromServer = responseObj['message'] as string | null;
-							const errorFromServer = responseObj['error'] as string | null;
-							const detailsFromServer = responseObj['details'] as string | null;
-							
-							if (messageFromServer != null) {
-								errorMessage += messageFromServer;
-							} else if (errorFromServer != null) {
-								errorMessage += errorFromServer;
-							} else if (detailsFromServer != null) {
-								errorMessage += detailsFromServer;
+							const resolved = getResponseMessage(responseData, '');
+							if (resolved.length > 0) {
+								errorMessage += resolved;
 							} else {
 								// Safely convert the response to string
 								try {
@@ -250,7 +243,7 @@ const handleRegister = async (): Promise<void> => {
 							errorMessage += responseData;
 						}
 					} else {
-						errorMessage += 'Server returned empty response.';
+						errorMessage += APP_MESSAGES.register.emptyServerResponse;
 					}
 					
 					console.error('Registration failed (HTTP Status):', errorMessage);
@@ -261,11 +254,11 @@ const handleRegister = async (): Promise<void> => {
 				console.error('Network error during registration:', error);
 				
 				if (error.errMsg != null && error.errMsg.includes('request:fail')) {
-					showToast('Failed to connect to server. Please check your network connection.');
+					showToast(APP_MESSAGES.network.connectFailed);
 				} else if (error.errMsg != null && error.errMsg.includes('timeout')) {
-					showToast('Request timed out. Please check your server and try again.');
+					showToast(APP_MESSAGES.network.timeout);
 				} else {
-					showToast('A network error occurred. Please check your connection and try again.');
+					showToast(APP_MESSAGES.network.unexpected);
 				}
 			},
 			complete: () => {
@@ -275,7 +268,7 @@ const handleRegister = async (): Promise<void> => {
 
 	} catch (error) {
 		console.error('Unexpected error during registration attempt:', error);
-		showToast('An unexpected error occurred.');
+		showToast(APP_MESSAGES.common.unexpectedError);
 		isSubmitting.value = false;
 	}
 };

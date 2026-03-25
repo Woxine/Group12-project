@@ -1,7 +1,5 @@
 package com.group12.backend.exception;
 
-import java.util.Map;
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -29,16 +27,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleGeneralException(Exception e) {
         // Log the full stack trace internally for debugging
         // Logger.error("Unexpected error", e); 
-        e.printStackTrace(); 
+        System.err.println("Unexpected error: " + e.getMessage());
         // Minimal logging for now
 
         // Return a generic error message to the user
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "timestamp", LocalDateTime.now(),
-                    "status", 500,
-                    "error", "Internal Server Error",
-                    "message", "An unexpected error occurred. Please contact support."
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        ErrorMessages.INTERNAL_SERVER_ERROR,
+                        ErrorMessages.UNEXPECTED_ERROR_MESSAGE
                 ));
     }
 
@@ -46,17 +43,30 @@ public class GlobalExceptionHandler {
      * 处理业务逻辑异常 (RuntimeException)
      * 例如：用户不存在、密码错误、邮箱已被注册等
      */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Object> handleBusinessException(BusinessException e) {
+        HttpStatus status = e.getStatus() != null ? e.getStatus() : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
+                .body(ErrorResponseFactory.build(
+                        status,
+                        ErrorMessages.BUSINESS_ERROR,
+                        e.getMessage()
+                ));
+    }
+
+    /**
+     * 兼容仍未迁移的 RuntimeException
+     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Object> handleRuntimeException(RuntimeException e) {
         // 返回 400 Bad Request 状态码，方便前端直接通过 catch 捕获
         // SECURITY: Ensure e.getMessage() does not contain sensitive info (SQL, paths, etc.)
         // Developers must ensure thrown RuntimeExceptions strictly contain safe messages.
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                    "timestamp", LocalDateTime.now(),
-                    "status", 400,
-                    "error", "Business Error",
-                    "message", e.getMessage()
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorMessages.BUSINESS_ERROR,
+                        e.getMessage()
                 ));
     }
 
@@ -71,11 +81,10 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                    "timestamp", LocalDateTime.now(),
-                    "status", 400,
-                    "error", "Validation Error",
-                    "message", message
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorMessages.VALIDATION_ERROR,
+                        message
                 ));
     }
 

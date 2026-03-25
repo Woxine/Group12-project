@@ -94,6 +94,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
+import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts'
 
 const PAGE_SIZE = 10
 
@@ -245,7 +246,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 	}
 
 	if (token == null || token.length == 0) {
-		loadError.value = 'Please log in again'
+		loadError.value = APP_MESSAGES.auth.loginAgain
 		isLoggedIn.value = true
 		isLoading.value = false
 		isRefreshing.value = false
@@ -284,7 +285,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 			}
 		},
 		fail: (error) => {
-			loadError.value = 'Network error. Please check your connection.'
+			loadError.value = APP_MESSAGES.network.checkConnection
 			console.error('Fetch bookings failed:', error)
 		},
 		complete: () => {
@@ -374,7 +375,7 @@ const hasAction = (booking: Booking, action: ActionType): boolean => {
 const goToRoute = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
@@ -383,22 +384,22 @@ const goToRoute = (booking: Booking) => {
 const cancelOrder = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
 		return
 	}
 	const cs = ('' + booking.status).trim().toUpperCase()
 	if (cs != 'CONFIRMED' && cs != 'PENDING') {
-		uni.showToast({ title: 'This booking cannot be cancelled', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.booking.cannotCancelBooking, icon: 'none' })
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: 'Please login again', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.auth.loginAgain, icon: 'none' })
 		return
 	}
 	uni.showModal({
-		title: 'Cancel Booking',
-		content: 'Are you sure you want to cancel this booking?',
+		title: APP_MESSAGES.booking.cancelBookingTitle,
+		content: APP_MESSAGES.booking.cancelBookingConfirm,
 		success: (res) => {
 			const confirm = !!res.confirm
 			if (confirm) {
@@ -418,19 +419,15 @@ const cancelOrder = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
-								uni.showToast({ title: 'Booking cancelled', icon: 'success' })
+								uni.showToast({ title: APP_MESSAGES.booking.cancelBookingSuccess, icon: 'success' })
 								fetchBookings(false)
 							} else {
-								let msg = 'Failed to cancel'
-								const data = resp.data as UTSJSONObject | null
-								if (data != null && data['message'] != null) {
-									msg = '' + data['message']
-								}
+								const msg = getResponseMessage(resp.data, APP_MESSAGES.booking.cancelBookingFailed)
 								uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 							}
 						},
 						fail: (err) => {
-							uni.showToast({ title: 'Network error', icon: 'none' })
+							uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
 							console.error('Cancel booking failed:', err)
 						}
 					})
@@ -448,17 +445,17 @@ const cancelOrder = (booking: Booking) => {
 const endRide = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: 'Invalid booking', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
 		return
 	}
 	const es = ('' + booking.status).trim().toUpperCase()
 	if (es != 'CONFIRMED' && es != 'PENDING') {
-		uni.showToast({ title: 'This booking cannot be ended', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.booking.cannotEndRide, icon: 'none' })
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: 'Please login again', icon: 'none' })
+		uni.showToast({ title: APP_MESSAGES.auth.loginAgain, icon: 'none' })
 		return
 	}
 	uni.getLocation({
@@ -474,24 +471,20 @@ const endRide = (booking: Booking) => {
 				},
 				success: (resp) => {
 					if (resp.statusCode >= 200 && resp.statusCode < 300) {
-						uni.showToast({ title: 'Ride ended', icon: 'success' })
+						uni.showToast({ title: APP_MESSAGES.booking.endRideSuccess, icon: 'success' })
 						fetchBookings(false)
 					} else {
-						let msg = 'Failed to end ride'
-						const data = resp.data as UTSJSONObject | null
-						if (data != null && data['message'] != null) {
-							msg = '' + data['message']
-						}
+						const msg = getResponseMessage(resp.data, APP_MESSAGES.booking.endRideFailed)
 						uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 					}
 				},
 				fail: () => {
-					uni.showToast({ title: 'Network error', icon: 'none' })
+					uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
 				}
 			})
 		},
 		fail: () => {
-			uni.showToast({ title: 'Location unavailable, cannot end ride', icon: 'none' })
+			uni.showToast({ title: APP_MESSAGES.booking.locationUnavailable, icon: 'none' })
 		}
 	})
 }

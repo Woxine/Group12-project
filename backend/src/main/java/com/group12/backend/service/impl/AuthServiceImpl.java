@@ -1,7 +1,5 @@
 package com.group12.backend.service.impl;
 
-import java.util.UUID;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -9,6 +7,8 @@ import org.springframework.stereotype.Service;
 import com.group12.backend.dto.LoginRequest;
 import com.group12.backend.dto.LoginResponse;
 import com.group12.backend.entity.User;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.AuthService;
 import com.group12.backend.utils.JwtUtil;
@@ -42,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
                  // Dummy check to consume time similar to BCrypt check
                  passwordEncoder.matches(request.getPassword(), "$2a$10$............................................................");
              }
-             throw new RuntimeException("Invalid email or password");
+             throw new BusinessException(ErrorMessages.INVALID_EMAIL_OR_PASSWORD);
         }
 
         // 3. 生成真实 JWT Token

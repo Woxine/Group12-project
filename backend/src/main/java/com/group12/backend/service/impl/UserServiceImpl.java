@@ -9,14 +9,16 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.group12.backend.dto.BookingResponse;
 import com.group12.backend.dto.RegisterRequest;
 import com.group12.backend.dto.RegisterResponse;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.User;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.UserService;
@@ -36,7 +38,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public Object register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new BusinessException(ErrorMessages.EMAIL_ALREADY_REGISTERED, HttpStatus.CONFLICT);
         }
 
         User user = new User();
@@ -80,9 +82,9 @@ public class UserServiceImpl implements UserService {
         Long uId = Long.parseLong(userId);
         Long bId = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(bId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
         if (!booking.getUser().getId().equals(uId)) {
-            throw new RuntimeException("Booking not found");
+            throw new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         Map<String, Object> result = new HashMap<>();
@@ -94,7 +96,7 @@ public class UserServiceImpl implements UserService {
     public Object getUserProfile(String userId) {
         Long uId = Long.parseLong(userId);
         User user = userRepository.findById(uId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         return java.util.Map.of(
             "id", user.getId(),
