@@ -17,6 +17,9 @@ import com.group12.backend.entity.Booking;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.service.AdminService;
 
+/**
+ * 实现后台收入统计与按租期经营分析相关的业务逻辑。
+ */
 @Service
 public class AdminServiceImpl implements AdminService {
 
@@ -24,6 +27,9 @@ public class AdminServiceImpl implements AdminService {
     private BookingRepository bookingRepository;
 
     @Override
+    /**
+     * 根据日期范围汇总有效订单的营收概览数据。
+     */
     public RevenueStatsDTO getRevenueStatistics(LocalDate startDate, LocalDate endDate) {
         List<Booking> allBookings = bookingRepository.findAll();
 
@@ -56,6 +62,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    /**
+     * 统计当前自然周内按租期分类的收入和订单数量。
+     */
     public List<DurationRevenueDTO> getWeeklyRevenueByDuration() {
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
@@ -89,6 +98,9 @@ public class AdminServiceImpl implements AdminService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 将预约时长换算为统计展示使用的租期分类标签。
+     */
     private static String toDurationType(Double hours) {
         if (hours == null || hours <= 1.0) return "1H";
         if (hours <= 4.0) return "4H";

@@ -2,6 +2,9 @@ package com.group12.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * 用于接收用户创建滑板车预约订单时提交的请求参数。
+ */
 public class CreateBookingRequest {
     @NotBlank(message = "Scooter ID is required")
     private String scooter_id;

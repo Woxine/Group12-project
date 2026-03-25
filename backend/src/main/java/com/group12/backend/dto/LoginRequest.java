@@ -3,6 +3,9 @@ package com.group12.backend.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * 用于接收用户登录时提交的邮箱和密码信息。
+ */
 public class LoginRequest {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")

@@ -20,6 +20,9 @@ import com.group12.backend.service.BookingService;
 
 import jakarta.validation.Valid;
 
+/**
+ * 负责处理预约订单的创建、取消和完成等接口请求。
+ */
 @RestController
 @RequestMapping("/api/v1/bookings")
 public class BookingController {
@@ -27,12 +30,18 @@ public class BookingController {
     @Autowired
     private BookingService bookingService;
 
+    /**
+     * 创建新的滑板车预约订单，并记录起点位置等基础信息。
+     */
     @LogAction(action = "CREATE_BOOKING", entityName = "Booking")
     @PostMapping
     public ResponseEntity<Object> create(@Valid @RequestBody CreateBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createBooking(request)));
     }
 
+    /**
+     * 取消指定预约订单，并可同时记录车辆结束位置。
+     */
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<Map<String, Object>> cancel(
             @PathVariable String bookingId,
@@ -45,6 +54,9 @@ public class BookingController {
         return ResponseEntity.ok(resp);
     }
 
+    /**
+     * 完成指定预约订单，并结算费用及记录还车位置。
+     */
     @PatchMapping("/{bookingId}/complete")
     public ResponseEntity<Map<String, Object>> complete(
             @PathVariable String bookingId,

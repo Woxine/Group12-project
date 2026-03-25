@@ -18,6 +18,9 @@ import com.group12.backend.service.FeedbackService;
 
 import jakarta.validation.Valid;
 
+/**
+ * 负责处理用户反馈提交与管理员反馈处理等接口请求。
+ */
 @RestController
 @RequestMapping("/api/v1/feedbacks")
 public class FeedbackController {
@@ -25,7 +28,7 @@ public class FeedbackController {
     @Autowired
     private FeedbackService feedbackService;
 
-    // API-007
+    // API-007: 提交用户反馈
     /**
      * 提交反馈
      * 用户提交关于行程或车辆的反馈
@@ -35,7 +38,7 @@ public class FeedbackController {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", feedbackService.submitFeedback(request)));
     }
 
-    // API-009
+    // API-009: 更新反馈处理状态
     /**
      * 处理/更新反馈
      * 管理员更新反馈的处理状态

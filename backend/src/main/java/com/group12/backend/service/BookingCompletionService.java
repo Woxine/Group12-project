@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * 负责在独立事务中完成预约订单收尾，并同步释放对应滑板车状态。
+ */
 @Service
 public class BookingCompletionService {
 
@@ -23,8 +26,7 @@ public class BookingCompletionService {
     private ScooterRepository scooterRepository;
 
     /**
-     * Each booking is processed in its own independent transaction.
-     * A failure here only rolls back this single booking, not the whole batch.
+     * 在独立事务中完成单个预约订单，避免批处理时单条失败影响整体任务。
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completeSingleBooking(Booking booking) {

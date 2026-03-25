@@ -18,6 +18,9 @@ import com.group12.backend.service.UserService;
 
 import jakarta.validation.Valid;
 
+/**
+ * 负责处理用户注册、个人资料查询和预约历史查询等接口请求。
+ */
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -25,11 +28,17 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    /**
+     * 接收新用户注册信息并创建账户。
+     */
     @PostMapping
     public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", userService.register(request)));
     }
 
+    /**
+     * 查询指定用户的预约历史记录，支持分页返回。
+     */
     @GetMapping("/{userId}/bookings")
     public ResponseEntity<Object> getHistory(
             @PathVariable String userId,
@@ -38,6 +47,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserBookings(userId, page, size));
     }
 
+    /**
+     * 查询指定用户的单条预约详情。
+     */
     @GetMapping("/{userId}/bookings/{bookingId}")
     public ResponseEntity<Object> getBookingById(
             @PathVariable String userId,
@@ -45,6 +57,9 @@ public class UserController {
         return ResponseEntity.ok(userService.getBookingById(userId, bookingId));
     }
 
+    /**
+     * 获取指定用户的个人资料信息。
+     */
     @GetMapping("/{userId}/profile")
     public ResponseEntity<Object> getProfile(@PathVariable String userId) {
         return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));

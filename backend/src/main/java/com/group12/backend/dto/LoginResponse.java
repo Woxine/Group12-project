@@ -1,5 +1,8 @@
 package com.group12.backend.dto;
 
+/**
+ * 用于返回用户登录成功后的认证结果和基础身份信息。
+ */
 public class LoginResponse {
     private String token;
     private String userId;

@@ -2,6 +2,9 @@ package com.group12.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * 用于接收用户提交车辆故障或使用问题反馈时的请求数据。
+ */
 public class FeedbackRequest {
     @NotBlank(message = "Scooter ID is required")
     private String scooter_id;

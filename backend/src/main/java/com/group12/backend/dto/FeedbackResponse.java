@@ -1,5 +1,8 @@
 package com.group12.backend.dto;
 
+/**
+ * 用于返回用户故障反馈记录的内容、优先级和处理状态。
+ */
 public class FeedbackResponse {
     private Long id;
     private Long userId;

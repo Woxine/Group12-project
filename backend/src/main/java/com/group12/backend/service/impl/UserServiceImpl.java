@@ -23,6 +23,9 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.UserService;
 
+/**
+ * 实现用户注册、资料查询和预约历史查询相关的业务逻辑。
+ */
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -36,6 +39,9 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder passwordEncoder;
 
     @Override
+    /**
+     * 校验注册信息并创建新的客户账户。
+     */
     public Object register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new BusinessException(ErrorMessages.EMAIL_ALREADY_REGISTERED, HttpStatus.CONFLICT);
@@ -57,6 +63,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 分页查询指定用户的预约历史，并组装前端需要的返回结构。
+     */
     public Object getUserBookings(String userId, Integer page, Integer size) {
         Long uId = Long.parseLong(userId);
         int pageNum = (page != null && page > 0) ? page : 1;
@@ -78,6 +87,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 查询指定用户名下的单条预约详情。
+     */
     public Object getBookingById(String userId, String bookingId) {
         Long uId = Long.parseLong(userId);
         Long bId = Long.parseLong(bookingId);
@@ -93,6 +105,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    /**
+     * 获取指定用户的个人资料信息。
+     */
     public Object getUserProfile(String userId) {
         Long uId = Long.parseLong(userId);
         User user = userRepository.findById(uId)
@@ -107,6 +122,9 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    /**
+     * 将预约实体转换为前端展示所需的字段结构。
+     */
     private Map<String, Object> bookingToMap(Booking booking, DateTimeFormatter fmt) {
         String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
         String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
@@ -131,6 +149,9 @@ public class UserServiceImpl implements UserService {
         return m;
     }
 
+    /**
+     * 根据预约时长小时数映射为前端使用的租期标签。
+     */
     private static String formatDuration(Double hours) {
         if (hours == null) return "1H";
         if (hours > 0 && hours <= 10.0 / 60.0 + 0.01) return "10M";

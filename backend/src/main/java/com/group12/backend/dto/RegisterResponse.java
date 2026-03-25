@@ -1,5 +1,8 @@
 package com.group12.backend.dto;
 
+/**
+ * 用于返回用户注册成功后的账户标识和基础资料。
+ */
 public class RegisterResponse {
     private String userId;
     private String email;

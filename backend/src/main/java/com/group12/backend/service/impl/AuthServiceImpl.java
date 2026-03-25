@@ -13,6 +13,9 @@ import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.AuthService;
 import com.group12.backend.utils.JwtUtil;
 
+/**
+ * 实现用户登录认证与权限校验相关的业务逻辑。
+ */
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -26,6 +29,9 @@ public class AuthServiceImpl implements AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Override
+    /**
+     * 校验邮箱密码并生成登录成功后的令牌和身份信息。
+     */
     public Object login(LoginRequest request) {
         // 1. 查找用户
         // SECURITY: Do not reveal whether user exists or not explicitly.
@@ -58,6 +64,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    /**
+     * 返回当前用户的权限校验结果。
+     */
     public Object checkPermission() {
         // 这是一个模拟接口，实际应从 SecurityContext 获取当前用户
         return "Permission Valid";

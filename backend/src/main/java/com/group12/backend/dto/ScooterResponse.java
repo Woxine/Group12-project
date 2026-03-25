@@ -2,6 +2,9 @@ package com.group12.backend.dto;
 
 import java.math.BigDecimal;
 
+/**
+ * 用于向前端返回滑板车列表展示所需的状态、位置和计费信息。
+ */
 public class ScooterResponse {
     private Long id;
     private String status;

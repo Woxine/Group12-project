@@ -1,5 +1,8 @@
 package com.group12.backend.dto;
 
+/**
+ * 用于返回预约订单的详情、状态和起止位置信息。
+ */
 public class BookingResponse {
     private String id;
     private String scooterId;

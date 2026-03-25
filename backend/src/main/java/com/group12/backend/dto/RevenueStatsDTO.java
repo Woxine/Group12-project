@@ -2,6 +2,9 @@ package com.group12.backend.dto;
 
 import java.math.BigDecimal;
 
+/**
+ * 用于承载后台营收总览中的总收入、订单数和客单价统计。
+ */
 public class RevenueStatsDTO {
     private BigDecimal totalRevenue;
     private Integer totalOrders;

@@ -17,6 +17,9 @@ import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.FeedbackService;
 
+/**
+ * 实现用户反馈提交、反馈状态更新和结果转换相关的业务逻辑。
+ */
 @Service
 public class FeedbackServiceImpl implements FeedbackService {
 
@@ -27,6 +30,9 @@ public class FeedbackServiceImpl implements FeedbackService {
     private ScooterRepository scooterRepository;
 
     @Override
+    /**
+     * 保存新的反馈记录，并在可用时关联对应滑板车。
+     */
     public Object submitFeedback(FeedbackRequest request) {
         Feedback feedback = new Feedback();
         feedback.setContent(request.getDescription());
@@ -48,6 +54,9 @@ public class FeedbackServiceImpl implements FeedbackService {
     }
 
     @Override
+    /**
+     * 更新指定反馈的处理状态并返回最新结果。
+     */
     public Object updateFeedback(String feedbackId, UpdateFeedbackRequest request) {
         Long id = Long.valueOf(feedbackId);
         Optional<Feedback> feedbackOpt = feedbackRepository.findById(id);
@@ -68,6 +77,9 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
     }
 
+    /**
+     * 将反馈实体转换为前端返回使用的 DTO。
+     */
     private FeedbackResponse mapToDTO(Feedback feedback) {
         return new FeedbackResponse(
             feedback.getId(),

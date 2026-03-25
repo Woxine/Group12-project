@@ -11,6 +11,9 @@ import com.group12.backend.entity.Scooter;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.ScooterService;
 
+/**
+ * 实现滑板车列表查询、位置查询和车辆信息更新相关的业务逻辑。
+ */
 @Service
 public class ScooterServiceImpl implements ScooterService {
 
@@ -18,6 +21,9 @@ public class ScooterServiceImpl implements ScooterService {
     private ScooterRepository scooterRepository;
 
     @Override
+    /**
+     * 查询滑板车列表，并按需应用状态过滤和分页截取。
+     */
     public List<Object> getScooters(String status, Integer page, Integer limit) {
         List<Scooter> scooters;
         if (status != null && !status.isEmpty()) {
@@ -43,6 +49,9 @@ public class ScooterServiceImpl implements ScooterService {
     }
 
     @Override
+    /**
+     * 获取指定滑板车的当前位置信息。
+     */
     public Object getScooterLocation(String scooterId) {
         Long id = Long.parseLong(scooterId);
         Scooter scooter = scooterRepository.findById(id)
@@ -52,6 +61,9 @@ public class ScooterServiceImpl implements ScooterService {
     }
 
     @Override
+    /**
+     * 更新指定滑板车的状态、计费或经纬度信息。
+     */
     public Object updateScooter(Long id, String status, BigDecimal hourRate, Double locationLat, Double locationLng) {
         Scooter scooter = scooterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Scooter not found with id: " + id));
@@ -73,6 +85,9 @@ public class ScooterServiceImpl implements ScooterService {
         return mapToDTO(saved);
     }
 
+    /**
+     * 将滑板车实体转换为接口返回使用的 DTO。
+     */
     private ScooterResponse mapToDTO(Scooter scooter) {
         String locName = (scooter.getLocationPoint() != null) ? scooter.getLocationPoint().getName() : "Unknown";
         return new ScooterResponse(

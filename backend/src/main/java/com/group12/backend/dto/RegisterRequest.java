@@ -4,6 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * 用于接收新用户注册账户时提交的基础信息。
+ */
 public class RegisterRequest {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")

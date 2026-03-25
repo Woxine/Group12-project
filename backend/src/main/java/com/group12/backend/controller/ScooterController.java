@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.service.ScooterService;
 
+/**
+ * 负责处理滑板车列表查询、位置查询和车辆信息更新等接口请求。
+ */
 @RestController
 @RequestMapping("/api/v1/scooters")
 public class ScooterController {
@@ -23,7 +26,10 @@ public class ScooterController {
     @Autowired
     private ScooterService scooterService;
 
-    // API-001
+    // API-001: 获取滑板车列表
+    /**
+     * 按状态和分页条件查询可展示的滑板车数据。
+     */
     @GetMapping
     public ResponseEntity<Object> getScooters(
             @RequestParam(required = false) String status,
@@ -34,12 +40,18 @@ public class ScooterController {
                 .body(Map.of("data", scooterService.getScooters(status, page, limit)));
     }
 
-    // API-010
+    // API-010: 获取指定滑板车位置
+    /**
+     * 查询单辆滑板车的最新位置信息，供地图定位或车辆追踪使用。
+     */
     @GetMapping("/{scooterId}/location")
     public ResponseEntity<Object> getLocation(@PathVariable String scooterId) {
         return ResponseEntity.ok(Map.of("data", scooterService.getScooterLocation(scooterId)));
     }
 
+    /**
+     * 更新指定滑板车的状态、计费规则或经纬度等基础信息。
+     */
     @PutMapping("/{scooterId}")
     public ResponseEntity<Object> updateScooter(
             @PathVariable Long scooterId,

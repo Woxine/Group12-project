@@ -2,6 +2,9 @@ package com.group12.backend.dto;
 
 import java.math.BigDecimal;
 
+/**
+ * 用于承载不同预约时长维度下的营收与订单统计结果。
+ */
 public class DurationRevenueDTO {
 
     private String durationType;

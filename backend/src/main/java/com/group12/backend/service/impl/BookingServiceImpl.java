@@ -20,6 +20,9 @@ import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BookingService;
 
+/**
+ * 实现预约订单创建、取消、完成和车辆状态同步的业务逻辑。
+ */
 @Service
 public class BookingServiceImpl implements BookingService {
 
@@ -34,6 +37,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    /**
+     * 校验用户和车辆状态后创建预约订单，并将车辆标记为租用中。
+     */
     public Object createBooking(CreateBookingRequest request) {
         Long userId = Long.parseLong(request.getUser_id());
         Long scooterId = Long.parseLong(request.getScooter_id());
@@ -117,6 +123,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    /**
+     * 取消指定预约订单，并释放对应滑板车。
+     */
     public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)
@@ -141,6 +150,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    /**
+     * 完成指定预约订单，并释放对应滑板车。
+     */
     public Object completeBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findById(id)

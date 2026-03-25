@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.service.AdminService;
 
+/**
+ * 负责提供后台管理端的营收统计与经营分析接口。
+ */
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
@@ -20,7 +23,7 @@ public class AdminController {
     @Autowired
     private AdminService adminService;
 
-    // API-008
+    // API-008: 获取收入统计信息
     /**
      * 获取收益统计信息
      * 根据起始日期和结束日期查询收入数据
@@ -35,6 +38,9 @@ public class AdminController {
 
     /**
      * 按租期分类的本周收入统计
+     */
+    /**
+     * 获取本周按租期分类汇总的收入统计结果。
      */
     @GetMapping("/revenue/duration-week")
     public ResponseEntity<Object> getWeeklyRevenueByDuration() {
