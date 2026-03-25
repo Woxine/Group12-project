@@ -3,28 +3,22 @@ spring:
     name: backend
 
   # --- Database Configuration ---
-  # Best Practice: Use environment variables (${VAR:DEFAULT}) for Prod/Dev separation
+  # Shared defaults for team development.
+  # Keep secrets out of Git and provide them via environment variables
+  # or an ignored application-local.yaml with the "local" profile enabled.
   datasource:
-    # 1. URL: Defaults to H2. Prod environment overrides SPRING_DATASOURCE_URL
-    # url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:scooter_db;DB_CLOSE_DELAY=-1}
-    # For Local MySQL, uncomment line below (and comment out H2):
+    # The agreed local database name is scooter_db.
+    # Override with SPRING_DATASOURCE_URL when a teammate uses another host or port.
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/scooter_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-
-    # 2. Driver
-    # driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
-
-    # 3. Credentials
-    # username: ${SPRING_DATASOURCE_USERNAME:sa}
-    # password: ${SPRING_DATASOURCE_PASSWORD:}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    # Do not commit real credentials here.
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
 
   jpa:
-    # Dialect: H2 vs MySQLDialect
     database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.MySQLDialect}
     hibernate:
-      # DDL: 'update' for dev, 'validate' for prod
+      # Use update for local development. Prefer validate in production.
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     show-sql: ${SPRING_JPA_SHOW_SQL:true}
     properties:

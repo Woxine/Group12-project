@@ -1,3 +1,7 @@
 # Build artifacts and generated caches
 unpackage/
 .cursor/
+*.env
+*.local
+backend/application-local.yaml
+backend/src/main/resources/application-local.yaml
