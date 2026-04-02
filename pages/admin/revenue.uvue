@@ -1,20 +1,46 @@
 <template>
-	<!-- 收入统计页：按租用时长分组展示本周收入和订单数 -->
+	<!-- 管理员营收页：展示总览、本周快捷视图与自定义日期范围的按租期营收 -->
 	<view class="container">
 		<view class="title-section">
-			<text class="title-text">Weekly Revenue by Duration</text>
-			<text class="hint-text">Current week grouped by rental duration</text>
+			<text class="title-text">Revenue by Duration</text>
+			<text class="hint-text">{{ activeRangeLabel }}</text>
+		</view>
+
+		<view class="card filter-card">
+			<text class="section-title">Date Range</text>
+			<input v-model="startDate" type="text" class="date-input" placeholder="Start date (YYYY-MM-DD)" />
+			<input v-model="endDate" type="text" class="date-input" placeholder="End date (YYYY-MM-DD)" />
+			<view class="action-row">
+				<button class="action-btn secondary" :disabled="isLoading" @click="loadCurrentWeekData">This Week</button>
+				<button class="action-btn primary" :disabled="isLoading" @click="searchByRange">Search</button>
+			</view>
+		</view>
+
+		<view class="stats-grid">
+			<view class="stat-card">
+				<text class="stat-label">Total Revenue</text>
+				<text class="stat-value">£{{ summary.totalRevenue }}</text>
+			</view>
+			<view class="stat-card">
+				<text class="stat-label">Total Orders</text>
+				<text class="stat-value">{{ summary.totalOrders }}</text>
+			</view>
+			<view class="stat-card">
+				<text class="stat-label">Average Order Value</text>
+				<text class="stat-value">£{{ summary.averageOrderValue }}</text>
+			</view>
 		</view>
 
 		<view v-if="isLoading" class="card">
-			<text class="loading-text">Loading...</text>
+			<text class="loading-text">Loading revenue data...</text>
 		</view>
 
 		<view v-else-if="rows.length == 0" class="card">
-			<text class="empty-text">No bookings for this week.</text>
+			<text class="empty-text">No bookings found for the selected period.</text>
 		</view>
 
 		<view v-else class="card">
+			<text class="section-title">Revenue Breakdown</text>
 			<view v-for="(row, index) in rows" :key="index" class="row">
 				<view class="row-left">
 					<text class="duration-text">{{ row.durationType }}</text>
@@ -26,14 +52,14 @@
 			</view>
 		</view>
 
-		<button :class="['reload-btn', isLoading ? 'reload-btn-disabled' : '']" :disabled="isLoading" @click="loadData">
-			{{ isLoading ? 'Loading...' : 'Reload' }}
+		<button :class="['reload-btn', isLoading ? 'reload-btn-disabled' : '']" :disabled="isLoading" @click="reloadCurrentView">
+			{{ isLoading ? 'Loading...' : 'Reload Current View' }}
 		</button>
 	</view>
 </template>
 
 <script setup lang="uts">
-// 收入统计逻辑：请求管理员收入接口、按租用时长分组解析并展示数据
+// 收入统计逻辑：支持默认本周视图与自定义日期范围的营收总览和租期分类
 import { ref, onMounted } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 
@@ -43,91 +69,226 @@ type DurationRow = {
 	totalOrders: number
 }
 
+type RevenueSummary = {
+	totalRevenue: string
+	totalOrders: number
+	averageOrderValue: string
+}
+
 const rows = ref<DurationRow[]>([])
 const isLoading = ref(false)
+const startDate = ref('')
+const endDate = ref('')
+const activeRangeLabel = ref('Current week grouped by rental duration')
+const currentMode = ref('week')
+const summary = ref<RevenueSummary>({
+	totalRevenue: '0.00',
+	totalOrders: 0,
+	averageOrderValue: '0.00'
+})
 
-const loadData = () => {
-	if (isLoading.value) return
-	isLoading.value = true
+const formatDate = (date: Date): string => {
+	const year = date.getFullYear()
+	const month = ('0' + (date.getMonth() + 1)).slice(-2)
+	const day = ('0' + date.getDate()).slice(-2)
+	return year + '-' + month + '-' + day
+}
 
+const getCurrentWeekRange = (): string[] => {
+	const today = new Date()
+	const day = today.getDay()
+	const diffToMonday = day == 0 ? -6 : 1 - day
+	const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMonday)
+	const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+	return [formatDate(start), formatDate(end)]
+}
+
+const getAuthToken = (): string => {
 	const tokenRaw = uni.getStorageSync('token')
-	const token = tokenRaw != null ? ('' + tokenRaw).trim() : ''
+	return tokenRaw != null ? ('' + tokenRaw).trim() : ''
+}
 
+const buildQuery = (rangeStart: string, rangeEnd: string): string => {
+	return '?start_date=' + encodeURIComponent(rangeStart) + '&end_date=' + encodeURIComponent(rangeEnd)
+}
+
+const parseDurationRows = (rawData: any): DurationRow[] => {
+	const result: DurationRow[] = []
+	if (rawData == null || !Array.isArray(rawData)) {
+		return result
+	}
+
+	const arr = rawData as UTSJSONObject[]
+	for (let i = 0; i < arr.length; i++) {
+		const item = arr[i]
+		const dtRaw = item['durationType']
+		const trRaw = item['totalRevenue']
+		const toRaw = item['totalOrders']
+		result.push({
+			durationType: dtRaw != null ? ('' + dtRaw) : 'Unknown',
+			totalRevenue: trRaw != null ? ('' + trRaw) : '0',
+			totalOrders: toRaw != null ? parseInt('' + toRaw) : 0
+		})
+	}
+	return result
+}
+
+const resetSummary = () => {
+	summary.value = { totalRevenue: '0.00', totalOrders: 0, averageOrderValue: '0.00' }
+}
+
+const updateSummary = (rawData: any) => {
+	const stats = rawData as UTSJSONObject
+	const totalRevenueRaw = stats['totalRevenue']
+	const totalOrdersRaw = stats['totalOrders']
+	const averageOrderValueRaw = stats['averageOrderValue']
+	summary.value = {
+		totalRevenue: totalRevenueRaw != null ? ('' + totalRevenueRaw) : '0.00',
+		totalOrders: totalOrdersRaw != null ? parseInt('' + totalOrdersRaw) : 0,
+		averageOrderValue: averageOrderValueRaw != null ? ('' + averageOrderValueRaw) : '0.00'
+	}
+}
+
+const loadRevenueData = (rangeStart: string, rangeEnd: string, durationPath: string, label: string, mode: string) => {
+	if (isLoading.value) return
+
+	const token = getAuthToken()
 	if (token.length < 1) {
 		uni.showToast({ title: 'Please login first', icon: 'none' })
-		isLoading.value = false
 		return
 	}
 
+	isLoading.value = true
+	const query = buildQuery(rangeStart, rangeEnd)
+	let pendingCount = 2
+	let hasError = false
+
+	const finishRequest = () => {
+		pendingCount -= 1
+		if (pendingCount <= 0) {
+			if (!hasError) {
+				activeRangeLabel.value = label
+				currentMode.value = mode
+			}
+			isLoading.value = false
+		}
+	}
+
+	const requestHeader = {
+		'Content-Type': 'application/json',
+		'Authorization': 'Bearer ' + token
+	}
+
 	uni.request({
-		url: BASE_URL + '/api/v1/admin/revenue/duration-week',
+		url: BASE_URL + '/api/v1/admin/revenue' + query,
 		method: 'GET',
-		header: {
-			'Content-Type': 'application/json',
-			'Authorization': 'Bearer ' + token
-		},
+		header: requestHeader,
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const root = res.data as UTSJSONObject
-				const result: DurationRow[] = []
-
-				// 优先从 data 字段取数组，否则尝试把根对象当数组
 				const dataField = root['data']
-				if (dataField != null && Array.isArray(dataField)) {
-					const arr = dataField as UTSJSONObject[]
-					for (let i = 0; i < arr.length; i++) {
-						const item = arr[i]
-						const dtRaw = item['durationType']
-						const trRaw = item['totalRevenue']
-						const toRaw = item['totalOrders']
-						const dt = dtRaw != null ? ('' + dtRaw) : 'Unknown'
-						const trStr = trRaw != null ? ('' + trRaw) : '0'
-						const toInt = toRaw != null ? parseInt('' + toRaw) : 0
-						result.push({
-							durationType: dt,
-							totalRevenue: trStr,
-							totalOrders: toInt
-						})
-					}
-				} else if (Array.isArray(root as any)) {
-					const arr = (root as any) as UTSJSONObject[]
-					for (let i = 0; i < arr.length; i++) {
-						const item = arr[i]
-						const dtRaw = item['durationType']
-						const trRaw = item['totalRevenue']
-						const toRaw = item['totalOrders']
-						const dt = dtRaw != null ? ('' + dtRaw) : 'Unknown'
-						const trStr = trRaw != null ? ('' + trRaw) : '0'
-						const toInt = toRaw != null ? parseInt('' + toRaw) : 0
-						result.push({
-							durationType: dt,
-							totalRevenue: trStr,
-							totalOrders: toInt
-						})
-					}
+				if (dataField != null) {
+					updateSummary(dataField)
+				} else {
+					resetSummary()
 				}
-
-				rows.value = result
 			} else {
-				uni.showToast({ title: 'Failed to load revenue', icon: 'none' })
+				hasError = true
+				uni.showToast({ title: 'Failed to load summary', icon: 'none' })
 			}
 		},
 		fail: () => {
+			hasError = true
 			uni.showToast({ title: 'Network error', icon: 'none' })
 		},
 		complete: () => {
-			isLoading.value = false
+			finishRequest()
+		}
+	})
+
+	uni.request({
+		url: BASE_URL + durationPath,
+		method: 'GET',
+		header: requestHeader,
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const root = res.data as UTSJSONObject
+				const dataField = root['data']
+				if (dataField != null) {
+					rows.value = parseDurationRows(dataField)
+				} else {
+					rows.value = []
+				}
+			} else {
+				hasError = true
+				uni.showToast({ title: 'Failed to load breakdown', icon: 'none' })
+			}
+		},
+		fail: () => {
+			hasError = true
+			uni.showToast({ title: 'Network error', icon: 'none' })
+		},
+		complete: () => {
+			finishRequest()
 		}
 	})
 }
 
+const loadCurrentWeekData = () => {
+	const range = getCurrentWeekRange()
+	startDate.value = range[0]
+	endDate.value = range[1]
+	loadRevenueData(
+		range[0],
+		range[1],
+		'/api/v1/admin/revenue/duration-week',
+		'Current week: ' + range[0] + ' to ' + range[1],
+		'week'
+	)
+}
+
+const isValidDateText = (value: string): boolean => {
+	return /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
+
+const searchByRange = () => {
+	const rangeStart = startDate.value.trim()
+	const rangeEnd = endDate.value.trim()
+
+	if (!isValidDateText(rangeStart) || !isValidDateText(rangeEnd)) {
+		uni.showToast({ title: 'Use YYYY-MM-DD dates', icon: 'none' })
+		return
+	}
+
+	if (rangeStart > rangeEnd) {
+		uni.showToast({ title: 'Start date must be before end date', icon: 'none' })
+		return
+	}
+
+	loadRevenueData(
+		rangeStart,
+		rangeEnd,
+		'/api/v1/admin/revenue/duration' + buildQuery(rangeStart, rangeEnd),
+		'Custom range: ' + rangeStart + ' to ' + rangeEnd,
+		'range'
+	)
+}
+
+const reloadCurrentView = () => {
+	if (currentMode.value == 'range') {
+		searchByRange()
+	} else {
+		loadCurrentWeekData()
+	}
+}
+
 onMounted(() => {
-	loadData()
+	loadCurrentWeekData()
 })
 </script>
 
 <style>
-/* 收入统计样式：卡片列表、时长/收入行、金额高亮、重新加载按钮 */
+/* 收入统计样式：日期筛选、总览卡片、租期分类列表和刷新按钮 */
 .container {
 	display: flex;
 	flex-direction: column;
@@ -160,6 +321,86 @@ onMounted(() => {
 	padding: 20px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 	margin-bottom: 24px;
+}
+
+.filter-card {
+	padding-bottom: 16px;
+}
+
+.section-title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 14px;
+}
+
+.date-input {
+	width: 100%;
+	height: 44px;
+	padding: 0 12px;
+	margin-bottom: 12px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ddd;
+	border-radius: 8px;
+	background-color: #fff;
+	box-sizing: border-box;
+}
+
+.action-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	margin-top: 4px;
+}
+
+.action-btn {
+	width: 48%;
+	padding: 12px 0;
+	border-radius: 8px;
+	border-width: 0;
+	font-size: 15px;
+	font-weight: bold;
+}
+
+.action-btn.primary {
+	background-color: #4CAF50;
+	color: #fff;
+}
+
+.action-btn.secondary {
+	background-color: #e8f5e9;
+	color: #2e7d32;
+}
+
+.stats-grid {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 24px;
+}
+
+.stat-card {
+	background-color: #fff;
+	border-radius: 12px;
+	padding: 18px 20px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	margin-bottom: 12px;
+}
+
+.stat-card:last-child {
+	margin-bottom: 0;
+}
+
+.stat-label {
+	font-size: 13px;
+	color: #666;
+	margin-bottom: 6px;
+}
+
+.stat-value {
+	font-size: 22px;
+	font-weight: bold;
+	color: #333;
 }
 
 .row {

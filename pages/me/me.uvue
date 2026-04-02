@@ -12,9 +12,7 @@
 					<button class="login-btn">Go to Login</button>
 				</navigator>
 				
-				<view class="divider-text">
-					<text>Don't have an account?</text>
-				</view>
+				<text class="divider-text">Don't have an account?</text>
 				
 				<navigator url="/pages/register/register" open-type="navigate">
 					<button class="register-btn">Create Account</button>
@@ -430,6 +428,8 @@ onShow(() => {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	padding: 16px 16px 96px;
+	box-sizing: border-box;
 }
 
 .not-logged-wrapper {
@@ -500,7 +500,8 @@ onShow(() => {
 .logged-in-container {
 	width: 100%;
 	flex: 1;
-	padding-bottom: 90px;
+	padding-bottom: 96px;
+	box-sizing: border-box;
 }
 
 /* ── Profile Header Card ── */

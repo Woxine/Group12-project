@@ -50,7 +50,7 @@
 // 反馈提交逻辑：表单校验、调用反馈接口提交数据、成功后重置表单
 import { ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
-import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts'
+import { APP_MESSAGES, getAppMessage, getResponseMessage } from '../../common/messages.uts'
 
 const scooterId = ref('')
 const description = ref('')
@@ -63,15 +63,20 @@ const onSubmit = () => {
 	const sid = scooterId.value.trim()
 	const desc = description.value.trim()
 	const loc = location.value.trim()
+	const enterScooterIdMessage = getAppMessage('feedback', 'enterScooterId', 'Please enter Scooter ID')
+	const enterDescriptionMessage = getAppMessage('feedback', 'enterDescription', 'Please enter a description')
+	const submitSuccessMessage = getAppMessage('feedback', 'submitSuccess', 'Feedback submitted')
+	const submitFailedMessage = getAppMessage('feedback', 'submitFailed', 'Failed to submit feedback')
+	const requestFailedMessage = getAppMessage('network', 'requestFailed', 'Network error, please try again')
 
 	if (sid.length < 1) {
-		submitError.value = APP_MESSAGES.feedback.enterScooterId
-		uni.showToast({ title: APP_MESSAGES.feedback.enterScooterId, icon: 'none' })
+		submitError.value = enterScooterIdMessage
+		uni.showToast({ title: enterScooterIdMessage, icon: 'none' })
 		return
 	}
 	if (desc.length < 1) {
-		submitError.value = APP_MESSAGES.feedback.enterDescription
-		uni.showToast({ title: APP_MESSAGES.feedback.enterDescription, icon: 'none' })
+		submitError.value = enterDescriptionMessage
+		uni.showToast({ title: enterDescriptionMessage, icon: 'none' })
 		return
 	}
 
@@ -101,19 +106,19 @@ const onSubmit = () => {
 		data: body,
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				uni.showToast({ title: APP_MESSAGES.feedback.submitSuccess, icon: 'success' })
+				uni.showToast({ title: submitSuccessMessage, icon: 'success' })
 				scooterId.value = ''
 				description.value = ''
 				location.value = ''
 			} else {
-				const msg = getResponseMessage(res.data, APP_MESSAGES.feedback.submitFailed)
+				const msg = getResponseMessage(res.data, submitFailedMessage)
 				submitError.value = msg
 				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 			}
 		},
 		fail: () => {
-			submitError.value = APP_MESSAGES.network.requestFailed
-			uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
+			submitError.value = requestFailedMessage
+			uni.showToast({ title: requestFailedMessage, icon: 'none' })
 		},
 		complete: () => {
 			isSubmitting.value = false

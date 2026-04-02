@@ -61,7 +61,52 @@ export const APP_MESSAGES = {
 		submitSuccess: 'Feedback submitted',
 		submitFailed: 'Failed to submit feedback'
 	}
-} as const
+}
+
+const debugMessageRunId = 'messages-helper-1'
+
+const debugMessageLookup = (hypothesisId: string, group: string, key: string, hasGroup: boolean, hasValue: boolean) => {
+	// #region agent log
+	uni.request({
+		url: 'http://127.0.0.1:7704/ingest/fb6b8af2-8829-46b4-89bb-12721b669ea9',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'X-Debug-Session-Id': '2b63ac'
+		},
+		data: {
+			sessionId: '2b63ac',
+			runId: debugMessageRunId,
+			hypothesisId: hypothesisId,
+			location: 'common/messages.uts:getAppMessage',
+			message: 'message lookup',
+			data: {
+				group: group,
+				key: key,
+				hasGroup: hasGroup,
+				hasValue: hasValue
+			},
+			timestamp: Date.now()
+		}
+	})
+	// #endregion
+}
+
+export const getAppMessage = (group: string, key: string, fallback: string): string => {
+	const root = APP_MESSAGES as UTSJSONObject
+	const groupRaw = root[group]
+	const hasGroup = groupRaw != null
+	if (!hasGroup) {
+		debugMessageLookup('H1', group, key, false, false)
+		return fallback
+	}
+
+	const groupObj = groupRaw as UTSJSONObject
+	const value = groupObj[key]
+	const hasValue = value != null
+	debugMessageLookup(hasValue ? 'H2' : 'H3', group, key, true, hasValue)
+	return hasValue ? ('' + value) : fallback
+}
 
 export const getResponseMessage = (data: any | null, fallback: string): string => {
 	let message = fallback

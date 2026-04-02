@@ -16,6 +16,11 @@ public interface AdminService {
     RevenueStatsDTO getRevenueStatistics(LocalDate startDate, LocalDate endDate);
 
     /**
+     * 按日期范围统计租期分类的营收和订单数量。
+     */
+    List<DurationRevenueDTO> getRevenueByDuration(LocalDate startDate, LocalDate endDate);
+
+    /**
      * 统计本周按租期分类的营收和订单数量。
      */
     List<DurationRevenueDTO> getWeeklyRevenueByDuration();

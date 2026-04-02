@@ -47,7 +47,7 @@
 // 登录逻辑：表单校验、请求登录接口、存储 token/用户信息、按角色跳转页面
 import { reactive, ref } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
-import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts';
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 
 // 响应式数据对象，用于存储用户输入
 type UserInfo = {
@@ -64,13 +64,19 @@ const isSubmitting = ref(false);
 
 // 定义提交方法
 const onSubmit = () => {
+	const fillCredentialsMessage = getAppMessage('auth', 'fillCredentials', 'Please fill in both email and password.')
+	const adminLoginSuccessMessage = getAppMessage('auth', 'adminLoginSuccess', 'Admin login')
+	const loginSuccessMessage = getAppMessage('auth', 'loginSuccess', 'Login successful!')
+	const loginFailedMessage = getAppMessage('auth', 'loginFailed', 'Login failed. Please check your credentials.')
+	const requestFailedLaterMessage = getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.')
+
 	// 防止重复提交
 	if (isSubmitting.value) return;
 
 	// 简单校验
 	if (userInfo.email == null || userInfo.email == '' || userInfo.password == null || userInfo.password == '') {
 		uni.showToast({
-			title: APP_MESSAGES.auth.fillCredentials,
+			title: fillCredentialsMessage,
 			icon: 'none'
 		});
 		return;
@@ -182,7 +188,7 @@ const onSubmit = () => {
 						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
 						
 						uni.showToast({
-							title: isAdmin ? APP_MESSAGES.auth.adminLoginSuccess : APP_MESSAGES.auth.loginSuccess,
+							title: isAdmin ? adminLoginSuccessMessage : loginSuccessMessage,
 							icon: 'success'
 						});
 						
@@ -197,7 +203,7 @@ const onSubmit = () => {
 			// 失败流程
 			const retObj = res.data as UTSJSONObject
 			// 默认错误消息
-			const msg = getResponseMessage(retObj, APP_MESSAGES.auth.loginFailed);
+			const msg = getResponseMessage(retObj, loginFailedMessage);
 			
 			console.error('Login failed. Status:', res.statusCode, 'Response:', JSON.stringify(retObj));
 			
@@ -210,7 +216,7 @@ const onSubmit = () => {
 		fail: (err) => {
 			console.error('Login request failed:', err);
 			uni.showToast({
-				title: APP_MESSAGES.network.requestFailedLater,
+				title: requestFailedLaterMessage,
 				icon: 'none'
 			});
 		},
@@ -226,21 +232,35 @@ const onSubmit = () => {
 /* 登录页样式：背景图、标题定位、输入容器、按钮间距 */
 	.back{
 		width: 100%;
-		height: 100%;
+		min-height: 100%;
+		padding: 48px 24px 88px;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		position: relative;
 		//background-color: aqua;
 		.backpic{
 			width: 100%;
 			height: 100%;
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			z-index: 0;
 		}
 		// 登录标题样式
 		.login_title {
-			position: absolute;
-			top: 80px; // 距离顶部的距离
-			left: 50%;
-			transform: translateX(-50%);
+			position: relative;
+			margin-bottom: 22px;
 			z-index: 10;
 			padding: 10px;
-			background-color: rgba(0, 0, 0, 0.3);
+			background-color: rgba(0, 0, 0, 0.35);
+			border: 1px solid rgba(255, 255, 255, 0.14);
+			border-radius: 12px;
+			box-sizing: border-box;
 			.title_text {
 				height: 100%;
 				font-size: 32px;
@@ -250,22 +270,22 @@ const onSubmit = () => {
 			}
 		}
 		.login_container{
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 300px;
-			padding: 30px;
+			position: relative;
+			z-index: 1;
+			width: 100%;
+			max-width: 320px;
+			padding: 28px 24px;
 			background-color: rgba(227, 225, 225, 0.46);
-			border-radius: 15px;
-			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+			border-radius: 14px;
+			box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+			box-sizing: border-box;
 			.input{
 				width: 100%;
-				height: 10%;
-				padding: 20px;
-				border: none;
+				min-height: 44px;
+				padding: 12px 16px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
 				border-radius: 8px;
-				background-color: rgba(60, 60, 60, 0.7);
+				background-color: rgba(60, 60, 60, 0.65);
 				color: white;
 				font-size: 16px;
 				box-sizing: border-box; /* 确保padding不会增加总宽度 */

@@ -94,9 +94,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
-import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 
 const PAGE_SIZE = 10
+const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback)
+const bookingMessage = (key: string, fallback: string): string => getAppMessage('booking', key, fallback)
+const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback)
 
 type Booking = {
 	id: string | null
@@ -246,7 +249,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 	}
 
 	if (token == null || token.length == 0) {
-		loadError.value = APP_MESSAGES.auth.loginAgain
+		loadError.value = authMessage('loginAgain', 'Please log in again')
 		isLoggedIn.value = true
 		isLoading.value = false
 		isRefreshing.value = false
@@ -285,7 +288,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 			}
 		},
 		fail: (error) => {
-			loadError.value = APP_MESSAGES.network.checkConnection
+			loadError.value = networkMessage('checkConnection', 'Network error. Please check your connection.')
 			console.error('Fetch bookings failed:', error)
 		},
 		complete: () => {
@@ -375,7 +378,7 @@ const hasAction = (booking: Booking, action: ActionType): boolean => {
 const goToRoute = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
+		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
@@ -384,22 +387,22 @@ const goToRoute = (booking: Booking) => {
 const cancelOrder = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
+		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
 		return
 	}
 	const cs = ('' + booking.status).trim().toUpperCase()
 	if (cs != 'CONFIRMED' && cs != 'PENDING') {
-		uni.showToast({ title: APP_MESSAGES.booking.cannotCancelBooking, icon: 'none' })
+		uni.showToast({ title: bookingMessage('cannotCancelBooking', 'This booking cannot be cancelled'), icon: 'none' })
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: APP_MESSAGES.auth.loginAgain, icon: 'none' })
+		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
 		return
 	}
 	uni.showModal({
-		title: APP_MESSAGES.booking.cancelBookingTitle,
-		content: APP_MESSAGES.booking.cancelBookingConfirm,
+		title: bookingMessage('cancelBookingTitle', 'Cancel Booking'),
+		content: bookingMessage('cancelBookingConfirm', 'Are you sure you want to cancel this booking?'),
 		success: (res) => {
 			const confirm = !!res.confirm
 			if (confirm) {
@@ -419,15 +422,15 @@ const cancelOrder = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
-								uni.showToast({ title: APP_MESSAGES.booking.cancelBookingSuccess, icon: 'success' })
+								uni.showToast({ title: bookingMessage('cancelBookingSuccess', 'Booking cancelled'), icon: 'success' })
 								fetchBookings(false)
 							} else {
-								const msg = getResponseMessage(resp.data, APP_MESSAGES.booking.cancelBookingFailed)
+								const msg = getResponseMessage(resp.data, bookingMessage('cancelBookingFailed', 'Failed to cancel'))
 								uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 							}
 						},
 						fail: (err) => {
-							uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
+							uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
 							console.error('Cancel booking failed:', err)
 						}
 					})
@@ -445,17 +448,17 @@ const cancelOrder = (booking: Booking) => {
 const endRide = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: APP_MESSAGES.booking.invalidBooking, icon: 'none' })
+		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
 		return
 	}
 	const es = ('' + booking.status).trim().toUpperCase()
 	if (es != 'CONFIRMED' && es != 'PENDING') {
-		uni.showToast({ title: APP_MESSAGES.booking.cannotEndRide, icon: 'none' })
+		uni.showToast({ title: bookingMessage('cannotEndRide', 'This booking cannot be ended'), icon: 'none' })
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: APP_MESSAGES.auth.loginAgain, icon: 'none' })
+		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
 		return
 	}
 	uni.getLocation({
@@ -471,20 +474,20 @@ const endRide = (booking: Booking) => {
 				},
 				success: (resp) => {
 					if (resp.statusCode >= 200 && resp.statusCode < 300) {
-						uni.showToast({ title: APP_MESSAGES.booking.endRideSuccess, icon: 'success' })
+						uni.showToast({ title: bookingMessage('endRideSuccess', 'Ride ended'), icon: 'success' })
 						fetchBookings(false)
 					} else {
-						const msg = getResponseMessage(resp.data, APP_MESSAGES.booking.endRideFailed)
+						const msg = getResponseMessage(resp.data, bookingMessage('endRideFailed', 'Failed to end ride'))
 						uni.showToast({ title: msg, icon: 'none', duration: 3000 })
 					}
 				},
 				fail: () => {
-					uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' })
+					uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
 				}
 			})
 		},
 		fail: () => {
-			uni.showToast({ title: APP_MESSAGES.booking.locationUnavailable, icon: 'none' })
+			uni.showToast({ title: bookingMessage('locationUnavailable', 'Location unavailable, cannot end ride'), icon: 'none' })
 		}
 	})
 }
@@ -594,20 +597,22 @@ onHide(() => {
 .loading-section,
 .error-section {
 	padding: 40px 20px;
-	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 }
 
 .loading-text {
 	font-size: 14px;
 	color: #999;
+	text-align: center;
 }
 
 .error-text {
 	font-size: 14px;
 	color: #f44336;
-	display: flex;
-	flex-direction: column;
 	margin-bottom: 16px;
+	text-align: center;
 }
 
 .retry-btn {

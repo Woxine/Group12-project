@@ -1,38 +1,40 @@
 <template>
-	<!-- 首页：滚动公告、图片轮播、地图及预约入口按钮 -->
-	<view class="slogan1">
-		<text class="text1">We offer you a variety of options.</text>
-	</view>
-	
-	<view class="span1">
-		<view class="span1_left"><image src="/static/broadcast.png" mode="aspectFill" class="icon1"></image></view>
-		<swiper class="swiper1" vertical="true" autoplay="true" circular interval="2000" duration="1000">
-			<swiper-item><text class="text2">Before cycling, please check the brakes, seat, pedals and other components.</text></swiper-item>
-			<swiper-item><text class="text2">Remember to return the bike when the ride is over.</text></swiper-item>
+	<view class="page-container">
+		<!-- 首页：滚动公告、图片轮播、地图及预约入口按钮 -->
+		<view class="slogan1">
+			<text class="text1">We offer you a variety of options.</text>
+		</view>
+		
+		<view class="span1">
+			<view class="span1_left"><image src="/static/broadcast.png" mode="aspectFill" class="icon1"></image></view>
+			<swiper class="swiper1" vertical="true" autoplay="true" circular interval="2000" duration="1000">
+				<swiper-item><text class="text2">Before cycling, please check the brakes, seat, pedals and other components.</text></swiper-item>
+				<swiper-item><text class="text2">Remember to return the bike when the ride is over.</text></swiper-item>
+			</swiper>
+		</view>
+		
+		<swiper class="swiper2" :indicator-dots="true" :autoplay="true" :interval="2000" :duration="1000"
+		indicator-color="rgba(255,255,255,0.3)" indicator-active-color="#c0c0c0" circular>
+			<swiper-item><image src="/static/MeiTuanbike.jpg" class="swipic1"></image></swiper-item>
+			<swiper-item><image src="/static/HelloBike.jpg" class="swipic2"></image></swiper-item>
+			<swiper-item><image src="/static/Scooter.jpg" class="swipic3"></image></swiper-item>
+			<swiper-item><image src="/static/EleBike.jpg" class="swipic4"></image></swiper-item>
 		</swiper>
-	</view>
-	
-	<swiper class="swiper2" :indicator-dots="true" :autoplay="true" :interval="2000" :duration="1000"
-	indicator-color="rgba(255,255,255,0.3)" indicator-active-color="#c0c0c0" circular>
-		<swiper-item><image src="/static/MeiTuanbike.jpg" class="swipic1"></image></swiper-item>
-		<swiper-item><image src="/static/HelloBike.jpg" class="swipic2"></image></swiper-item>
-		<swiper-item><image src="/static/Scooter.jpg" class="swipic3"></image></swiper-item>
-		<swiper-item><image src="/static/EleBike.jpg" class="swipic4"></image></swiper-item>
-	</swiper>
-	
-	<!--
-	<view class="span2">------</view>
-	-->
+		
+		<!--
+		<view class="span2">------</view>
+		-->
 
-	<view class="map_container">
-		<map id="mainMap" class="map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
-	</view>
-	
-	<!-- 预约按钮 -->
-	<view class="booking-section">
-		<button class="booking-button" @click="goToBikeList">
-			appoint
-		</button>
+		<view class="map_container">
+			<map id="mainMap" class="map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
+		</view>
+		
+		<!-- 预约按钮 -->
+		<view class="booking-section">
+			<button class="booking-button" @click="goToBikeList">
+				appoint
+			</button>
+		</view>
 	</view>
 	
 	<TabBar current="home" />
@@ -156,6 +158,13 @@
 
 <style lang="scss">
 /* 首页样式：公告栏、轮播图、地图容器、预约按钮 */
+	.page-container {
+		min-height: 100%;
+		padding-bottom: 88px;
+		box-sizing: border-box;
+		background-color: #F8F8F8;
+	}
+
 	.slogan1{
 		display: flex;
 		align-items: center;
@@ -222,17 +231,19 @@
 	.booking-section {
 		width: 90%;
 		margin: 20px auto;
-		margin-bottom: 90px;
+		margin-bottom: 12px;
 		display: flex;
 		justify-content: center;
 		
 		.booking-button {
 			width: 100%;
-			height: 45px;
-			background-color: #4CAF50;
+			height: 46px;
+			background-color: rgba(76, 175, 80, 0.88);
 			color: white;
-			border: none;
-			border-radius: 8px;
+			border: 1px solid rgba(255, 255, 255, 0.22);
+			border-radius: 12px;
+			box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(76, 175, 80, 0.16);
+			box-sizing: border-box;
 			font-size: 16px;
 			font-weight: bold;
 		}

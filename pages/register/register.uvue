@@ -59,7 +59,7 @@
 // 注册逻辑：实时校验表单、调用注册接口、保存用户ID并跳转登录页
 import { ref, computed } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
-import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts';
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 
 // --- Types ---
 // We don't need to define a specific RegisterResponse type since we'll handle the response as a generic object
@@ -123,24 +123,28 @@ const showToast = (message: string): void => {
 	});
 };
 
+const registerMessage = (key: string, fallback: string): string => getAppMessage('register', key, fallback);
+const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback);
+const commonMessage = (key: string, fallback: string): string => getAppMessage('common', key, fallback);
+
 const handleRegister = async (): Promise<void> => {
 	if (!isNameValid.value) {
-		showToast(APP_MESSAGES.register.enterName);
+		showToast(registerMessage('enterName', 'Please enter your name.'));
 		return;
 	}
 
 	if (!isEmailValid.value) {
-		showToast(APP_MESSAGES.register.enterValidEmail);
+		showToast(registerMessage('enterValidEmail', 'Please enter a valid email address.'));
 		return;
 	}
 
 	if (!isPasswordValid.value) {
-		showToast(APP_MESSAGES.register.passwordTooShort);
+		showToast(registerMessage('passwordTooShort', 'Password must be at least 6 characters long.'));
 		return;
 	}
 
 	if (!passwordsMatch.value) {
-		showToast(APP_MESSAGES.register.passwordsMismatch);
+		showToast(registerMessage('passwordsMismatch', 'Passwords do not match.'));
 		return;
 	}
 
@@ -210,16 +214,16 @@ const handleRegister = async (): Promise<void> => {
 					let errorMessage = '';
 					switch(response.statusCode) {
 						case 400:
-							errorMessage = APP_MESSAGES.register.invalidRequest;
+							errorMessage = registerMessage('invalidRequest', 'Invalid request data. ');
 							break;
 						case 409:
-							errorMessage = APP_MESSAGES.register.accountExists;
+							errorMessage = registerMessage('accountExists', 'Account already exists. ');
 							break;
 						case 422:
-							errorMessage = APP_MESSAGES.register.validationError;
+							errorMessage = registerMessage('validationError', 'Validation error. ');
 							break;
 						case 500:
-							errorMessage = APP_MESSAGES.register.serverError;
+							errorMessage = registerMessage('serverError', 'Server error. ');
 							break;
 						default:
 							errorMessage = `Error ${response.statusCode}. `;
@@ -243,7 +247,7 @@ const handleRegister = async (): Promise<void> => {
 							errorMessage += responseData;
 						}
 					} else {
-						errorMessage += APP_MESSAGES.register.emptyServerResponse;
+						errorMessage += registerMessage('emptyServerResponse', 'Server returned empty response.');
 					}
 					
 					console.error('Registration failed (HTTP Status):', errorMessage);
@@ -254,11 +258,11 @@ const handleRegister = async (): Promise<void> => {
 				console.error('Network error during registration:', error);
 				
 				if (error.errMsg != null && error.errMsg.includes('request:fail')) {
-					showToast(APP_MESSAGES.network.connectFailed);
+					showToast(networkMessage('connectFailed', 'Failed to connect to server. Please check your network connection.'));
 				} else if (error.errMsg != null && error.errMsg.includes('timeout')) {
-					showToast(APP_MESSAGES.network.timeout);
+					showToast(networkMessage('timeout', 'Request timed out. Please check your server and try again.'));
 				} else {
-					showToast(APP_MESSAGES.network.unexpected);
+					showToast(networkMessage('unexpected', 'A network error occurred. Please check your connection and try again.'));
 				}
 			},
 			complete: () => {
@@ -268,7 +272,7 @@ const handleRegister = async (): Promise<void> => {
 
 	} catch (error) {
 		console.error('Unexpected error during registration attempt:', error);
-		showToast(APP_MESSAGES.common.unexpectedError);
+		showToast(commonMessage('unexpectedError', 'An unexpected error occurred.'));
 		isSubmitting.value = false;
 	}
 };
@@ -278,20 +282,34 @@ const handleRegister = async (): Promise<void> => {
 /* 注册页样式：背景图、标题定位、输入框、校验提示文字颜色 */
 .back {
 	width: 100%;
-	height: 100%;
+	min-height: 100%;
+	padding: 32px 24px 88px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: center;
+	position: relative;
 	.backpic {
 		width: 100%;
 		height: 100%;
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 0;
 	}
 	
 	.login_title {
-		position: absolute;
-		top: 0px;
-		left: 50%;
-		transform: translateX(-50%);
+		position: relative;
+		margin-bottom: 18px;
 		z-index: 10;
 		padding: 10px;
-		background-color: rgba(0, 0, 0, 0.3);
+		background-color: rgba(0, 0, 0, 0.35);
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		border-radius: 12px;
+		box-sizing: border-box;
 		.title_text {
 			height: 100%;
 			font-size: 32px;
@@ -302,25 +320,26 @@ const handleRegister = async (): Promise<void> => {
 	}
 	
 	.login_container {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 300px;
-		padding: 30px;
+		position: relative;
+		z-index: 1;
+		width: 100%;
+		max-width: 320px;
+		padding: 28px 24px;
 		background-color: rgba(227, 225, 225, 0.46);
-		border-radius: 15px;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+		border-radius: 14px;
+		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+		box-sizing: border-box;
 		
 		.input {
 			width: 100%;
-			height: 10%;
-			padding: 20px;
-			border: none;
+			min-height: 44px;
+			padding: 12px 16px;
+			border: 1px solid rgba(255, 255, 255, 0.12);
 			border-radius: 8px;
-			background-color: rgba(60, 60, 60, 0.7);
+			background-color: rgba(60, 60, 60, 0.65);
 			color: white;
 			font-size: 16px;
+			box-sizing: border-box;
 		}
 		
 		.span1 {
@@ -336,10 +355,12 @@ const handleRegister = async (): Promise<void> => {
 		}
 		
 		.validation-info {
-			margin: 10px 0;
+			margin: 8px 0;
 			padding: 10px;
-			background-color: rgba(0, 0, 0, 0.1);
-			border-radius: 5px;
+			background-color: rgba(0, 0, 0, 0.12);
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-radius: 8px;
+			box-sizing: border-box;
 		}
 
 		.validation-message {

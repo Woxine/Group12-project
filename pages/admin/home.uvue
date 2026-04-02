@@ -15,7 +15,7 @@
 				Modify Scooter Information
 			</button>
 			<button class="menu-btn" @click="goRevenue">
-				View Revenue
+				View Revenue by Duration
 			</button>
 			<button class="menu-btn danger" @click="logout">
 				Logout

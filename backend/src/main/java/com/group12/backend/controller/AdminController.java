@@ -37,10 +37,17 @@ public class AdminController {
     }
 
     /**
-     * 按租期分类的本周收入统计
+     * 获取指定日期范围内按租期分类汇总的收入统计结果。
      */
+    @GetMapping("/revenue/duration")
+    public ResponseEntity<Object> getRevenueByDuration(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start_date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end_date) {
+        return ResponseEntity.ok(Map.of("data", adminService.getRevenueByDuration(start_date, end_date)));
+    }
+
     /**
-     * 获取本周按租期分类汇总的收入统计结果。
+     * 按租期分类的本周收入统计
      */
     @GetMapping("/revenue/duration-week")
     public ResponseEntity<Object> getWeeklyRevenueByDuration() {

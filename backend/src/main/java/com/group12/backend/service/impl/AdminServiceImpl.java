@@ -22,6 +22,8 @@ import com.group12.backend.service.AdminService;
  */
 @Service
 public class AdminServiceImpl implements AdminService {
+    private static final double TEN_MINUTES_IN_HOURS = 10.0 / 60.0;
+    private static final List<String> DURATION_ORDER = List.of("10M", "1H", "4H", "1D", "1W");
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -31,25 +33,9 @@ public class AdminServiceImpl implements AdminService {
      * 根据日期范围汇总有效订单的营收概览数据。
      */
     public RevenueStatsDTO getRevenueStatistics(LocalDate startDate, LocalDate endDate) {
-        List<Booking> allBookings = bookingRepository.findAll();
+        List<Booking> filteredBookings = getValidBookingsWithinRange(startDate, endDate);
 
-        List<Booking> filteredBookings = allBookings.stream()
-                .filter(booking -> booking.getStartTime() != null)
-                .filter(booking -> {
-                    boolean startOk = startDate == null || !booking.getStartTime().toLocalDate().isBefore(startDate);
-                    boolean endOk = endDate == null || !booking.getStartTime().toLocalDate().isAfter(endDate);
-                    return startOk && endOk;
-                })
-                .filter(booking -> {
-                    String status = booking.getStatus();
-                    return status != null && !"CANCELLED".equalsIgnoreCase(status);
-                })
-                .collect(Collectors.toList());
-
-        BigDecimal totalRevenue = filteredBookings.stream()
-                .map(Booking::getTotalPrice)
-                .filter(price -> price != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalRevenue = sumRevenue(filteredBookings);
 
         Integer totalOrders = filteredBookings.size();
 
@@ -63,49 +49,77 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     /**
+     * 统计指定日期范围内按租期分类的收入和订单数量。
+     */
+    public List<DurationRevenueDTO> getRevenueByDuration(LocalDate startDate, LocalDate endDate) {
+        return buildDurationRevenue(getValidBookingsWithinRange(startDate, endDate));
+    }
+
+    @Override
+    /**
      * 统计当前自然周内按租期分类的收入和订单数量。
      */
     public List<DurationRevenueDTO> getWeeklyRevenueByDuration() {
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
         LocalDate endOfWeek = startOfWeek.plusDays(6);
+        return getRevenueByDuration(startOfWeek, endOfWeek);
+    }
 
+    private List<Booking> getValidBookingsWithinRange(LocalDate startDate, LocalDate endDate) {
         List<Booking> allBookings = bookingRepository.findAll();
-
-        List<Booking> weekBookings = allBookings.stream()
-                .filter(b -> b.getStartTime() != null)
-                .filter(b -> {
-                    LocalDate d = b.getStartTime().toLocalDate();
-                    return !d.isBefore(startOfWeek) && !d.isAfter(endOfWeek);
+        return allBookings.stream()
+                .filter(booking -> booking.getStartTime() != null)
+                .filter(booking -> {
+                    LocalDate bookingDate = booking.getStartTime().toLocalDate();
+                    boolean startOk = startDate == null || !bookingDate.isBefore(startDate);
+                    boolean endOk = endDate == null || !bookingDate.isAfter(endDate);
+                    return startOk && endOk;
                 })
-                .filter(b -> {
-                    String status = b.getStatus();
+                .filter(booking -> {
+                    String status = booking.getStatus();
                     return status != null && !"CANCELLED".equalsIgnoreCase(status);
                 })
                 .collect(Collectors.toList());
+    }
 
-        Map<String, List<Booking>> grouped = weekBookings.stream()
+    private List<DurationRevenueDTO> buildDurationRevenue(List<Booking> bookings) {
+        Map<String, List<Booking>> grouped = bookings.stream()
                 .collect(Collectors.groupingBy(b -> toDurationType(b.getDurationHours())));
 
         return grouped.entrySet().stream()
+                .sorted((left, right) -> Integer.compare(
+                        durationOrderIndex(left.getKey()),
+                        durationOrderIndex(right.getKey())))
                 .map(e -> {
-                    BigDecimal totalRevenue = e.getValue().stream()
-                            .map(Booking::getTotalPrice)
-                            .filter(p -> p != null)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal totalRevenue = sumRevenue(e.getValue());
                     return new DurationRevenueDTO(e.getKey(), totalRevenue, e.getValue().size());
                 })
                 .collect(Collectors.toList());
+    }
+
+    private BigDecimal sumRevenue(List<Booking> bookings) {
+        return bookings.stream()
+                .map(Booking::getTotalPrice)
+                .filter(price -> price != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**
      * 将预约时长换算为统计展示使用的租期分类标签。
      */
     private static String toDurationType(Double hours) {
-        if (hours == null || hours <= 1.0) return "1H";
-        if (hours <= 4.0) return "4H";
-        if (hours <= 24.0) return "1D";
-        if (hours <= 168.0) return "1W";
+        if (hours == null) return "Unknown";
+        if (Math.abs(hours - TEN_MINUTES_IN_HOURS) < 0.001) return "10M";
+        if (Math.abs(hours - 1.0) < 0.001) return "1H";
+        if (Math.abs(hours - 4.0) < 0.001) return "4H";
+        if (Math.abs(hours - 24.0) < 0.001) return "1D";
+        if (Math.abs(hours - 168.0) < 0.001) return "1W";
         return hours.intValue() + "H";
+    }
+
+    private static int durationOrderIndex(String durationType) {
+        int index = DURATION_ORDER.indexOf(durationType);
+        return index >= 0 ? index : DURATION_ORDER.size();
     }
 }

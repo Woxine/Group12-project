@@ -286,7 +286,7 @@ const bookScooter = () => {
 		flex: 1;
 		width: 100%;
 		padding: 20px;
-		padding-bottom: 90px;
+		padding-bottom: 96px;
 		box-sizing: border-box;
 	}
 

@@ -68,7 +68,7 @@
 import { ref, onMounted } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
-import { APP_MESSAGES, getResponseMessage } from '../../common/messages.uts';
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 
 type DurationItem = {
 	time: string;
@@ -81,6 +81,10 @@ type UserInfo = {
 }
 
 const hourRate = ref<number>(1.0);
+const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback);
+const bookingMessage = (key: string, fallback: string): string => getAppMessage('booking', key, fallback);
+const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback);
+const commonMessage = (key: string, fallback: string): string => getAppMessage('common', key, fallback);
 
 const formatPrice = (val: number): string => {
 	const rounded = Math.round(val * 100) / 100;
@@ -209,7 +213,7 @@ const selectStartTime = () => {
 
 const selectEndTime = () => {
 	if (startTime.value == '') {
-		uni.showToast({ title: APP_MESSAGES.booking.selectStartTimeFirst, icon: 'none' });
+		uni.showToast({ title: bookingMessage('selectStartTimeFirst', 'Please select start time first'), icon: 'none' });
 		return;
 	}
 
@@ -278,17 +282,17 @@ const stepSendBooking = () => {
 				}
 				const priceStr = confirmedPrice.toFixed(2);
 				uni.setStorageSync('totalPrice', priceStr);
-				uni.showToast({ title: APP_MESSAGES.booking.bookingSuccess, icon: 'success' });
+				uni.showToast({ title: bookingMessage('bookingSuccess', 'Booking successful, proceed to payment'), icon: 'success' });
 				setTimeout(() => { uni.navigateTo({ url: '/pages/payment/payment?amount=' + priceStr }); }, 1000);
 			} else {
-				let errorMsg: string = getResponseMessage(res.data, APP_MESSAGES.booking.bookingFailed);
+				let errorMsg: string = getResponseMessage(res.data, bookingMessage('bookingFailed', 'Booking failed, please try again'));
 				if (res.statusCode == 401) {
-					uni.showToast({ title: APP_MESSAGES.auth.loginExpired, icon: 'none', duration: 2500 });
+					uni.showToast({ title: authMessage('loginExpired', 'Login expired, please login again'), icon: 'none', duration: 2500 });
 					setTimeout(() => { uni.reLaunch({ url: '/pages/login/login' }); }, 2500);
 				} else {
 					const msgLower = errorMsg.toLowerCase();
 					if (msgLower.indexOf('bookingresponse') >= 0 || msgLower.indexOf('type definition error') >= 0) {
-						errorMsg = APP_MESSAGES.booking.bookingServiceError;
+						errorMsg = bookingMessage('bookingServiceError', 'Booking service error, please try again later');
 					}
 					uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 });
 					const isScooterUnavailable = msgLower.indexOf('overlapping') >= 0 || msgLower.indexOf('not available') >= 0;
@@ -299,7 +303,7 @@ const stepSendBooking = () => {
 			}
 		},
 		fail: () => {
-			uni.showToast({ title: APP_MESSAGES.network.requestFailed, icon: 'none' });
+			uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' });
 		}
 	});
 };
@@ -320,7 +324,7 @@ const hasActivePending = ref<boolean>(false);
 
 const stepAfterActiveCheck = () => {
 	if (hasActivePending.value) {
-		uni.showToast({ title: APP_MESSAGES.booking.activeBookingExists, icon: 'none', duration: 3000 });
+		uni.showToast({ title: bookingMessage('activeBookingExists', 'You already have an active booking.'), icon: 'none', duration: 3000 });
 	} else {
 		setTimeout(() => { stepGetLocationAndBook(); }, 10);
 	}
@@ -356,7 +360,7 @@ const stepCheckActiveBooking = () => {
 			setTimeout(() => { stepAfterActiveCheck(); }, 10);
 		},
 		fail: () => {
-			uni.showToast({ title: APP_MESSAGES.booking.checkBookingsFailed, icon: 'none' });
+			uni.showToast({ title: bookingMessage('checkBookingsFailed', 'Failed to check bookings'), icon: 'none' });
 		}
 	});
 };
@@ -367,7 +371,7 @@ const stepAfterScooterCheck = () => {
 	if (scooterAvailable.value) {
 		setTimeout(() => { stepCheckActiveBooking(); }, 10);
 	} else {
-		uni.showToast({ title: APP_MESSAGES.booking.scooterUnavailable, icon: 'none', duration: 3000 });
+		uni.showToast({ title: bookingMessage('scooterUnavailable', 'This scooter is no longer available.'), icon: 'none', duration: 3000 });
 		setTimeout(() => { uni.navigateBack({}); }, 3000);
 	}
 };
@@ -393,14 +397,16 @@ const stepCheckScooter = () => {
 			setTimeout(() => { stepAfterScooterCheck(); }, 10);
 		},
 		fail: () => {
-			uni.showToast({ title: APP_MESSAGES.booking.verifyScooterFailed, icon: 'none' });
+			uni.showToast({ title: bookingMessage('verifyScooterFailed', 'Failed to verify scooter availability'), icon: 'none' });
 		}
 	});
 };
 
 const confirm = () => {
 	if (startTime.value == '' || endTime.value == '') {
-		const msg = startTime.value == '' ? APP_MESSAGES.booking.selectStartTime : APP_MESSAGES.booking.selectEndTime;
+		const msg = startTime.value == '' ?
+			bookingMessage('selectStartTime', 'Please select start time') :
+			bookingMessage('selectEndTime', 'Please select end time');
 		uni.showToast({ title: msg, icon: 'none' });
 	} else {
 		const tokenRaw = uni.getStorageSync('token');
@@ -412,9 +418,9 @@ const confirm = () => {
 		}
 
 		if (token.length == 0) {
-			uni.showToast({ title: APP_MESSAGES.auth.loginRequired, icon: 'none' });
+			uni.showToast({ title: authMessage('loginRequired', 'Please login first'), icon: 'none' });
 		} else if (userId.length == 0) {
-			uni.showToast({ title: APP_MESSAGES.auth.userInfoMissing, icon: 'none' });
+			uni.showToast({ title: authMessage('userInfoMissing', 'User information missing'), icon: 'none' });
 		} else {
 			const selectedScooterId = uni.getStorageSync('selectedScooterId');
 			let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
@@ -448,7 +454,7 @@ const confirm = () => {
 const cancel = () => {
 	startTime.value = '';
 	endTime.value = '';
-	uni.showToast({ title: APP_MESSAGES.common.cancelled, icon: 'none' });
+	uni.showToast({ title: commonMessage('cancelled', 'Cancelled'), icon: 'none' });
 	uni.reLaunch({ url: '/pages/index/index' });
 };
 </script>
