@@ -2,6 +2,7 @@ package com.group12.backend.service.impl;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,7 @@ public class ScooterServiceImpl implements ScooterService {
     /**
      * 查询滑板车列表，并按需应用状态过滤和分页截取。
      */
-    public List<Object> getScooters(String status, Integer page, Integer limit) {
+    public Map<String, Object> getScooters(String status, Integer page, Integer size) {
         List<Scooter> scooters;
         if (status != null && !status.isEmpty()) {
             scooters = scooterRepository.findByStatus(status);
@@ -32,20 +33,23 @@ public class ScooterServiceImpl implements ScooterService {
             scooters = scooterRepository.findAll();
         }
 
-        if (page != null && limit != null && page > 0 && limit > 0) {
-            int skip = (page - 1) * limit;
-            return scooters.stream()
+        long total = scooters.size();
+        if (page != null && size != null && page > 0 && size > 0) {
+            int skip = (page - 1) * size;
+            List<Object> data = scooters.stream()
                     .skip(skip)
-                    .limit(limit)
+                    .limit(size)
                     .map(this::mapToDTO)
                     .map(dto -> (Object) dto)
                     .toList();
+            return Map.of("data", data, "total", total);
         }
 
-        return scooters.stream()
+        List<Object> data = scooters.stream()
                 .map(this::mapToDTO)
                 .map(dto -> (Object) dto)
                 .toList();
+        return Map.of("data", data, "total", total);
     }
 
     @Override

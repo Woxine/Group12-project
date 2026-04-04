@@ -14,6 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.RegisterRequest;
+import com.group12.backend.dto.ChangePasswordRequest;
+import com.group12.backend.dto.ChangeEmailRequest;
+import com.group12.backend.dto.ChangeNameRequest;
 import com.group12.backend.dto.RegisterResponse;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.User;
@@ -120,6 +123,89 @@ public class UserServiceImpl implements UserService {
             "role", user.getRole(),
             "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false
         );
+    }
+
+    @Override
+    /**
+     * 验证原密码并更新为新密码（加密后落库）。
+     */
+    public Object changePassword(String userId, ChangePasswordRequest request) {
+        Long uId = Long.parseLong(userId);
+        User user = userRepository.findById(uId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorMessages.PASSWORD_INCORRECT, HttpStatus.BAD_REQUEST);
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorMessages.SAME_PASSWORD_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return java.util.Map.of("message", "Password updated successfully");
+    }
+
+    @Override
+    /**
+     * 修改邮箱前校验：与当前邮箱不同，且数据库中未被其他账号占用。
+     */
+    public Object changeEmail(String userId, ChangeEmailRequest request) {
+        Long uId = Long.parseLong(userId);
+        User user = userRepository.findById(uId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        String newEmail = request.getNewEmail() == null ? "" : request.getNewEmail().trim().toLowerCase();
+        String currentEmail = user.getEmail() == null ? "" : user.getEmail().trim().toLowerCase();
+
+        if (newEmail.equals(currentEmail)) {
+            throw new BusinessException(ErrorMessages.SAME_EMAIL_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+        }
+
+        userRepository.findByEmailIgnoreCase(newEmail).ifPresent(existingUser -> {
+            if (!existingUser.getId().equals(user.getId())) {
+                throw new BusinessException(ErrorMessages.EMAIL_ALREADY_REGISTERED, HttpStatus.CONFLICT);
+            }
+        });
+
+        user.setEmail(newEmail);
+        userRepository.save(user);
+
+        return java.util.Map.of(
+                "message", "Email updated successfully",
+                "email", user.getEmail());
+    }
+
+    @Override
+    /**
+     * 修改用户名前校验：与当前用户名不同，且数据库中未被其他账号占用。
+     */
+    public Object changeName(String userId, ChangeNameRequest request) {
+        Long uId = Long.parseLong(userId);
+        User user = userRepository.findById(uId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        String newName = request.getNewName() == null ? "" : request.getNewName().trim();
+        String currentName = user.getName() == null ? "" : user.getName().trim();
+
+        if (newName.equalsIgnoreCase(currentName)) {
+            throw new BusinessException(ErrorMessages.SAME_NAME_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+        }
+
+        userRepository.findByNameIgnoreCase(newName).ifPresent(existingUser -> {
+            if (!existingUser.getId().equals(user.getId())) {
+                throw new BusinessException(ErrorMessages.USERNAME_ALREADY_TAKEN, HttpStatus.CONFLICT);
+            }
+        });
+
+        user.setName(newName);
+        userRepository.save(user);
+
+        return java.util.Map.of(
+                "message", "Username updated successfully",
+                "name", user.getName());
     }
 
     /**

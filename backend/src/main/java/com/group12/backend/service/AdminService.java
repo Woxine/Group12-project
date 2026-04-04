@@ -1,6 +1,7 @@
 package com.group12.backend.service;
 
 import com.group12.backend.dto.DurationRevenueDTO;
+import com.group12.backend.dto.DashboardOverviewDTO;
 import com.group12.backend.dto.RevenueStatsDTO;
 
 import java.time.LocalDate;
@@ -24,4 +25,9 @@ public interface AdminService {
      * 统计本周按租期分类的营收和订单数量。
      */
     List<DurationRevenueDTO> getWeeklyRevenueByDuration();
+
+    /**
+     * 按日期范围聚合管理看板核心指标数据。
+     */
+    DashboardOverviewDTO getDashboardOverview(LocalDate startDate, LocalDate endDate);
 }

@@ -10,5 +10,7 @@ import com.group12.backend.entity.Feedback;
 @Repository
 public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     List<Feedback> findByResolved(Boolean resolved);
+    List<Feedback> findByPriorityIgnoreCase(String priority);
+    List<Feedback> findByResolvedAndPriorityIgnoreCase(Boolean resolved, String priority);
     List<Feedback> findByScooterId(Long scooterId);
 }

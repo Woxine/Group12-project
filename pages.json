@@ -77,6 +77,30 @@
 			"style": {
 				"navigationBarTitleText": "Ride Route"
 			}
+		},
+		{
+			"path": "pages/portrait/portrait",
+			"style": {
+				"navigationBarTitleText": "portrait"
+			}
+		},
+		{
+			"path": "pages/password/password",
+			"style": {
+				"navigationBarTitleText": "password"
+			}
+		},
+		{
+			"path": "pages/email/email",
+			"style": {
+				"navigationBarTitleText": "email"
+			}
+		},
+		{
+			"path": "pages/username/username",
+			"style": {
+				"navigationBarTitleText": "username"
+			}
 		}
 	],
 	"globalStyle": {

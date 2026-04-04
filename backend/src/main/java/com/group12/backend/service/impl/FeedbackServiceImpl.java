@@ -1,5 +1,7 @@
 package com.group12.backend.service.impl;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +77,39 @@ public class FeedbackServiceImpl implements FeedbackService {
         } else {
             throw new BusinessException(ErrorMessages.feedbackNotFound(feedbackId), HttpStatus.NOT_FOUND);
         }
+    }
+
+    @Override
+    public Map<String, Object> getFeedbacks(Boolean resolved, String priority, Integer page, Integer size) {
+        List<Feedback> feedbacks;
+
+        if (resolved != null && priority != null && !priority.isBlank()) {
+            feedbacks = feedbackRepository.findByResolvedAndPriorityIgnoreCase(resolved, priority);
+        } else if (resolved != null) {
+            feedbacks = feedbackRepository.findByResolved(resolved);
+        } else if (priority != null && !priority.isBlank()) {
+            feedbacks = feedbackRepository.findByPriorityIgnoreCase(priority);
+        } else {
+            feedbacks = feedbackRepository.findAll();
+        }
+
+        long total = feedbacks.size();
+        if (page != null && size != null && page > 0 && size > 0) {
+            int skip = (page - 1) * size;
+            List<Object> data = feedbacks.stream()
+                    .skip(skip)
+                    .limit(size)
+                    .map(this::mapToDTO)
+                    .map(dto -> (Object) dto)
+                    .toList();
+            return Map.of("data", data, "total", total);
+        }
+
+        List<Object> data = feedbacks.stream()
+                .map(this::mapToDTO)
+                .map(dto -> (Object) dto)
+                .toList();
+        return Map.of("data", data, "total", total);
     }
 
     /**

@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.group12.backend.security.AdminAccessGuard;
 import com.group12.backend.service.ScooterService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 负责处理滑板车列表查询、位置查询和车辆信息更新等接口请求。
@@ -26,6 +29,9 @@ public class ScooterController {
     @Autowired
     private ScooterService scooterService;
 
+    @Autowired
+    private AdminAccessGuard adminAccessGuard;
+
     // API-001: 获取滑板车列表
     /**
      * 按状态和分页条件查询可展示的滑板车数据。
@@ -34,10 +40,12 @@ public class ScooterController {
     public ResponseEntity<Object> getScooters(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             @RequestParam(required = false) Integer limit) {
+        Integer finalSize = size != null ? size : limit;
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noCache().noStore().mustRevalidate())
-                .body(Map.of("data", scooterService.getScooters(status, page, limit)));
+                .body(scooterService.getScooters(status, page, finalSize));
     }
 
     // API-010: 获取指定滑板车位置
@@ -55,7 +63,9 @@ public class ScooterController {
     @PutMapping("/{scooterId}")
     public ResponseEntity<Object> updateScooter(
             @PathVariable Long scooterId,
-            @RequestBody Map<String, Object> body) {
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
         String status = body.containsKey("status") ? (String) body.get("status") : null;
         BigDecimal hourRate = body.containsKey("hour_rate") ? new BigDecimal(body.get("hour_rate").toString()) : null;
         Double locationLat = body.containsKey("location_lat") ? Double.valueOf(body.get("location_lat").toString()) : null;

@@ -1,0 +1,126 @@
+<template>
+	<view class="container">
+		<view class="top-section">
+			<image :src="avatarUrl" mode="aspectFill" class="avatar"></image>
+		</view>
+		<view class="bottom-section">
+			<button class="change-btn" @click="handleChooseAvatar">修改头像</button>
+		</view>
+	</view>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+
+const DEFAULT_AVATAR = '/static/me.png'
+const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
+const LEGACY_AVATAR_STORAGE_KEY = 'userAvatar'
+const avatarUrl = ref(DEFAULT_AVATAR)
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const getAvatarStorageKey = (): string => {
+	const userId = readStorageStringOrNull('userId')
+	if (userId != null) {
+		return AVATAR_STORAGE_KEY_PREFIX + userId
+	}
+	return LEGACY_AVATAR_STORAGE_KEY
+}
+
+const loadAvatar = () => {
+	const avatarKey = getAvatarStorageKey()
+	const savedAvatar = readStorageStringOrNull(avatarKey)
+	if (savedAvatar != null) {
+		avatarUrl.value = savedAvatar
+		return
+	}
+
+	// Migrate old global avatar key to current user-specific key once.
+	const legacyAvatar = readStorageStringOrNull(LEGACY_AVATAR_STORAGE_KEY)
+	if (legacyAvatar != null) {
+		avatarUrl.value = legacyAvatar
+		uni.setStorageSync(avatarKey, legacyAvatar)
+		return
+	}
+
+	avatarUrl.value = DEFAULT_AVATAR
+}
+
+const handleChooseAvatar = () => {
+	uni.chooseImage({
+		count: 1,
+		sizeType: ['compressed'],
+		sourceType: ['album'],
+		success: (res) => {
+			const tempFilePaths = res.tempFilePaths
+			if (tempFilePaths.length > 0) {
+				const selectedPath = tempFilePaths[0]
+				const avatarKey = getAvatarStorageKey()
+				avatarUrl.value = selectedPath
+				uni.setStorageSync(avatarKey, selectedPath)
+				uni.showToast({
+					title: '头像已更新',
+					icon: 'success'
+				})
+			}
+		}
+	})
+}
+
+onShow(() => {
+	loadAvatar()
+})
+</script>
+
+<style>
+.container {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background-color: #f5f5f5;
+}
+
+.top-section {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 24px;
+	box-sizing: border-box;
+	background-color: #ffffff;
+}
+
+.avatar {
+	width: 180px;
+	height: 180px;
+	border-radius: 90px;
+	background-color: #e0e0e0;
+}
+
+.bottom-section {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 24px;
+	box-sizing: border-box;
+}
+
+.change-btn {
+	width: 70%;
+	height: 48px;
+	line-height: 48px;
+	border-radius: 8px;
+	background-color: #4caf50;
+	color: #ffffff;
+	font-size: 16px;
+	font-weight: 600;
+}
+</style>

@@ -13,9 +13,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.group12.backend.dto.ChangePasswordRequest;
+import com.group12.backend.dto.ChangeEmailRequest;
+import com.group12.backend.dto.ChangeNameRequest;
 import com.group12.backend.dto.RegisterRequest;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.UserService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 /**
@@ -63,5 +69,50 @@ public class UserController {
     @GetMapping("/{userId}/profile")
     public ResponseEntity<Object> getProfile(@PathVariable String userId) {
         return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));
+    }
+
+    /**
+     * 修改指定用户密码，需先校验原密码。
+     */
+    @PostMapping("/{userId}/password")
+    public ResponseEntity<Object> changePassword(
+            @PathVariable String userId,
+            @Valid @RequestBody ChangePasswordRequest request,
+            HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        return ResponseEntity.ok(Map.of("data", userService.changePassword(userId, request)));
+    }
+
+    /**
+     * 修改指定用户邮箱，需验证登录用户与目标用户一致。
+     */
+    @PostMapping("/{userId}/email")
+    public ResponseEntity<Object> changeEmail(
+            @PathVariable String userId,
+            @Valid @RequestBody ChangeEmailRequest request,
+            HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        return ResponseEntity.ok(Map.of("data", userService.changeEmail(userId, request)));
+    }
+
+    /**
+     * 修改指定用户名，需验证登录用户与目标用户一致。
+     */
+    @PostMapping("/{userId}/name")
+    public ResponseEntity<Object> changeName(
+            @PathVariable String userId,
+            @Valid @RequestBody ChangeNameRequest request,
+            HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        return ResponseEntity.ok(Map.of("data", userService.changeName(userId, request)));
     }
 }

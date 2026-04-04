@@ -4,17 +4,29 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.group12.backend.dto.DailyTrendPointDTO;
+import com.group12.backend.dto.DashboardOverviewDTO;
 import com.group12.backend.dto.DurationRevenueDTO;
+import com.group12.backend.dto.FaultStatsDTO;
+import com.group12.backend.dto.OrderStatsDTO;
 import com.group12.backend.dto.RevenueStatsDTO;
+import com.group12.backend.dto.VehicleStatsDTO;
 import com.group12.backend.entity.Booking;
+import com.group12.backend.entity.Feedback;
+import com.group12.backend.entity.Scooter;
 import com.group12.backend.repository.BookingRepository;
+import com.group12.backend.repository.FeedbackRepository;
+import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.AdminService;
 
 /**
@@ -27,6 +39,12 @@ public class AdminServiceImpl implements AdminService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private ScooterRepository scooterRepository;
+
+    @Autowired
+    private FeedbackRepository feedbackRepository;
 
     @Override
     /**
@@ -66,9 +84,106 @@ public class AdminServiceImpl implements AdminService {
         return getRevenueByDuration(startOfWeek, endOfWeek);
     }
 
+    @Override
+    public DashboardOverviewDTO getDashboardOverview(LocalDate startDate, LocalDate endDate) {
+        List<Booking> allBookingsInRange = getBookingsWithinRange(startDate, endDate);
+        List<Booking> validBookings = getValidBookings(allBookingsInRange);
+
+        return new DashboardOverviewDTO(
+                buildOrderStats(allBookingsInRange, validBookings),
+                buildRevenueStats(validBookings),
+                buildVehicleStats(),
+                buildFaultStats(),
+                buildDailyTrend(validBookings, startDate, endDate));
+    }
+
+    private OrderStatsDTO buildOrderStats(List<Booking> allBookingsInRange, List<Booking> validBookings) {
+        int totalOrders = allBookingsInRange.size();
+        int validOrders = validBookings.size();
+        int cancelledOrders = totalOrders - validOrders;
+        BigDecimal cancellationRate = BigDecimal.ZERO;
+        if (totalOrders > 0) {
+            cancellationRate = BigDecimal.valueOf(cancelledOrders)
+                    .divide(BigDecimal.valueOf(totalOrders), 4, RoundingMode.HALF_UP);
+        }
+        return new OrderStatsDTO(totalOrders, validOrders, cancelledOrders, cancellationRate);
+    }
+
+    private RevenueStatsDTO buildRevenueStats(List<Booking> validBookings) {
+        BigDecimal totalRevenue = sumRevenue(validBookings);
+        int totalOrders = validBookings.size();
+        BigDecimal averageOrderValue = BigDecimal.ZERO;
+        if (totalOrders > 0) {
+            averageOrderValue = totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
+        }
+        return new RevenueStatsDTO(totalRevenue, totalOrders, averageOrderValue);
+    }
+
+    private VehicleStatsDTO buildVehicleStats() {
+        List<Scooter> scooters = scooterRepository.findAll();
+        int totalScooters = scooters.size();
+        int rentedScooters = countScootersByStatus(scooters, "RENTED");
+        int maintenanceScooters = countScootersByStatus(scooters, "MAINTENANCE");
+        int availableScooters = countScootersByStatus(scooters, "AVAILABLE");
+        BigDecimal usageRate = BigDecimal.ZERO;
+        if (totalScooters > 0) {
+            usageRate = BigDecimal.valueOf(rentedScooters)
+                    .divide(BigDecimal.valueOf(totalScooters), 4, RoundingMode.HALF_UP);
+        }
+        return new VehicleStatsDTO(totalScooters, rentedScooters, maintenanceScooters, availableScooters, usageRate);
+    }
+
+    private FaultStatsDTO buildFaultStats() {
+        List<Feedback> feedbacks = feedbackRepository.findAll();
+        int totalFeedbacks = feedbacks.size();
+        int resolvedFeedbacks = (int) feedbacks.stream().filter(f -> Boolean.TRUE.equals(f.getResolved())).count();
+        int unresolvedFeedbacks = totalFeedbacks - resolvedFeedbacks;
+        Map<String, Integer> priorityDistribution = feedbacks.stream()
+                .collect(Collectors.groupingBy(
+                        f -> normalizePriority(f.getPriority()),
+                        LinkedHashMap::new,
+                        Collectors.collectingAndThen(Collectors.counting(), Long::intValue)));
+        return new FaultStatsDTO(totalFeedbacks, resolvedFeedbacks, unresolvedFeedbacks, priorityDistribution);
+    }
+
+    private List<DailyTrendPointDTO> buildDailyTrend(List<Booking> validBookings, LocalDate startDate, LocalDate endDate) {
+        Map<LocalDate, List<Booking>> groupedByDate = validBookings.stream()
+                .collect(Collectors.groupingBy(booking -> booking.getStartTime().toLocalDate()));
+
+        Stream<LocalDate> dateStream;
+        if (startDate != null && endDate != null && !endDate.isBefore(startDate)) {
+            dateStream = startDate.datesUntil(endDate.plusDays(1));
+        } else {
+            dateStream = groupedByDate.keySet().stream().sorted(Comparator.naturalOrder());
+        }
+
+        return dateStream
+                .map(date -> {
+                    List<Booking> dayBookings = groupedByDate.getOrDefault(date, List.of());
+                    return new DailyTrendPointDTO(date, dayBookings.size(), sumRevenue(dayBookings));
+                })
+                .collect(Collectors.toList());
+    }
+
+    private int countScootersByStatus(List<Scooter> scooters, String status) {
+        return (int) scooters.stream()
+                .filter(scooter -> scooter.getStatus() != null && status.equalsIgnoreCase(scooter.getStatus()))
+                .count();
+    }
+
+    private String normalizePriority(String priority) {
+        if (priority == null || priority.isBlank()) {
+            return "UNKNOWN";
+        }
+        return priority.trim().toUpperCase();
+    }
+
     private List<Booking> getValidBookingsWithinRange(LocalDate startDate, LocalDate endDate) {
-        List<Booking> allBookings = bookingRepository.findAll();
-        return allBookings.stream()
+        return getValidBookings(getBookingsWithinRange(startDate, endDate));
+    }
+
+    private List<Booking> getBookingsWithinRange(LocalDate startDate, LocalDate endDate) {
+        return bookingRepository.findAll().stream()
                 .filter(booking -> booking.getStartTime() != null)
                 .filter(booking -> {
                     LocalDate bookingDate = booking.getStartTime().toLocalDate();
@@ -76,6 +191,11 @@ public class AdminServiceImpl implements AdminService {
                     boolean endOk = endDate == null || !bookingDate.isAfter(endDate);
                     return startOk && endOk;
                 })
+                .collect(Collectors.toList());
+    }
+
+    private List<Booking> getValidBookings(List<Booking> bookings) {
+        return bookings.stream()
                 .filter(booking -> {
                     String status = booking.getStatus();
                     return status != null && !"CANCELLED".equalsIgnoreCase(status);

@@ -13,6 +13,12 @@ public final class ErrorMessages {
     public static final String INVALID_EMAIL_OR_PASSWORD = "Invalid email or password";
     public static final String EMAIL_ALREADY_REGISTERED = "Email already registered";
     public static final String USER_NOT_FOUND = "User not found";
+    public static final String FORBIDDEN = "Forbidden";
+    public static final String PASSWORD_INCORRECT = "Current password is incorrect";
+    public static final String SAME_PASSWORD_NOT_ALLOWED = "New password must be different from current password";
+    public static final String SAME_EMAIL_NOT_ALLOWED = "New email must be different from current email";
+    public static final String SAME_NAME_NOT_ALLOWED = "New username must be different from current username";
+    public static final String USERNAME_ALREADY_TAKEN = "Username is already taken";
     public static final String BOOKING_NOT_FOUND = "Booking not found";
     public static final String SCOOTER_NOT_FOUND = "Scooter not found";
     public static final String OVERLAPPING_BOOKING = "Scooter has overlapping reservation. Please try another scooter or time.";
