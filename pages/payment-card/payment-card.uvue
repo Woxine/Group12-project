@@ -1,0 +1,31 @@
+<template>
+	<view class="container">
+		<text class="title">Payment Card TODO Skeleton</text>
+		<button @click="loadCards">Load Cards</button>
+		<button @click="submitAddCard">Add Card</button>
+	</view>
+</template>
+
+<script setup lang="uts">
+// TODO(ID2): 支付卡页面函数骨架（不实现业务）
+const loadCards = () => {
+	// TODO: GET /api/v1/users/{userId}/payment-cards
+}
+
+const submitAddCard = () => {
+	// TODO: 前端表单校验 + POST 保存卡片
+}
+
+const onSetDefault = (cardId: string) => {
+	// TODO: POST /api/v1/users/{userId}/payment-cards/{cardId}/default
+}
+
+const onDeleteCard = (cardId: string) => {
+	// TODO: DELETE /api/v1/users/{userId}/payment-cards/{cardId}
+}
+</script>
+
+<style>
+.container { padding: 20px; }
+.title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+</style>

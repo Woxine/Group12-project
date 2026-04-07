@@ -101,6 +101,18 @@
 			"style": {
 				"navigationBarTitleText": "username"
 			}
+		},
+		{
+			"path": "pages/security/security",
+			"style": {
+				"navigationBarTitleText": "security-todo"
+			}
+		},
+		{
+			"path": "pages/payment-card/payment-card",
+			"style": {
+				"navigationBarTitleText": "payment-card-todo"
+			}
 		}
 	],
 	"globalStyle": {
