@@ -1,31 +1,366 @@
 <template>
 	<view class="container">
-		<text class="title">Payment Card TODO Skeleton</text>
-		<button @click="loadCards">Load Cards</button>
-		<button @click="submitAddCard">Add Card</button>
+		<view class="scroll-wrap" :style="{ height: scrollWrapHeight + 'px' }">
+			<scroll-view class="scroll-area" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }">
+				<text class="title">Payment Cards</text>
+
+				<view class="form_card">
+					<text class="section_title">Add New Card</text>
+					<input v-model="form.holderName" class="input" placeholder="Card holder name" />
+					<input v-model="form.brand" class="input" placeholder="Brand (e.g. VISA)" />
+					<input v-model="form.cardNumber" class="input" type="number" maxlength="19" placeholder="Card number" />
+					<view class="row">
+						<input v-model="form.expiryMonth" class="input half" type="number" maxlength="2" placeholder="MM" />
+						<input v-model="form.expiryYear" class="input half" type="number" maxlength="4" placeholder="YYYY" />
+					</view>
+					<button class="primary_btn" :disabled="isSubmitting" @click="submitAddCard">
+						{{ isSubmitting ? 'Adding...' : 'Add Card' }}
+					</button>
+				</view>
+
+				<view class="section">
+					<text class="section_title">Saved Cards</text>
+					<text v-if="isLoading" class="tip">Loading...</text>
+					<text v-else-if="cards.length == 0" class="tip">No cards saved yet</text>
+
+					<view v-else>
+						<view v-for="card in cards" :key="card.id" class="card_item">
+							<view class="card_main">
+								<text class="card_brand">{{ card.brand }}</text>
+								<text class="card_number">{{ card.maskedNumber }}</text>
+								<text class="card_extra">{{ card.holderName }} · {{ card.expiryMonth }}/{{ card.expiryYear }}</text>
+								<text v-if="card.isDefault" class="default_tag">Default</text>
+							</view>
+							<view class="actions">
+								<button class="mini_btn" :disabled="activeCardActionId == card.id" @click="onSetDefault(card.id)">
+									Set Default
+								</button>
+								<button class="mini_btn danger" :disabled="activeCardActionId == card.id" @click="onDeleteCard(card.id)">
+									Delete
+								</button>
+							</view>
+						</view>
+					</view>
+			</view>
+			</scroll-view>
+		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
-// TODO(ID2): 支付卡页面函数骨架（不实现业务）
+import { reactive, ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { BASE_URL } from '../../common/api.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+
+type PaymentCardItem = {
+	id: string
+	holderName: string
+	brand: string
+	maskedNumber: string
+	expiryMonth: number
+	expiryYear: number
+	isDefault: boolean
+}
+
+const cards = ref<PaymentCardItem[]>([])
+const isLoading = ref(false)
+const isSubmitting = ref(false)
+const activeCardActionId = ref<string>('')
+const scrollWrapHeight = ref(600)
+const scrollViewHeight = ref(560)
+
+const form = reactive({
+	holderName: '',
+	brand: '',
+	cardNumber: '',
+	expiryMonth: '',
+	expiryYear: ''
+})
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const getAuth = (): UTSJSONObject | null => {
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
+	if (userId == null || token == null) {
+		uni.showToast({ title: getAppMessage('auth', 'loginRequired', 'Please login first'), icon: 'none' })
+		return null
+	}
+	const auth = {} as UTSJSONObject
+	auth['userId'] = userId
+	auth['token'] = token
+	return auth
+}
+
+const normalizeCardNumber = (value: string): string => {
+	return value.replace(/\s/g, '').trim()
+}
+
+const toPaymentCardItem = (raw: UTSJSONObject): PaymentCardItem => {
+	return {
+		id: raw['id'] != null ? ('' + raw['id']) : '',
+		holderName: raw['holderName'] != null ? ('' + raw['holderName']) : '',
+		brand: raw['brand'] != null ? ('' + raw['brand']) : '',
+		maskedNumber: raw['maskedNumber'] != null ? ('' + raw['maskedNumber']) : '',
+		expiryMonth: raw['expiryMonth'] != null ? parseInt('' + raw['expiryMonth']) : 0,
+		expiryYear: raw['expiryYear'] != null ? parseInt('' + raw['expiryYear']) : 0,
+		isDefault: raw['isDefault'] == true
+	}
+}
+
+const parseCardList = (dataField: any | null): PaymentCardItem[] => {
+	if (dataField == null || !Array.isArray(dataField)) {
+		return []
+	}
+	const rawList = dataField as UTSJSONObject[]
+	const result: PaymentCardItem[] = []
+	for (let i = 0; i < rawList.length; i++) {
+		result.push(toPaymentCardItem(rawList[i]))
+	}
+	return result
+}
+
+const validateForm = (): boolean => {
+	const holderName = ('' + form.holderName).trim()
+	const brand = ('' + form.brand).trim()
+	const cardNumber = normalizeCardNumber('' + form.cardNumber)
+	const month = parseInt('' + form.expiryMonth)
+	const year = parseInt('' + form.expiryYear)
+	if (holderName.length < 2) {
+		uni.showToast({ title: getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'), icon: 'none' })
+		return false
+	}
+	if (brand.length < 2) {
+		uni.showToast({ title: getAppMessage('paymentCard', 'brandInvalid', 'Invalid brand'), icon: 'none' })
+		return false
+	}
+	if (!/^\d{13,19}$/.test(cardNumber)) {
+		uni.showToast({ title: getAppMessage('paymentCard', 'cardNumberInvalid', 'Invalid card number'), icon: 'none' })
+		return false
+	}
+	if (isNaN(month) || month < 1 || month > 12) {
+		uni.showToast({ title: getAppMessage('paymentCard', 'expiryMonthInvalid', 'Invalid expiry month'), icon: 'none' })
+		return false
+	}
+	if (isNaN(year) || year < 2024) {
+		uni.showToast({ title: getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'), icon: 'none' })
+		return false
+	}
+	return true
+}
+
 const loadCards = () => {
-	// TODO: GET /api/v1/users/{userId}/payment-cards
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	isLoading.value = true
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode == 401) {
+				uni.showToast({ title: getAppMessage('auth', 'loginExpired', 'Login expired'), icon: 'none' })
+				return
+			}
+			if (res.statusCode == 403) {
+				uni.showToast({ title: getAppMessage('auth', 'loginAgain', 'Please log in again'), icon: 'none' })
+				cards.value = []
+				return
+			}
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const responseData = res.data as UTSJSONObject | null
+				const dataField = responseData != null ? responseData['data'] : null
+				cards.value = parseCardList(dataField)
+				return
+			}
+			uni.showToast({
+				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')),
+				icon: 'none'
+			})
+		},
+		fail: () => {
+			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+		},
+		complete: () => {
+			isLoading.value = false
+		}
+	})
 }
 
 const submitAddCard = () => {
-	// TODO: 前端表单校验 + POST 保存卡片
+	if (isSubmitting.value) return
+	if (!validateForm()) return
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	isSubmitting.value = true
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		data: {
+			holderName: ('' + form.holderName).trim(),
+			brand: ('' + form.brand).trim(),
+			cardNumber: normalizeCardNumber('' + form.cardNumber),
+			expiryMonth: parseInt('' + form.expiryMonth),
+			expiryYear: parseInt('' + form.expiryYear)
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.showToast({ title: getAppMessage('paymentCard', 'addSuccess', 'Card added'), icon: 'success' })
+				form.holderName = ''
+				form.brand = ''
+				form.cardNumber = ''
+				form.expiryMonth = ''
+				form.expiryYear = ''
+				loadCards()
+				return
+			}
+			uni.showToast({
+				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Failed to add card')),
+				icon: 'none'
+			})
+		},
+		fail: () => {
+			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+		},
+		complete: () => {
+			isSubmitting.value = false
+		}
+	})
 }
 
 const onSetDefault = (cardId: string) => {
-	// TODO: POST /api/v1/users/{userId}/payment-cards/{cardId}/default
+	if (activeCardActionId.value != '') return
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	activeCardActionId.value = cardId
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards/' + cardId + '/default',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.showToast({ title: getAppMessage('paymentCard', 'setDefaultSuccess', 'Default card updated'), icon: 'success' })
+				loadCards()
+				return
+			}
+			uni.showToast({
+				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'setDefaultFailed', 'Failed to set default card')),
+				icon: 'none'
+			})
+		},
+		fail: () => {
+			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+		},
+		complete: () => {
+			activeCardActionId.value = ''
+		}
+	})
 }
 
 const onDeleteCard = (cardId: string) => {
-	// TODO: DELETE /api/v1/users/{userId}/payment-cards/{cardId}
+	if (activeCardActionId.value != '') return
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	uni.showModal({
+		title: getAppMessage('paymentCard', 'deleteConfirmTitle', 'Delete Card'),
+		content: getAppMessage('paymentCard', 'deleteConfirmContent', 'Are you sure to delete this card?'),
+		success: (modalRes) => {
+			if (!modalRes.confirm) return
+			activeCardActionId.value = cardId
+			uni.request({
+				url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards/' + cardId,
+				method: 'DELETE',
+				header: {
+					'Content-Type': 'application/json',
+					'Authorization': 'Bearer ' + token
+				},
+				success: (res) => {
+					if (res.statusCode >= 200 && res.statusCode < 300) {
+						uni.showToast({ title: getAppMessage('paymentCard', 'deleteSuccess', 'Card deleted'), icon: 'success' })
+						loadCards()
+						return
+					}
+					uni.showToast({
+						title: getResponseMessage(res.data, getAppMessage('paymentCard', 'deleteFailed', 'Failed to delete card')),
+						icon: 'none'
+					})
+				},
+				fail: () => {
+					uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+				},
+				complete: () => {
+					activeCardActionId.value = ''
+				}
+			})
+		}
+	})
 }
+
+const setScrollHeight = () => {
+	try {
+		const sys = uni.getSystemInfoSync()
+		const h = sys.windowHeight != null ? sys.windowHeight : 600
+		scrollWrapHeight.value = h
+		scrollViewHeight.value = h - 24
+	} catch (e) {
+		scrollWrapHeight.value = 600
+		scrollViewHeight.value = 560
+	}
+}
+
+onMounted(() => {
+	setScrollHeight()
+})
+
+onShow(() => {
+	setScrollHeight()
+	loadCards()
+})
 </script>
 
 <style>
-.container { padding: 20px; }
-.title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+.container { width: 100%; height: 100%; background: #f5f5f5; box-sizing: border-box; display: flex; flex-direction: column; }
+.scroll-wrap { width: 100%; }
+.scroll-area { width: 100%; padding: 16px; padding-bottom: 24px; box-sizing: border-box; }
+.title { font-size: 20px; font-weight: bold; margin-bottom: 12px; color: #333; }
+.form_card, .section { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 12px; }
+.section_title { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 8px; display: block; }
+.input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 8px; background: #fafafa; }
+.row { display: flex; gap: 8px; }
+.half { flex: 1; }
+.primary_btn { margin-top: 6px; background: #4CAF50; color: #fff; border: none; height: 40px; font-size: 16px; }
+.tip { color: #999; font-size: 13px; margin-top: 8px; display: block; }
+.card_item { border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-top: 8px; }
+.card_main { display: flex; flex-direction: column; }
+.card_brand { font-weight: bold; color: #333; font-size: 14px; }
+.card_number { color: #444; margin-top: 2px; }
+.card_extra { color: #888; font-size: 12px; margin-top: 4px; }
+.default_tag { margin-top: 6px; color: #4CAF50; font-size: 12px; }
+.actions { display: flex; gap: 8px; margin-top: 8px; }
+.mini_btn { flex: 1; font-size: 16px; background: #f5f5f5; color: #333; height: 40px; border-radius: 8px; }
+.danger { color: #c62828; }
 </style>

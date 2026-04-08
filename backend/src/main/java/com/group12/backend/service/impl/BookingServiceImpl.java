@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.group12.backend.dto.BookingConfirmationEmailPayload;
 import com.group12.backend.dto.BookingResponse;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.entity.Booking;
@@ -19,6 +20,7 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BookingService;
+import com.group12.backend.service.EmailNotificationService;
 
 /**
  * 实现预约订单创建、取消、完成和车辆状态同步的业务逻辑。
@@ -34,6 +36,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmailNotificationService emailNotificationService;
 
     @Override
     @Transactional
@@ -108,6 +113,8 @@ public class BookingServiceImpl implements BookingService {
         scooter.setStatus("RENTED");
         scooterRepository.save(scooter);
 
+        sendBookingConfirmationSafely(user, scooter, savedBooking, durationRequest);
+
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
         String createdAtStr = savedBooking.getStartTime() == null ? "" : savedBooking.getStartTime().format(fmt);
         BookingResponse response = new BookingResponse(
@@ -119,6 +126,20 @@ public class BookingServiceImpl implements BookingService {
         );
         response.setTotalPrice(savedBooking.getTotalPrice() != null ? savedBooking.getTotalPrice().doubleValue() : null);
         return response;
+    }
+
+    private void sendBookingConfirmationSafely(User user, Scooter scooter, Booking booking, String durationRequest) {
+        try {
+            BookingConfirmationEmailPayload payload = new BookingConfirmationEmailPayload();
+            payload.setEmail(user.getEmail());
+            payload.setBookingId(String.valueOf(booking.getId()));
+            payload.setScooterId(String.valueOf(scooter.getId()));
+            payload.setDuration(durationRequest);
+            payload.setTotalPrice(booking.getTotalPrice() == null ? "" : booking.getTotalPrice().toPlainString());
+            emailNotificationService.sendBookingConfirmation(payload);
+        } catch (Exception ignored) {
+            // 邮件失败不影响订单主流程
+        }
     }
 
     @Override

@@ -23,6 +23,10 @@ public final class ErrorMessages {
     public static final String SCOOTER_NOT_FOUND = "Scooter not found";
     public static final String OVERLAPPING_BOOKING = "Scooter has overlapping reservation. Please try another scooter or time.";
     public static final String ACTIVE_BOOKING_EXISTS = "You already have an active booking. Please cancel it or wait until it ends before booking again.";
+    public static final String PAYMENT_CARD_NOT_FOUND = "Payment card not found";
+    public static final String PAYMENT_CARD_DUPLICATE = "Payment card already exists";
+    public static final String PAYMENT_CARD_EXPIRED = "Payment card is expired";
+    public static final String INVALID_CARD_NUMBER = "Invalid card number";
 
     private ErrorMessages() {
     }

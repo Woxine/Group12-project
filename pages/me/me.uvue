@@ -131,6 +131,10 @@
 					<text class="menu-text">Feedback</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
+				<navigator url="/pages/payment-card/payment-card" open-type="navigate" class="menu-item">
+					<text class="menu-text">Payment Cards</text>
+					<text class="menu-arrow">›</text>
+				</navigator>
 			</view>
 
 			<!-- Logout Button -->
@@ -566,7 +570,9 @@ onShow(() => {
 
 .profile-header {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
+	justify-content: center;
 }
 
 .avatar {
@@ -574,13 +580,15 @@ onShow(() => {
 	height: 72px;
 	border-radius: 36px;
 	background-color: #e0e0e0;
-	margin-right: 20px;
+	margin-right: 0;
+	margin-bottom: 12px;
 }
 
 .user-info {
-	flex: 1;
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	text-align: center;
 }
 
 .user-name {

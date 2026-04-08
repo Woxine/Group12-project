@@ -58,39 +58,43 @@ class PaymentCardControllerMvcTest {
     @Test
     @DisplayName("POST 创建卡片：2xx 且委托 PaymentCardService#createCard")
     void createCard_delegatesToService() throws Exception {
-        String body = "{\"holderName\":\"A\",\"cardNumber\":\"4111111111111111\"}";
-        mockMvc.perform(post("/api/v1/users/user-1/payment-cards")
+        String body = "{\"holderName\":\"Alice\",\"cardNumber\":\"4111111111111111\",\"brand\":\"VISA\",\"expiryMonth\":12,\"expiryYear\":2030}";
+        mockMvc.perform(post("/api/v1/users/1/payment-cards")
                         .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L)
                         .contentType(APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().is2xxSuccessful());
-        verify(paymentCardService).createCard(eq("user-1"), any(StorePaymentCardRequest.class));
+        verify(paymentCardService).createCard(eq("1"), any(StorePaymentCardRequest.class));
     }
 
     @Test
     @DisplayName("GET 列表：2xx 且委托 PaymentCardService#listCards")
     void listCards_delegatesToService() throws Exception {
-        mockMvc.perform(get("/api/v1/users/user-1/payment-cards")
-                        .header(HttpHeaders.AUTHORIZATION, AUTH))
+        mockMvc.perform(get("/api/v1/users/1/payment-cards")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L))
                 .andExpect(status().is2xxSuccessful());
-        verify(paymentCardService).listCards("user-1");
+        verify(paymentCardService).listCards("1");
     }
 
     @Test
     @DisplayName("DELETE 删除卡片：2xx 且委托 PaymentCardService#deleteCard")
     void deleteCard_delegatesToService() throws Exception {
-        mockMvc.perform(delete("/api/v1/users/user-1/payment-cards/card-1")
-                        .header(HttpHeaders.AUTHORIZATION, AUTH))
+        mockMvc.perform(delete("/api/v1/users/1/payment-cards/1")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L))
                 .andExpect(status().is2xxSuccessful());
-        verify(paymentCardService).deleteCard("user-1", "card-1");
+        verify(paymentCardService).deleteCard("1", "1");
     }
 
     @Test
     @DisplayName("POST 设默认卡：2xx 且委托 PaymentCardService#setDefaultCard")
     void setDefaultCard_delegatesToService() throws Exception {
-        mockMvc.perform(post("/api/v1/users/user-1/payment-cards/card-1/default")
-                        .header(HttpHeaders.AUTHORIZATION, AUTH))
+        mockMvc.perform(post("/api/v1/users/1/payment-cards/1/default")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L))
                 .andExpect(status().is2xxSuccessful());
-        verify(paymentCardService).setDefaultCard("user-1", "card-1");
+        verify(paymentCardService).setDefaultCard("1", "1");
     }
 }

@@ -111,7 +111,7 @@
 		{
 			"path": "pages/payment-card/payment-card",
 			"style": {
-				"navigationBarTitleText": "payment-card-todo"
+				"navigationBarTitleText": "Payment Cards"
 			}
 		}
 	],

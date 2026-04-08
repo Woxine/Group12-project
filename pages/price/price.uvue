@@ -270,10 +270,15 @@ const stepSendBooking = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				let confirmedPrice: number = pendingTotalPrice.value;
+				let bookingId: string = '';
 				const resData = res.data as UTSJSONObject | null;
 				if (resData != null) {
 					const dataObj = resData['data'] as UTSJSONObject | null;
 					if (dataObj != null) {
+						const serverBookingId = dataObj['id'];
+						if (serverBookingId != null) {
+							bookingId = '' + serverBookingId;
+						}
 						const serverPrice = dataObj['totalPrice'];
 						if (serverPrice != null) {
 							confirmedPrice = serverPrice as number;
@@ -282,8 +287,15 @@ const stepSendBooking = () => {
 				}
 				const priceStr = confirmedPrice.toFixed(2);
 				uni.setStorageSync('totalPrice', priceStr);
-				uni.showToast({ title: bookingMessage('bookingSuccess', 'Booking successful, proceed to payment'), icon: 'success' });
-				setTimeout(() => { uni.navigateTo({ url: '/pages/payment/payment?amount=' + priceStr }); }, 1000);
+				if (bookingId.length > 0) {
+					uni.setStorageSync('pendingBookingId', bookingId);
+				}
+				uni.showToast({ title: bookingMessage('bookingSuccess', 'Booking successful, proceed to payment'), icon: 'success', duration: 800 });
+				let paymentUrl = '/pages/payment/payment?amount=' + priceStr;
+				if (bookingId.length > 0) {
+					paymentUrl = paymentUrl + '&bookingId=' + bookingId;
+				}
+				uni.navigateTo({ url: paymentUrl });
 			} else {
 				let errorMsg: string = getResponseMessage(res.data, bookingMessage('bookingFailed', 'Booking failed, please try again'));
 				if (res.statusCode == 401) {
@@ -308,25 +320,13 @@ const stepSendBooking = () => {
 	});
 };
 
-const stepGetLocationAndBook = () => {
-	uni.getLocation({
-		type: 'gcj02',
-		success: (_locRes) => {
-			stepSendBooking();
-		},
-		fail: () => {
-			stepSendBooking();
-		}
-	});
-};
-
 const hasActivePending = ref<boolean>(false);
 
 const stepAfterActiveCheck = () => {
 	if (hasActivePending.value) {
 		uni.showToast({ title: bookingMessage('activeBookingExists', 'You already have an active booking.'), icon: 'none', duration: 3000 });
 	} else {
-		setTimeout(() => { stepGetLocationAndBook(); }, 10);
+		setTimeout(() => { stepSendBooking(); }, 10);
 	}
 };
 

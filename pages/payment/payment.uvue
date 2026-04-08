@@ -35,6 +35,27 @@
 				
 				<!-- 银行卡支付表单 -->
 				<view v-if="paymentMethodIndex == 0" class="payment_form">
+					<view class="form_group" v-if="savedCards.length > 0">
+						<view class="saved_cards_header">
+							<text class="label">Saved Cards</text>
+							<text class="manage_cards_link" @click="goManageCards">Manage</text>
+						</view>
+						<view v-for="card in savedCards" :key="card['id']" class="saved_card_item"
+							:class="selectedCardId == ('' + card['id']) ? 'saved_card_item_active' : ''"
+							@click="selectSavedCard('' + card['id'])">
+							<text class="saved_card_main">{{ card['brand'] }} {{ card['maskedNumber'] }}</text>
+							<text class="saved_card_sub">{{ card['holderName'] }} · {{ card['expiryMonth'] }}/{{ card['expiryYear'] }}</text>
+						</view>
+					</view>
+					<view class="form_group" v-else>
+						<view class="saved_cards_header">
+							<text class="label">No saved cards</text>
+							<text class="manage_cards_link" @click="goManageCards">Add Card</text>
+						</view>
+					</view>
+					
+					<view class="span1"></view>
+					
 					<!-- 选择银行 -->
 					<view class="form_group">
 						<text class="label">Bank</text>
@@ -147,7 +168,9 @@
 <script setup lang="uts">
 // 支付逻辑：读取订单金额、验证支付信息、模拟支付流程并跳转首页
 import { reactive, ref } from 'vue';
-import { onLoad } from '@dcloudio/uni-app';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { BASE_URL } from '../../common/api.uts';
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 
 // 支付方式列表
 const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay'];
@@ -159,6 +182,9 @@ const bankIndex = ref(0);
 
 // 订单金额 - 优先从 URL 参数读取（服务端计算值），其次从本地存储兜底
 const orderAmount = ref<number>(1.0);
+const savedCards = ref<UTSJSONObject[]>([]);
+const selectedCardId = ref<string>('');
+const pendingBookingId = ref<string>('');
 
 onLoad((options) => {
 	const params = options as UTSJSONObject | null;
@@ -172,6 +198,11 @@ onLoad((options) => {
 				resolved = true;
 			}
 		}
+		const bookingIdParam = params['bookingId'];
+		if (bookingIdParam != null && ('' + bookingIdParam).length > 0) {
+			pendingBookingId.value = '' + bookingIdParam;
+			uni.setStorageSync('pendingBookingId', pendingBookingId.value);
+		}
 	}
 	if (!resolved) {
 		const storedAmount = uni.getStorageSync('totalPrice');
@@ -182,7 +213,85 @@ onLoad((options) => {
 			}
 		}
 	}
+	if (pendingBookingId.value.length == 0) {
+		const storedRaw = uni.getStorageSync('pendingBookingId');
+		const storedBookingId: string | null = storedRaw != null ? ('' + storedRaw).trim() : null;
+		if (storedBookingId != null) {
+			pendingBookingId.value = storedBookingId;
+		}
+	}
 });
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key);
+	if (raw == null) return null;
+	const value = ('' + raw).trim();
+	return value.length < 1 ? null : value;
+};
+
+const loadSavedCards = () => {
+	const userId = readStorageStringOrNull('userId');
+	const token = readStorageStringOrNull('token');
+	if (userId == null || token == null) {
+		savedCards.value = [];
+		selectedCardId.value = '';
+		return;
+	}
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode == 401 || res.statusCode == 403) {
+				savedCards.value = [];
+				selectedCardId.value = '';
+				return;
+			}
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const responseData = res.data as UTSJSONObject | null;
+				const dataField = responseData != null ? responseData['data'] : null;
+				savedCards.value = dataField != null ? (dataField as UTSJSONObject[]) : [];
+				let defaultCardId = '';
+				for (let i = 0; i < savedCards.value.length; i++) {
+					const card = savedCards.value[i];
+					if (card['isDefault'] == true) {
+						defaultCardId = '' + card['id'];
+						break;
+					}
+				}
+				selectedCardId.value = defaultCardId.length > 0 ? defaultCardId : (savedCards.value.length > 0 ? ('' + savedCards.value[0]['id']) : '');
+				return;
+			}
+			uni.showToast({
+				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')),
+				icon: 'none'
+			});
+			savedCards.value = [];
+			selectedCardId.value = '';
+		},
+		fail: () => {
+			uni.showToast({
+				title: getAppMessage('network', 'requestFailed', 'Network error'),
+				icon: 'none'
+			});
+			savedCards.value = [];
+			selectedCardId.value = '';
+		}
+	});
+};
+
+const selectSavedCard = (cardId: string) => {
+	selectedCardId.value = cardId;
+};
+
+const goManageCards = () => {
+	uni.navigateTo({
+		url: '/pages/payment-card/payment-card'
+	});
+};
 
 // 支付信息对象
 type PaymentInfo = {
@@ -246,6 +355,9 @@ const validatePaymentInfo = (): boolean => {
 	const method = paymentMethodIndex.value;
 	
 	if (method == 0) {
+		if (selectedCardId.value.length > 0) {
+			return true;
+		}
 		// 银行卡验证
 		const cardNum = paymentInfo.cardNumber.replace(/\s/g, '');
 		if (cardNum == '' || cardNum.length != 16) {
@@ -299,14 +411,16 @@ const onPayment = () => {
 	// 模拟支付请求
 	setTimeout(() => {
 		const method = paymentMethods[paymentMethodIndex.value];
+		const cardMessage = selectedCardId.value.length > 0 ? ' (saved card)' : '';
 		uni.showToast({
-			title: `Payment successful via ${method}!`,
+			title: `Payment successful via ${method}${cardMessage}!`,
 			icon: 'success',
 			duration: 2000
 		});
 		
 		isPaymentProcessing.value = false;
 		uni.removeStorageSync('totalPrice');
+		uni.removeStorageSync('pendingBookingId');
 		
 		// 支付成功后跳转到首页
 		setTimeout(() => {
@@ -319,10 +433,74 @@ const onPayment = () => {
 
 // 取消支付，返回 bikelist 页面
 const onCancel = () => {
-	uni.reLaunch({
-		url: '/pages/bikelist/bikelist'
+	if (isPaymentProcessing.value) return;
+	let bookingId = '';
+	if (pendingBookingId.value.length > 0) {
+		bookingId = pendingBookingId.value;
+	} else {
+		const storedBookingId = readStorageStringOrNull('pendingBookingId');
+		bookingId = storedBookingId != null ? storedBookingId : '';
+	}
+	if (bookingId.length == 0) {
+		uni.removeStorageSync('totalPrice');
+		uni.reLaunch({
+			url: '/pages/bikelist/bikelist'
+		});
+		return;
+	}
+
+	const token = readStorageStringOrNull('token');
+	if (token == null || token.length == 0) {
+		uni.showToast({
+			title: getAppMessage('auth', 'loginRequired', 'Please login first'),
+			icon: 'none'
+		});
+		return;
+	}
+
+	isPaymentProcessing.value = true;
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings/' + bookingId,
+		method: 'DELETE',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.removeStorageSync('pendingBookingId');
+				uni.removeStorageSync('totalPrice');
+				uni.showToast({
+					title: getAppMessage('booking', 'cancelBookingSuccess', 'Booking cancelled'),
+					icon: 'success'
+				});
+				setTimeout(() => {
+					uni.reLaunch({
+						url: '/pages/bikelist/bikelist'
+					});
+				}, 800);
+				return;
+			}
+			uni.showToast({
+				title: getResponseMessage(res.data, getAppMessage('booking', 'cancelBookingFailed', 'Failed to cancel')),
+				icon: 'none'
+			});
+		},
+		fail: () => {
+			uni.showToast({
+				title: getAppMessage('network', 'requestFailed', 'Network error'),
+				icon: 'none'
+			});
+		},
+		complete: () => {
+			isPaymentProcessing.value = false;
+		}
 	});
 };
+
+onShow(() => {
+	loadSavedCards();
+});
 </script>
 
 <style scoped>
@@ -517,6 +695,44 @@ const onCancel = () => {
 	font-size: 13px;
 	color: #333;
 	font-weight: 400;
+}
+
+.saved_cards_header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.manage_cards_link {
+	font-size: 12px;
+	color: #4CAF50;
+}
+
+.saved_card_item {
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	padding: 8px 10px;
+	margin-bottom: 6px;
+	background-color: #fafafa;
+}
+
+.saved_card_item_active {
+	border-color: #4CAF50;
+	background-color: #eef8ef;
+}
+
+.saved_card_main {
+	font-size: 13px;
+	color: #333;
+	font-weight: bold;
+}
+
+.saved_card_sub {
+	font-size: 12px;
+	color: #777;
+	margin-top: 2px;
 }
 
 .arrow_text {
