@@ -46,8 +46,14 @@ $args = @(
     "test"
 )
 
-& $mavenCmd @args 2>&1 | Tee-Object -FilePath $logFile
-$exitCode = $LASTEXITCODE
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    & $mavenCmd @args 2>&1 | Tee-Object -FilePath $logFile
+    $exitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $prevEap
+}
 
 if ($exitCode -ne 0) {
     Write-Host "[Sprint2] FAILED (exit code: $exitCode)" -ForegroundColor Red

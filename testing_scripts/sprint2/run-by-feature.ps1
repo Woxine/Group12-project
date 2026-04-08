@@ -59,12 +59,20 @@ $args = @(
     "-DforkCount=1",
     "-DreuseForks=false",
     "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
     "-Dtest=$testSelector",
     "test"
 )
 
-& $mavenCmd @args 2>&1 | Tee-Object -FilePath $logFile
-$exitCode = $LASTEXITCODE
+# ErrorAction Stop + 2>&1 会把 JVM 打到 stderr 的 WARNING 当成终止错误，中断 Maven。
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    & $mavenCmd @args 2>&1 | Tee-Object -FilePath $logFile
+    $exitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $prevEap
+}
 
 if ($exitCode -ne 0) {
     Write-Host "[Sprint2][$Feature] FAILED (exit code: $exitCode)" -ForegroundColor Red
