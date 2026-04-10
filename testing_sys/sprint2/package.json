@@ -1,0 +1,12 @@
+{
+  "name": "group12-sys-test-sprint2",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test:sprint2": "node ./scripts/run.mjs"
+  }
+}
+
