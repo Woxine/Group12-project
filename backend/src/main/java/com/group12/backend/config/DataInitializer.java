@@ -1,71 +1,42 @@
 package com.group12.backend.config;
 
-import java.math.BigDecimal;
-import java.util.List;
-
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import com.group12.backend.entity.LocationPoint;
-import com.group12.backend.entity.Scooter;
-import com.group12.backend.repository.LocationPointRepository;
-import com.group12.backend.repository.ScooterRepository;
+import com.group12.backend.entity.User;
+import com.group12.backend.repository.UserRepository;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
-    private final LocationPointRepository locationPointRepository;
-    private final ScooterRepository scooterRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(LocationPointRepository locationPointRepository,
-                           ScooterRepository scooterRepository) {
-        this.locationPointRepository = locationPointRepository;
-        this.scooterRepository = scooterRepository;
+    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
-    public void run(String... args) {
-        if (scooterRepository.count() > 0) {
-            return;
-        }
-
-        LocationPoint lp1 = new LocationPoint();
-        lp1.setName("University of Leeds");
-        lp1.setLat(53.8067);
-        lp1.setLng(-1.5550);
-        lp1 = locationPointRepository.save(lp1);
-
-        LocationPoint lp2 = new LocationPoint();
-        lp2.setName("Leeds City Centre");
-        lp2.setLat(53.7996);
-        lp2.setLng(-1.5491);
-        lp2 = locationPointRepository.save(lp2);
-
-        LocationPoint lp3 = new LocationPoint();
-        lp3.setName("Leeds Train Station");
-        lp3.setLat(53.7953);
-        lp3.setLng(-1.5490);
-        lp3 = locationPointRepository.save(lp3);
-
-        List<Object[]> seedData = List.of(
-            new Object[]{"AVAILABLE", 53.8067, -1.5550, new BigDecimal("3.50"), lp1},
-            new Object[]{"AVAILABLE", 53.8071, -1.5542, new BigDecimal("3.50"), lp1},
-            new Object[]{"AVAILABLE", 53.7996, -1.5491, new BigDecimal("3.00"), lp2},
-            new Object[]{"RENTED",    53.7985, -1.5478, new BigDecimal("3.00"), lp2},
-            new Object[]{"AVAILABLE", 53.7953, -1.5490, new BigDecimal("2.50"), lp3},
-            new Object[]{"AVAILABLE", 53.7960, -1.5483, new BigDecimal("2.50"), lp3},
-            new Object[]{"MAINTENANCE", 53.8010, -1.5510, new BigDecimal("3.00"), lp2},
-            new Object[]{"AVAILABLE", 53.8045, -1.5530, new BigDecimal("3.50"), lp1}
-        );
-
-        for (Object[] row : seedData) {
-            Scooter s = new Scooter();
-            s.setStatus((String) row[0]);
-            s.setLocationLat((Double) row[1]);
-            s.setLocationLng((Double) row[2]);
-            s.setHourRate((BigDecimal) row[3]);
-            s.setLocationPoint((LocationPoint) row[4]);
-            scooterRepository.save(s);
+    public void run(String... args) throws Exception {
+        String adminEmail = "admin@admin.com";
+        // 检查是否已经存在该管理员账号，不存在则创建
+        if (userRepository.findByEmail(adminEmail).isEmpty()) {
+            User admin = new User();
+            admin.setEmail(adminEmail);
+            admin.setName("Admin");
+            // 使用项目自带的密码编码器加密密码
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setRole("ADMIN");
+            admin.setIsStudent(false);
+            admin.setAge(25);
+            userRepository.save(admin);
+            System.out.println("==========================================================");
+            System.out.println("默认管理员账号已成功注入！");
+            System.out.println("账号: " + adminEmail);
+            System.out.println("密码: admin123");
+            System.out.println("==========================================================");
         }
     }
 }

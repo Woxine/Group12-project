@@ -1,4 +1,8 @@
+/**
+ * 统一的文案管理文件
+ */
 export const APP_MESSAGES = {
+	// 认证相关文案
 	auth: {
 		fillCredentials: 'Please fill in both email and password.',
 		loginRequired: 'Please login first',
@@ -9,6 +13,7 @@ export const APP_MESSAGES = {
 		adminLoginSuccess: 'Admin login',
 		loginSuccess: 'Login successful!'
 	},
+	// 网络相关文案
 	network: {
 		requestFailed: 'Network error, please try again',
 		requestFailedLater: 'Network error, please try again later.',
@@ -17,11 +22,13 @@ export const APP_MESSAGES = {
 		timeout: 'Request timed out. Please check your server and try again.',
 		unexpected: 'A network error occurred. Please check your connection and try again.'
 	},
+	// 通用相关文案
 	common: {
 		cancelled: 'Cancelled',
 		unexpectedError: 'An unexpected error occurred.',
 		operationSuccess: 'Operation successful'
 	},
+	// 注册相关文案
 	register: {
 		enterName: 'Please enter your name.',
 		enterValidEmail: 'Please enter a valid email address.',
@@ -33,6 +40,7 @@ export const APP_MESSAGES = {
 		serverError: 'Server error. ',
 		emptyServerResponse: 'Server returned empty response.'
 	},
+	// 预约相关文案
 	booking: {
 		selectStartTimeFirst: 'Please select start time first',
 		selectStartTime: 'Please select start time',
@@ -53,14 +61,19 @@ export const APP_MESSAGES = {
 		endRideSuccess: 'Ride ended',
 		endRideFailed: 'Failed to end ride',
 		cannotEndRide: 'This booking cannot be ended',
-		locationUnavailable: 'Location unavailable, cannot end ride'
+		locationUnavailable: 'Location unavailable, cannot end ride',
+		cannotExtendBooking: 'This booking cannot be extended',
+		extendSuccess: 'Booking extended',
+		extendFailed: 'Failed to extend booking'
 	},
+	// 反馈相关文案
 	feedback: {
 		enterScooterId: 'Please enter Scooter ID',
 		enterDescription: 'Please enter a description',
 		submitSuccess: 'Feedback submitted',
 		submitFailed: 'Failed to submit feedback'
 	},
+	// 支付卡相关文案
 	paymentCard: {
 		loadFailed: 'Failed to load cards',
 		addSuccess: 'Card added',
@@ -108,6 +121,7 @@ const debugMessageLookup = (hypothesisId: string, group: string, key: string, ha
 	// #endregion
 }
 
+// 获取应用文案
 export const getAppMessage = (group: string, key: string, fallback: string): string => {
 	const root = APP_MESSAGES as UTSJSONObject
 	const groupRaw = root[group]
@@ -124,6 +138,7 @@ export const getAppMessage = (group: string, key: string, fallback: string): str
 	return hasValue ? ('' + value) : fallback
 }
 
+// 获取响应文案
 export const getResponseMessage = (data: any | null, fallback: string): string => {
 	let message = fallback
 	if (data != null && typeof data == 'object') {

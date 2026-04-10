@@ -54,9 +54,10 @@ class BookingExtensionControllerMvcTest {
     void extendBooking_delegatesToService() throws Exception {
         mockMvc.perform(patch("/api/v1/bookings/b1/extend")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer t")
+                        .requestAttr("userId", 99L)
                         .contentType(APPLICATION_JSON)
                         .content("{\"duration\":\"1H\"}"))
                 .andExpect(status().is2xxSuccessful());
-        verify(bookingExtensionService).extendBooking(eq("b1"), any(ExtendBookingRequest.class), anyLong());
+        verify(bookingExtensionService).extendBooking(eq("b1"), any(ExtendBookingRequest.class), eq(99L));
     }
 }

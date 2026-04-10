@@ -29,8 +29,8 @@ public class BookingExtensionController {
     public ResponseEntity<Object> extendBooking(@PathVariable String bookingId,
                                                 @Valid @RequestBody ExtendBookingRequest body,
                                                 HttpServletRequest request) {
-        // TODO: 读取登录用户ID并校验订单归属
-        // TODO: 调用 bookingExtensionService.extendBooking(...)
-        throw new UnsupportedOperationException("TODO: implement extendBooking endpoint");
+        Long userId = (Long) request.getAttribute("userId");
+        Object result = bookingExtensionService.extendBooking(bookingId, body, userId);
+        return ResponseEntity.ok(java.util.Map.of("data", result));
     }
 }

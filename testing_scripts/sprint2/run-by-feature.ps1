@@ -60,6 +60,7 @@ $args = @(
     "-DreuseForks=false",
     "-DfailIfNoTests=false",
     "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-DargLine=-Dnet.bytebuddy.experimental=true",
     "-Dtest=$testSelector",
     "test"
 )

@@ -392,6 +392,12 @@ const fetchBookingsForHeatmap = () => {
 				} else {
 					buildHeatmap({} as UTSJSONObject, [])
 				}
+			} else if (res.statusCode == 401) {
+				uni.removeStorageSync('userInfo')
+				uni.removeStorageSync('token')
+				uni.removeStorageSync('userId')
+				isLoggedIn.value = false
+				buildHeatmap({} as UTSJSONObject, [])
 			} else {
 				console.error('Failed to fetch bookings for heatmap:', res.statusCode)
 				buildHeatmap({} as UTSJSONObject, [])
@@ -588,7 +594,6 @@ onShow(() => {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	text-align: center;
 }
 
 .user-name {
@@ -596,11 +601,13 @@ onShow(() => {
 	font-weight: bold;
 	color: #333;
 	margin-bottom: 6px;
+	text-align: center;
 }
 
 .user-email {
 	font-size: 13px;
 	color: #999;
+	text-align: center;
 }
 
 /* ── Heatmap Section (continues card group) ── */

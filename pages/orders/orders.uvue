@@ -71,6 +71,7 @@
 						</view>
 						<view v-if="getOrderActions(booking).length > 0" class="card-actions">
 							<button v-if="hasAction(booking, 'endRide')" class="end-ride-btn" @click="endRide(booking)">End Ride</button>
+							<button v-if="hasAction(booking, 'extendBooking')" class="extend-booking-btn" @click="onExtendBooking(booking)">Extend</button>
 							<button v-if="hasAction(booking, 'cancelOrder')" class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Booking</button>
 							<button v-if="hasAction(booking, 'viewRoute')" class="view-route-btn" @click="goToRoute(booking)">View Route</button>
 						</view>
@@ -341,13 +342,13 @@ const onPullRefresh = () => {
 
 /**
  * Status -> visible actions mapping (single source of truth)
- *   CONFIRMED  => endRide, cancelOrder
+ *   CONFIRMED  => endRide, cancelOrder, extendBooking
  *   PENDING    => endRide, cancelOrder
  *   COMPLETED  => viewRoute (only when all 4 GPS coordinates are present)
  *   CANCELLED  => (none)
  *   Unknown/empty => (none)
  */
-type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute'
+type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking'
 
 const hasRoute = (booking: Booking): boolean => {
 	const slat = booking.startLat
@@ -361,7 +362,8 @@ const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
 	if (status == null || status.length < 1) return []
 	const s = ('' + status).trim().toUpperCase()
-	if (s == 'CONFIRMED' || s == 'PENDING') return ['endRide', 'cancelOrder']
+	if (s == 'CONFIRMED') return ['endRide', 'extendBooking', 'cancelOrder']
+	if (s == 'PENDING') return ['endRide', 'cancelOrder']
 	if (s == 'COMPLETED') return hasRoute(booking) ? ['viewRoute'] : []
 	if (s == 'CANCELLED' || s == 'CANCELED') return []
 	return []
@@ -382,6 +384,57 @@ const goToRoute = (booking: Booking) => {
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
+}
+
+const submitExtendBooking = (bid: string, duration: string) => {
+	const token = readStorageString('token')
+	if (token == '') {
+		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
+		return
+	}
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings/' + bid + '/extend',
+		method: 'PATCH',
+		data: { duration: duration },
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (resp) => {
+			if (resp.statusCode >= 200 && resp.statusCode < 300) {
+				uni.showToast({ title: bookingMessage('extendSuccess', 'Booking extended'), icon: 'success' })
+				fetchBookings(false)
+			} else {
+				const msg = getResponseMessage(resp.data, bookingMessage('extendFailed', 'Failed to extend booking'))
+				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+			}
+		},
+		fail: () => {
+			uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
+		}
+	})
+}
+
+const onExtendBooking = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length < 1) {
+		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
+		return
+	}
+	const es = ('' + booking.status).trim().toUpperCase()
+	if (es != 'CONFIRMED') {
+		uni.showToast({ title: bookingMessage('cannotExtendBooking', 'This booking cannot be extended'), icon: 'none' })
+		return
+	}
+	
+	uni.showActionSheet({
+		itemList: ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week'],
+		success: (res) => {
+			const durArr = ['10M', '1H', '4H', '1D', '1W']
+			const duration = durArr[res.tapIndex]
+			submitExtendBooking(bid, duration)
+		}
+	})
 }
 
 const cancelOrder = (booking: Booking) => {
@@ -767,34 +820,59 @@ onHide(() => {
 	border-top-color: #eee;
 	display: flex;
 	flex-direction: row;
-	gap: 10px;
 }
 
 .end-ride-btn {
 	flex: 1;
-	padding: 10px 16px;
+	margin: 0 5px;
+	height: 40px;
+	line-height: 40px;
+	padding: 0;
 	background-color: #4CAF50;
 	color: white;
 	border: none;
 	border-radius: 8px;
 	font-size: 14px;
 	font-weight: bold;
+	text-align: center;
+}
+
+.extend-booking-btn {
+	flex: 1;
+	margin: 0 5px;
+	height: 40px;
+	line-height: 40px;
+	padding: 0;
+	background-color: #2196F3;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-size: 14px;
+	font-weight: bold;
+	text-align: center;
 }
 
 .cancel-order-btn {
 	flex: 1;
-	padding: 10px 16px;
+	margin: 0 5px;
+	height: 40px;
+	line-height: 40px;
+	padding: 0;
 	background-color: #f44336;
 	color: white;
 	border: none;
 	border-radius: 8px;
 	font-size: 14px;
 	font-weight: bold;
+	text-align: center;
 }
 
 .view-route-btn {
-	width: 100%;
-	padding: 10px 16px;
+	flex: 1;
+	margin: 0 5px;
+	height: 40px;
+	line-height: 40px;
+	padding: 0;
 	background-color: #FFFFFF;
 	color: #2196F3;
 	border-width: 1px;
@@ -803,6 +881,7 @@ onHide(() => {
 	border-radius: 8px;
 	font-size: 14px;
 	font-weight: bold;
+	text-align: center;
 }
 
 .detail-row {

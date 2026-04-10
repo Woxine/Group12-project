@@ -47,4 +47,15 @@ class ExtendBookingRequestValidationTest {
         req.setDuration("4H");
         assertThat(validator.validate(req)).isEmpty();
     }
+
+    @Test
+    @DisplayName("duration 格式不匹配时校验失败")
+    void invalid_when_durationPatternMismatch() {
+        ExtendBookingRequest req = new ExtendBookingRequest();
+        req.setDuration("2H"); // invalid duration
+        Set<ConstraintViolation<ExtendBookingRequest>> violations = validator.validate(req);
+        assertThat(violations).isNotEmpty();
+        assertThat(violations.stream().map(v -> v.getPropertyPath().toString()).collect(Collectors.toSet()))
+                .contains("duration");
+    }
 }

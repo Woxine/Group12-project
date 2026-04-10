@@ -43,6 +43,10 @@ public final class ErrorMessages {
         return "Cannot complete booking with status: " + status;
     }
 
+    public static String cannotExtendBooking(String status) {
+        return "Cannot extend booking with status: " + status;
+    }
+
     public static String feedbackNotFound(String feedbackId) {
         return "Feedback not found with id: " + feedbackId;
     }

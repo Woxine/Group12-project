@@ -43,6 +43,7 @@ $args = @(
     "-DforkCount=1",
     "-DreuseForks=false",
     "-DfailIfNoTests=false",
+    "-DargLine=-Dnet.bytebuddy.experimental=true",
     "test"
 )
 
