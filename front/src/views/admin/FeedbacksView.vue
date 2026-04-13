@@ -1,63 +1,92 @@
 <template>
-  <el-card>
+  <el-card shadow="never" class="feedbacks-container">
     <template #header>
       <div class="header">
-        <span>Feedback Management</span>
-        <el-space>
-          <el-select v-model="filters.priority" clearable placeholder="Priority" style="width: 140px">
-            <el-option label="LOW" value="LOW" />
-            <el-option label="HIGH" value="HIGH" />
-          </el-select>
-          <el-select
-            v-model="resolvedView"
-            clearable
-            placeholder="Resolution"
-            style="width: 160px"
-            @change="onResolvedChange"
-          >
-            <el-option label="Unresolved" :value="false" />
-            <el-option label="Resolved" :value="true" />
-          </el-select>
-          <el-button type="primary" :loading="loading" @click="load">Search</el-button>
-        </el-space>
+        <span class="page-title">Feedback Management</span>
+        <div class="toolbar">
+          <el-space>
+            <el-select v-model="filters.priority" clearable placeholder="Priority" style="width: 140px">
+              <el-option label="LOW" value="LOW" />
+              <el-option label="HIGH" value="HIGH" />
+            </el-select>
+            <el-select
+              v-model="resolvedView"
+              clearable
+              placeholder="Resolution"
+              style="width: 160px"
+              @change="onResolvedChange"
+            >
+              <el-option label="Unresolved" :value="false" />
+              <el-option label="Resolved" :value="true" />
+            </el-select>
+            <el-button type="primary" :icon="Search" :loading="loading" @click="load">Search</el-button>
+          </el-space>
+        </div>
       </div>
     </template>
 
-    <el-table :data="rows" stripe v-loading="loading">
-      <el-table-column prop="id" label="Feedback ID" width="100" />
-      <el-table-column prop="userId" label="User ID" width="100" />
-      <el-table-column prop="scooterId" label="Scooter ID" width="100" />
-      <el-table-column prop="priority" label="Priority" width="120" />
-      <el-table-column label="Status" width="120">
+    <el-table :data="rows" stripe v-loading="loading" class="data-table">
+      <el-table-column prop="id" label="ID" width="80" align="center" />
+      <el-table-column prop="userId" label="User ID" width="100" align="center" />
+      <el-table-column prop="scooterId" label="Scooter ID" width="120" align="center" />
+      
+      <el-table-column prop="priority" label="Priority" width="120" align="center">
         <template #default="{ row }">
-          <el-tag :type="row.resolved ? 'success' : 'warning'">
+          <el-tag
+            :type="row.priority === 'HIGH' ? 'danger' : 'info'"
+            effect="light"
+            round
+          >
+            {{ row.priority }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      
+      <el-table-column label="Status" width="120" align="center">
+        <template #default="{ row }">
+          <el-tag 
+            :type="row.resolved ? 'success' : 'warning'"
+            effect="dark"
+            round
+            size="small"
+          >
+            <el-icon v-if="row.resolved" style="margin-right: 4px"><Select /></el-icon>
+            <el-icon v-else style="margin-right: 4px"><Warning /></el-icon>
             {{ row.resolved ? "Resolved" : "Unresolved" }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="content" label="Feedback Content" min-width="320" />
-      <el-table-column label="Actions" width="160">
+      
+      <el-table-column prop="content" label="Feedback Content" min-width="320" show-overflow-tooltip />
+      
+      <el-table-column label="Actions" width="160" align="center" fixed="right">
         <template #default="{ row }">
           <el-button
-            type="primary"
+            v-if="!row.resolved"
+            type="success"
             link
-            :disabled="row.resolved"
+            :icon="CircleCheck"
             @click="resolve(row.id)"
           >
-            Mark as Resolved
+            Mark Resolved
           </el-button>
+          <span v-else class="resolved-text">
+            <el-icon><Check /></el-icon> Completed
+          </span>
         </template>
       </el-table-column>
     </el-table>
 
-    <div class="pager">
+    <div class="pager-container">
       <el-pagination
         background
-        layout="total, prev, pager, next"
+        layout="total, sizes, prev, pager, next, jumper"
         :total="total"
-        :page-size="pager.size"
-        :current-page="pager.page"
+        :page-sizes="[10, 20, 50]"
+        v-model:page-size="pager.size"
+        v-model:current-page="pager.page"
         @current-change="onPageChange"
+        @size-change="onSizeChange"
       />
     </div>
   </el-card>
@@ -66,6 +95,7 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
+import { Search, CircleCheck, Check, Warning, Select } from '@element-plus/icons-vue';
 
 import { getFeedbacks, updateFeedback } from "@/api/admin";
 import type { FeedbackItem } from "@/types/api";
@@ -104,13 +134,19 @@ function onPageChange(page: number) {
   load();
 }
 
+function onSizeChange(size: number) {
+  pager.size = size;
+  pager.page = 1;
+  load();
+}
+
 async function resolve(feedbackId: number) {
   try {
     await updateFeedback(feedbackId, "resolved");
-    ElMessage.success("Feedback marked as resolved");
+    ElMessage.success("Feedback successfully marked as resolved");
     await load();
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to update feedback");
+    ElMessage.error(error?.response?.data?.message ?? "Failed to update feedback status");
   }
 }
 
@@ -118,15 +154,41 @@ onMounted(load);
 </script>
 
 <style scoped>
+.feedbacks-container {
+  border-radius: 8px;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.pager {
-  display: flex;
-  justify-content: flex-end;
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.data-table {
   margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ebeef5;
+}
+
+.pager-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 8px 0;
+}
+
+.resolved-text {
+  color: #67C23A;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 </style>

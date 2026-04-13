@@ -1,8 +1,8 @@
 <template>
-  <el-card>
+  <el-card shadow="never" class="analytics-container">
     <template #header>
       <div class="header">
-        <span>Management Analytics</span>
+        <span class="page-title">Management Analytics</span>
         <el-space>
           <el-date-picker
             v-model="dateRange"
@@ -12,114 +12,151 @@
             end-placeholder="End date"
             value-format="YYYY-MM-DD"
           />
-          <el-button type="primary" :loading="loading" @click="load">Refresh</el-button>
+          <el-button type="primary" :icon="Refresh" :loading="loading" @click="load">Refresh</el-button>
         </el-space>
       </div>
     </template>
 
-    <el-row :gutter="16" class="stats-row">
+    <el-row :gutter="24" class="stats-row">
       <el-col :span="6">
-        <el-statistic title="Total Orders" :value="overview.orderStats.totalOrders" />
+        <el-card shadow="hover" class="stat-card blue">
+          <div class="stat-icon"><el-icon><Tickets /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-title">Total Orders</div>
+            <div class="stat-value">{{ overview.orderStats.totalOrders }}</div>
+            <div class="stat-desc">Valid: {{ overview.orderStats.validOrders }}</div>
+          </div>
+        </el-card>
       </el-col>
       <el-col :span="6">
-        <el-statistic title="Valid Orders" :value="overview.orderStats.validOrders" />
+        <el-card shadow="hover" class="stat-card green">
+          <div class="stat-icon"><el-icon><Money /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-title">Total Revenue</div>
+            <div class="stat-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
+            <div class="stat-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
+          </div>
+        </el-card>
       </el-col>
       <el-col :span="6">
-        <el-statistic title="Total Revenue" :value="overview.revenueStats.totalRevenue" />
+        <el-card shadow="hover" class="stat-card purple">
+          <div class="stat-icon"><el-icon><Bicycle /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-title">Scooter Usage</div>
+            <div class="stat-value">{{ usageRatePercent }}%</div>
+            <div class="stat-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
+          </div>
+        </el-card>
       </el-col>
       <el-col :span="6">
-        <el-statistic title="Average Order Value" :value="overview.revenueStats.averageOrderValue" />
+        <el-card shadow="hover" class="stat-card orange">
+          <div class="stat-icon"><el-icon><Warning /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-title">Fault Reports</div>
+            <div class="stat-value">{{ overview.faultStats.totalFeedbacks }}</div>
+            <div class="stat-desc">Resolved: {{ overview.faultStats.resolvedFeedbacks }}</div>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="stats-row">
-      <el-col :span="6">
-        <el-statistic title="Scooter Usage Rate" :value="usageRatePercent" suffix="%" />
-      </el-col>
-      <el-col :span="6">
-        <el-statistic title="Rented Scooters" :value="overview.vehicleStats.rentedScooters" />
-      </el-col>
-      <el-col :span="6">
-        <el-statistic title="Fault Reports" :value="overview.faultStats.totalFeedbacks" />
-      </el-col>
-      <el-col :span="6">
-        <el-statistic title="Resolved Faults" :value="overview.faultStats.resolvedFeedbacks" />
+    <el-row :gutter="24" class="charts-row">
+      <el-col :span="24">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="chart-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
+          </template>
+          <v-chart class="chart" :option="trendChartOption" autoresize />
+        </el-card>
       </el-col>
     </el-row>
 
-    <div class="charts">
-      <el-card shadow="never">
-        <template #header>Orders & Revenue Trend (Table)</template>
-        <el-table :data="paginatedDailyTrend" stripe>
-          <el-table-column prop="date" label="Date" />
-          <el-table-column prop="orderCount" label="Orders" />
-          <el-table-column prop="revenue" label="Revenue" />
-        </el-table>
-        <div class="pagination-wrap">
-          <el-pagination
-            v-model:current-page="trendCurrentPage"
-            v-model:page-size="trendPageSize"
-            :page-sizes="[10, 20, 50]"
-            :total="trendTotal"
-            layout="total, sizes, prev, pager, next"
-          />
-        </div>
-      </el-card>
+    <el-row :gutter="24" class="charts-row">
+      <el-col :span="12">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="chart-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
+          </template>
+          <v-chart class="chart" :option="vehicleStatusOption" autoresize />
+        </el-card>
+      </el-col>
 
-      <el-card shadow="never">
-        <template #header>Vehicle Status Distribution</template>
-        <div class="progress-group">
-          <div class="progress-item">
-            <span>Available</span>
-            <el-progress :percentage="availablePercent" />
-          </div>
-          <div class="progress-item">
-            <span>Rented</span>
-            <el-progress :percentage="rentedPercent" status="success" />
-          </div>
-          <div class="progress-item">
-            <span>Maintenance</span>
-            <el-progress :percentage="maintenancePercent" status="warning" />
-          </div>
-        </div>
-      </el-card>
+      <el-col :span="12">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="chart-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
+          </template>
+          <v-chart class="chart" :option="faultResolutionOption" autoresize />
+        </el-card>
+      </el-col>
+    </el-row>
 
-      <el-card shadow="never">
-        <template #header>Fault Priority Distribution</template>
-        <el-table :data="faultPriorityRows" stripe>
-          <el-table-column prop="priority" label="Priority" />
-          <el-table-column prop="count" label="Count" />
-        </el-table>
-      </el-card>
+    <el-row :gutter="24" class="charts-row">
 
-      <el-card shadow="never">
-        <template #header>Fault Resolution Status</template>
-        <div class="progress-group">
-          <div class="progress-item">
-            <span>Resolved</span>
-            <el-progress :percentage="resolvedPercent" status="success" />
+      <el-col :span="12">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="chart-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
+          </template>
+          <v-chart class="chart" :option="faultPriorityOption" autoresize />
+        </el-card>
+      </el-col>
+      
+      <el-col :span="12">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="chart-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
+          </template>
+          <div class="heatmap-wrapper">
+            <v-chart class="chart" :option="heatmapOption" autoresize />
+            <div class="heatmap-stats">
+              <el-statistic title="Avg Daily Rides" :value="averageDailyRides" />
+              <el-statistic title="Max Daily Rides" :value="maxDailyRides" />
+            </div>
           </div>
-          <div class="progress-item">
-            <span>Unresolved</span>
-            <el-progress :percentage="unresolvedPercent" status="exception" />
-          </div>
-        </div>
-      </el-card>
-    </div>
+        </el-card>
+      </el-col>
+    </el-row>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
-
 import { getDashboardOverview } from "@/api/admin";
 import type { DashboardOverview } from "@/types/api";
 
+import { Refresh, Tickets, Money, Bicycle, Warning, TrendCharts, PieChart, SuccessFilled, DataAnalysis, Calendar } from '@element-plus/icons-vue';
+
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { BarChart, LineChart, PieChart as EchartsPieChart, HeatmapChart } from 'echarts/charts';
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  VisualMapComponent,
+  CalendarComponent
+} from 'echarts/components';
+import VChart from 'vue-echarts';
+
+use([
+  CanvasRenderer,
+  BarChart,
+  LineChart,
+  EchartsPieChart,
+  HeatmapChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  VisualMapComponent,
+  CalendarComponent
+]);
+
 const loading = ref(false);
 const dateRange = ref<[string, string] | null>(getDefaultRange());
-const trendCurrentPage = ref(1);
-const trendPageSize = ref(10);
 const overview = reactive<DashboardOverview>({
   orderStats: {
     totalOrders: 0,
@@ -149,28 +186,184 @@ const overview = reactive<DashboardOverview>({
 });
 
 const usageRatePercent = computed(() => Number(((overview.vehicleStats.usageRate ?? 0) * 100).toFixed(2)));
-const trendTotal = computed(() => overview.dailyTrend.length);
-const paginatedDailyTrend = computed(() => {
-  const start = (trendCurrentPage.value - 1) * trendPageSize.value;
-  const end = start + trendPageSize.value;
-  return overview.dailyTrend.slice(start, end);
+
+const averageDailyRides = computed(() => {
+  if (overview.dailyTrend.length === 0) return 0;
+  const sum = overview.dailyTrend.reduce((acc, curr) => acc + curr.orderCount, 0);
+  return Math.round(sum / overview.dailyTrend.length);
 });
-const faultPriorityRows = computed(() =>
-  Object.entries(overview.faultStats.priorityDistribution ?? {}).map(([priority, count]) => ({ priority, count }))
-);
-const availablePercent = computed(() =>
-  toPercent(overview.vehicleStats.availableScooters, overview.vehicleStats.totalScooters)
-);
-const rentedPercent = computed(() => toPercent(overview.vehicleStats.rentedScooters, overview.vehicleStats.totalScooters));
-const maintenancePercent = computed(() =>
-  toPercent(overview.vehicleStats.maintenanceScooters, overview.vehicleStats.totalScooters)
-);
-const resolvedPercent = computed(() =>
-  toPercent(overview.faultStats.resolvedFeedbacks, overview.faultStats.totalFeedbacks)
-);
-const unresolvedPercent = computed(() =>
-  toPercent(overview.faultStats.unresolvedFeedbacks, overview.faultStats.totalFeedbacks)
-);
+
+const maxDailyRides = computed(() => {
+  if (overview.dailyTrend.length === 0) return 0;
+  return Math.max(...overview.dailyTrend.map(d => d.orderCount));
+});
+
+// 1. Orders & Revenue Trend Option
+const trendChartOption = computed(() => {
+  const dates = overview.dailyTrend.map(d => d.date);
+  const orders = overview.dailyTrend.map(d => d.orderCount);
+  const revenues = overview.dailyTrend.map(d => d.revenue);
+
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['Orders', 'Revenue'] },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', data: dates },
+    yAxis: [
+      { type: 'value', name: 'Orders', position: 'left' },
+      { type: 'value', name: 'Revenue (£)', position: 'right', axisLabel: { formatter: '£{value}' } }
+    ],
+    series: [
+      {
+        name: 'Orders',
+        type: 'bar',
+        data: orders,
+        itemStyle: { color: '#409EFF', borderRadius: [4, 4, 0, 0] },
+        yAxisIndex: 0
+      },
+      {
+        name: 'Revenue',
+        type: 'line',
+        data: revenues,
+        itemStyle: { color: '#67C23A' },
+        areaStyle: { opacity: 0.1 },
+        yAxisIndex: 1
+      }
+    ]
+  };
+});
+
+// 2. Vehicle Status Donut Chart Option
+const vehicleStatusOption = computed(() => {
+  return {
+    tooltip: { trigger: 'item' },
+    legend: { top: '5%', left: 'center' },
+    series: [
+      {
+        name: 'Vehicle Status',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 8,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: { show: false, position: 'center' },
+        emphasis: {
+          label: { show: true, fontSize: 20, fontWeight: 'bold' }
+        },
+        labelLine: { show: false },
+        data: [
+          { value: overview.vehicleStats.availableScooters, name: 'Available', itemStyle: { color: '#409EFF' } },
+          { value: overview.vehicleStats.rentedScooters, name: 'Rented', itemStyle: { color: '#67C23A' } },
+          { value: overview.vehicleStats.maintenanceScooters, name: 'Maintenance', itemStyle: { color: '#F56C6C' } }
+        ]
+      }
+    ]
+  };
+});
+
+// 3. Fault Resolution Pie Chart Option
+const faultResolutionOption = computed(() => {
+  return {
+    tooltip: { trigger: 'item' },
+    legend: { top: '5%', left: 'center' },
+    series: [
+      {
+        name: 'Fault Resolution',
+        type: 'pie',
+        radius: '50%',
+        data: [
+          { value: overview.faultStats.resolvedFeedbacks, name: 'Resolved', itemStyle: { color: '#67C23A' } },
+          { value: overview.faultStats.unresolvedFeedbacks, name: 'Unresolved', itemStyle: { color: '#E6A23C' } }
+        ],
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }
+    ]
+  };
+});
+
+// 4. Fault Priority Horizontal Bar Chart Option
+const faultPriorityOption = computed(() => {
+  const distribution = overview.faultStats.priorityDistribution || {};
+  let priorities = Object.keys(distribution);
+  let counts = Object.values(distribution);
+  
+  if (priorities.length === 0) {
+    // Show default empty categories if no data
+    priorities = ['LOW', 'HIGH'];
+    counts = [0, 0];
+  }
+
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'value', minInterval: 1 },
+    yAxis: { type: 'category', data: priorities },
+    series: [
+      {
+        name: 'Faults',
+        type: 'bar',
+        data: counts,
+        itemStyle: { color: '#909399', borderRadius: [0, 4, 4, 0] }
+      }
+    ]
+  };
+});
+
+// 5. Activity Heatmap Option
+const heatmapOption = computed(() => {
+  const data = overview.dailyTrend.map(d => [d.date, d.orderCount]);
+  
+  let start = dateRange.value?.[0] ?? '2026-01-01';
+  let end = dateRange.value?.[1] ?? '2026-12-31';
+
+  return {
+    tooltip: {
+      position: 'top',
+      formatter: function (p: any) {
+        return p.data[0] + ': ' + p.data[1] + ' orders';
+      }
+    },
+    visualMap: {
+      min: 0,
+      max: Math.max(1, ...overview.dailyTrend.map(d => d.orderCount)),
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '5%',
+      itemWidth: 15,
+      inRange: {
+        color: ['#ecf5ff', '#b3d8ff', '#8cc5ff', '#66b1ff', '#409eff']
+      }
+    },
+    calendar: {
+      top: 40,
+      left: 40,
+      right: 180, // Leave space for stats on the right
+      cellSize: ['auto', 20],
+      range: [start, end],
+      itemStyle: {
+        borderWidth: 1,
+        borderColor: '#fff'
+      },
+      splitLine: { show: false },
+      yearLabel: { show: false }
+    },
+    series: {
+      type: 'heatmap',
+      coordinateSystem: 'calendar',
+      data: data
+    }
+  };
+});
 
 async function load() {
   loading.value = true;
@@ -180,7 +373,6 @@ async function load() {
       end_date: dateRange.value?.[1]
     });
     Object.assign(overview, payload);
-    trendCurrentPage.value = 1;
   } catch (error: any) {
     ElMessage.error(error?.response?.data?.message ?? "Failed to load dashboard data");
   } finally {
@@ -193,7 +385,7 @@ onMounted(load);
 function getDefaultRange(): [string, string] {
   const end = new Date();
   const start = new Date();
-  start.setDate(end.getDate() - 6);
+  start.setDate(end.getDate() - 30); // Default to last 30 days for better heatmap
   return [formatDate(start), formatDate(end)];
 }
 
@@ -204,45 +396,128 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function toPercent(value = 0, total = 0) {
-  if (!total) return 0;
-  return Number(((value / total) * 100).toFixed(2));
-}
 </script>
 
 <style scoped>
+.analytics-container {
+  border-radius: 8px;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
 .stats-row {
-  margin-top: 12px;
+  margin-top: 8px;
+  margin-bottom: 24px;
 }
 
-.charts {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.stat-card {
+  border-radius: 12px;
+  border: none;
+  background-color: #ffffff;
+  height: 100%;
+}
+
+.stat-card :deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  margin-right: 16px;
+}
+
+.blue .stat-icon { background: #ecf5ff; color: #409EFF; }
+.green .stat-icon { background: #f0f9eb; color: #67C23A; }
+.purple .stat-icon { background: #f4f4f5; color: #909399; }
+.orange .stat-icon { background: #fdf6ec; color: #E6A23C; }
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.stat-desc {
+  font-size: 13px;
+  color: #606266;
+}
+
+.charts-row {
+  margin-bottom: 24px;
+}
+
+.chart-card {
+  border-radius: 8px;
+}
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.chart {
+  height: 300px;
+  width: 100%;
+}
+
+.heatmap-wrapper {
+  position: relative;
+}
+
+.heatmap-stats {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 }
 
-.progress-group {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.heatmap-stats :deep(.el-statistic__title) {
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
-.progress-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pagination-wrap {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
+.heatmap-stats :deep(.el-statistic__content) {
+  font-size: 20px;
+  font-weight: bold;
+  color: #409EFF;
 }
 </style>

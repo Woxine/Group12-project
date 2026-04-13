@@ -47,7 +47,10 @@ public class WebConfig implements WebMvcConfigurer {
                 // 3. 真机调试/App环境: App 发出的请求 Origin 可能为空或特定标识，
                 //    如果是开发阶段图方便，可以使用 allowedOriginPatterns("*") 允许所有。
                 // -------------------------------------------------------------------
-                .allowedOrigins("http://localhost:5173", "http://localhost:8080")
+                .allowedOrigins( 
+                    "http://localhost:5173", 
+                "http://localhost:5174", 
+                "http://localhost:8080")
                 // 或者使用下面的通配符配置（开发阶段推荐，但生产环境不安全）：
                 // .allowedOriginPatterns("*")
 

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "axios": "latest",
     "echarts": "latest",
     "element-plus": "latest",
@@ -20,8 +21,8 @@
   "devDependencies": {
     "@types/node": "latest",
     "@vitejs/plugin-vue": "latest",
-    "typescript": "latest",
+    "typescript": "^5.4.5",
     "vite": "latest",
-    "vue-tsc": "latest"
+    "vue-tsc": "^2.0.19"
   }
 }
