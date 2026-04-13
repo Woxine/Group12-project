@@ -113,6 +113,18 @@
 			"style": {
 				"navigationBarTitleText": "Payment Cards"
 			}
+		},
+		{
+			"path": "pages/guest-booking/guest-booking",
+			"style": {
+				"navigationBarTitleText": "Guest Booking"
+			}
+		},
+		{
+			"path": "pages/guest-profile/guest-profile",
+			"style": {
+				"navigationBarTitleText": "Guest Profile"
+			}
 		}
 	],
 	"globalStyle": {

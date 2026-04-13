@@ -1,0 +1,32 @@
+<template>
+	<view class="container">
+		<text class="title">Guest Profile (TODO)</text>
+	</view>
+</template>
+
+<script setup lang="uts">
+// TODO(ID9): Build guest profile maintenance page.
+
+const loadGuestProfile = (_guestId: string) => {
+	// TODO(ID9): load guest details, linked cards and booking summary.
+}
+
+const bindCardForGuest = () => {
+	// TODO(ID9): bind payment card for guest flow.
+}
+
+const goToGuestBookings = () => {
+	// TODO(ID9): navigate to guest booking history list.
+}
+</script>
+
+<style lang="scss">
+.container {
+	padding: 24px;
+}
+
+.title {
+	font-size: 20px;
+	font-weight: bold;
+}
+</style>

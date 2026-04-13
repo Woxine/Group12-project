@@ -1,0 +1,37 @@
+<template>
+	<view class="container">
+		<text class="title">Guest Booking (TODO)</text>
+	</view>
+</template>
+
+<script setup lang="uts">
+// TODO(ID9): Build guest booking page for salesperson flow.
+
+const loadInitialData = () => {
+	// TODO(ID9): load scooter options and salesperson context.
+}
+
+const validateGuestForm = (): boolean => {
+	// TODO(ID9): validate guest name/contact/scooter/duration.
+	return false
+}
+
+const submitGuestBooking = () => {
+	// TODO(ID9): submit guest booking request and handle success navigation.
+}
+
+const handleGuestBookingError = (_res: any | null) => {
+	// TODO(ID9): map backend error to user-friendly message.
+}
+</script>
+
+<style lang="scss">
+.container {
+	padding: 24px;
+}
+
+.title {
+	font-size: 20px;
+	font-weight: bold;
+}
+</style>

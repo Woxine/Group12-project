@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.group12.backend.dto.BookingConfirmationEmailPayload;
+import com.group12.backend.dto.CreateGuestBookingRequest;
+import com.group12.backend.dto.DiscountBreakdownResponse;
 import com.group12.backend.dto.BookingResponse;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.entity.Booking;
@@ -20,6 +22,7 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BookingService;
+import com.group12.backend.service.DiscountService;
 import com.group12.backend.service.EmailNotificationService;
 
 /**
@@ -39,6 +42,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Autowired
     private EmailNotificationService emailNotificationService;
+
+    @Autowired(required = false)
+    private DiscountService discountService;
 
     @Override
     @Transactional
@@ -126,6 +132,24 @@ public class BookingServiceImpl implements BookingService {
         );
         response.setTotalPrice(savedBooking.getTotalPrice() != null ? savedBooking.getTotalPrice().doubleValue() : null);
         return response;
+    }
+
+    /**
+     * TODO(ID9): 预留未注册用户预约入口（店员代下单）。
+     */
+    @Override
+    public Object createGuestBooking(CreateGuestBookingRequest request) {
+        // TODO(ID9): validate salesperson permission and create guest booking flow.
+        throw new UnsupportedOperationException("TODO(ID9): createGuestBooking");
+    }
+
+    /**
+     * TODO(ID22): 折扣预览入口，供前端下单前试算。
+     */
+    @Override
+    public DiscountBreakdownResponse previewDiscount(String userId, String scooterId, String duration) {
+        // TODO(ID22): delegate to DiscountService with proper parameter parsing.
+        throw new UnsupportedOperationException("TODO(ID22): previewDiscount");
     }
 
     private void sendBookingConfirmationSafely(User user, Scooter scooter, Booking booking, String durationRequest) {

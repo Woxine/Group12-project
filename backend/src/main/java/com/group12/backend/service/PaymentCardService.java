@@ -13,4 +13,11 @@ public interface PaymentCardService {
     List<PaymentCardResponse> listCards(String userId);
     void deleteCard(String userId, String cardId);
     PaymentCardResponse setDefaultCard(String userId, String cardId);
+
+    /**
+     * TODO(ID9): 店员为未注册用户绑定信用卡。
+     */
+    default PaymentCardResponse bindCardForGuest(String guestId, StorePaymentCardRequest request, String salespersonId) {
+        throw new UnsupportedOperationException("TODO(ID9): bindCardForGuest not implemented yet");
+    }
 }

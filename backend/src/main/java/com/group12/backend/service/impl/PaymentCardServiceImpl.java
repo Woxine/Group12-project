@@ -130,6 +130,12 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         return toResponse(paymentCardRepository.save(target));
     }
 
+    @Override
+    public PaymentCardResponse bindCardForGuest(String guestId, StorePaymentCardRequest request, String salespersonId) {
+        // TODO(ID9): implement salesperson-owned guest card binding flow.
+        throw new UnsupportedOperationException("TODO(ID9): bindCardForGuest");
+    }
+
     private void ensureUserExists(Long userId) {
         if (userRepository.findById(userId).isEmpty()) {
             throw new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
