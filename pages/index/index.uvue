@@ -43,9 +43,10 @@
 
 <script setup lang="uts">
 	// 首页逻辑：获取定位、加载滑板车地图标记、定时刷新、跳转滑板车列表
-	import { ref, onMounted, getCurrentInstance } from 'vue'
+	import { ref, onMounted, getCurrentInstance, nextTick } from 'vue'
 	import { onShow } from '@dcloudio/uni-app'
 	import { BASE_URL } from '../../common/api.uts'
+	import { getAppMessage } from '../../common/messages.uts'
 	
 	const longitude = ref(116.392325)
 	const latitude = ref(40.01811)
@@ -55,9 +56,9 @@
 	
 	const buildNearbyMarkers = (lat: number, lng: number): Marker[] => {
 	  return JSON.parse<Marker[]>(JSON.stringify([
-	    { id: 1, longitude: lng - 0.0006, latitude: lat - 0.0007, title: '附近1', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
-	    { id: 2, longitude: lng + 0.0005, latitude: lat + 0.0005, title: '附近2', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
-	    { id: 3, longitude: lng - 0.0003, latitude: lat + 0.0004, title: '附近3', iconPath: '/static/location.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } }
+	    { id: 1, longitude: lng - 0.0006, latitude: lat - 0.0007, title: '附近1', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
+	    { id: 2, longitude: lng + 0.0005, latitude: lat + 0.0005, title: '附近2', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
+	    { id: 3, longitude: lng - 0.0003, latitude: lat + 0.0004, title: '附近3', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } }
 	  ]))!
 	}
 	
@@ -95,7 +96,7 @@
 	            latitude: numLat,
 	            longitude: numLng,
 	            title: sid,
-	            iconPath: '/static/location.png',
+	            iconPath: '/static/loc.png',
 	            width: 32,
 	            height: 32,
 	            anchor: { x: 0.5, y: 1 }
@@ -146,13 +147,33 @@
 	
 	onShow(() => {
 	  applyMarkers(latitude.value, longitude.value)
+	  nextTick(() => {
+	    const instance = getCurrentInstance()
+	    if (instance != null && instance.proxy != null) {
+	      mapContext.value = uni.createMapContext('mainMap', instance.proxy!)
+	    } else {
+	      mapContext.value = uni.createMapContext('mainMap')
+	    }
+	    getCurrentLocation()
+	  })
 	})
 	
-	// 跳转到单车列表页面
+	// 跳转到单车列表页面（未登录先提示并进入登录页）
 	const goToBikeList = () => {
+		const token = uni.getStorageSync('token')
+		if (token == null || token == '' || typeof token != 'string') {
+			uni.showToast({
+				title: getAppMessage('auth', 'loginRequired', 'Please login first'),
+				icon: 'none'
+			})
+			uni.navigateTo({
+				url: '/pages/login/login'
+			})
+			return
+		}
 		uni.navigateTo({
 			url: '/pages/bikelist/bikelist'
-		});
+		})
 	}
 </script>
 

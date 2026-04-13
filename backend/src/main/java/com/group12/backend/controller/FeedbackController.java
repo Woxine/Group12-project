@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.security.AdminAccessGuard;
 import com.group12.backend.service.FeedbackService;
 
@@ -41,8 +43,28 @@ public class FeedbackController {
      * 用户提交关于行程或车辆的反馈
      */
     @PostMapping
-    public ResponseEntity<Object> submit(@Valid @RequestBody FeedbackRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", feedbackService.submitFeedback(request)));
+    public ResponseEntity<Object> submit(@Valid @RequestBody FeedbackRequest request, HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("data", feedbackService.submitFeedback(userId, request)));
+    }
+
+    private Long extractUserId(HttpServletRequest request) {
+        Object value = request.getAttribute("userId");
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @GetMapping

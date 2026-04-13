@@ -13,10 +13,12 @@ import com.group12.backend.dto.FeedbackResponse;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
 import com.group12.backend.entity.Scooter;
+import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
+import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.FeedbackService;
 
 /**
@@ -31,12 +33,22 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Autowired
     private ScooterRepository scooterRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     /**
      * 保存新的反馈记录，并在可用时关联对应滑板车。
      */
-    public Object submitFeedback(FeedbackRequest request) {
+    public Object submitFeedback(Long userId, FeedbackRequest request) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
+
         Feedback feedback = new Feedback();
+        feedback.setUser(user);
         feedback.setContent(request.getDescription());
         feedback.setPriority("LOW");
         feedback.setResolved(false);
