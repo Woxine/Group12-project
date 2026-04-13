@@ -10,9 +10,9 @@ import com.group12.backend.dto.UpdateFeedbackRequest;
  */
 public interface FeedbackService {
     /**
-     * 提交新的用户反馈。
+     * 提交新的用户反馈（关联当前登录用户）。
      */
-    Object submitFeedback(FeedbackRequest request);
+    Object submitFeedback(Long userId, FeedbackRequest request);
 
     /**
      * 更新指定反馈的处理状态。

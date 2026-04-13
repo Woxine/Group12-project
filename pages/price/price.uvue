@@ -455,7 +455,18 @@ const cancel = () => {
 	startTime.value = '';
 	endTime.value = '';
 	uni.showToast({ title: commonMessage('cancelled', 'Cancelled'), icon: 'none' });
-	uni.reLaunch({ url: '/pages/index/index' });
+	// 若栈底仍是首页（index → bikelist → price），用 navigateBack 保留首页实例，避免 reLaunch 后地图白屏
+	const pages = getCurrentPages()
+	if (pages.length >= 3) {
+		const bottom = pages[0]
+		const route = bottom.route
+		const routeStr = route != null ? ('' + route) : ''
+		if (routeStr.indexOf('index/index') >= 0) {
+			uni.navigateBack({ delta: 2 })
+			return
+		}
+	}
+	uni.reLaunch({ url: '/pages/index/index' })
 };
 </script>
 

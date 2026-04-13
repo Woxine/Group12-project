@@ -143,8 +143,8 @@
 				<button 
 					@click="onPayment" 
 					size="default" 
-					:disabled="isPaymentProcessing" 
-					:class="['payment_button', isPaymentProcessing ? 'payment_button_disabled' : '', isPaymentProcessing ? 'processing' : '']"
+					hover-class="payment_button_hover"
+					:class="['payment_button', isPaymentProcessing ? 'processing' : '']"
 					style="background-color: #4CAF50; color: white; border: none;"
 				>
 					{{ isPaymentProcessing ? 'Processing...' : `Pay £${orderAmount.toFixed(2)}` }}
@@ -400,6 +400,30 @@ const validatePaymentInfo = (): boolean => {
 	return true;
 };
 
+// 与 price 取消逻辑一致：栈内仍有首页时用 navigateBack 保留实例，避免 reLaunch 后地图白屏
+const goHomeAfterPayment = () => {
+	const pages = getCurrentPages()
+	let homeIdx = -1
+	for (let i = 0; i < pages.length; i++) {
+		const r = pages[i].route
+		const routeStr = r != null ? ('' + r) : ''
+		if (routeStr.indexOf('index/index') >= 0) {
+			homeIdx = i
+			break
+		}
+	}
+	if (homeIdx >= 0) {
+		const delta = pages.length - 1 - homeIdx
+		if (delta > 0) {
+			uni.navigateBack({ delta })
+			return
+		}
+	}
+	uni.reLaunch({
+		url: '/pages/index/index'
+	})
+}
+
 // 支付处理
 const onPayment = () => {
 	if (isPaymentProcessing.value) return;
@@ -422,11 +446,9 @@ const onPayment = () => {
 		uni.removeStorageSync('totalPrice');
 		uni.removeStorageSync('pendingBookingId');
 		
-		// 支付成功后跳转到首页
+		// 支付成功后回到首页（优先 navigateBack 保留首页地图实例）
 		setTimeout(() => {
-			uni.reLaunch({
-				url: '/pages/index/index'
-			});
+			goHomeAfterPayment()
 		}, 2000);
 	}, 2000);
 };
@@ -820,15 +842,17 @@ onShow(() => {
 	box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
 }
 
-.payment_button.processing {
-	background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
-	opacity: 0.8;
+/* 替代默认 button-hover（半透明遮罩易在 Toast 后残留发灰），按下保持绿色系 */
+.payment_button_hover {
+	background-color: #43a047 !important;
+	color: rgba(255, 255, 255, 0.95) !important;
+	box-shadow: 0 2px 8px rgba(76, 175, 80, 0.25);
 }
 
-.payment_button_disabled {
-	background: #cccccc;
-	box-shadow: none;
-	opacity: 0.6;
+.payment_button.processing {
+	background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%) !important;
+	opacity: 0.95;
+	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.35);
 }
 
 .cancel_button {

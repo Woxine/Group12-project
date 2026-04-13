@@ -236,15 +236,39 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
-     * 根据预约时长小时数映射为前端使用的租期标签。
+     * 根据预约时长小时数映射为前端展示文案。
+     * 先匹配单次预订档位（10M/1H/…）；延长后总时长多为非档位组合，改为按分钟或「Xh Ym」展示，避免把 20 分钟误标成 1H。
      */
     private static String formatDuration(Double hours) {
-        if (hours == null) return "1H";
-        if (hours > 0 && hours <= 10.0 / 60.0 + 0.01) return "10M";
-        if (hours <= 1) return "1H";
-        if (hours <= 4) return "4H";
-        if (hours <= 24) return "1D";
-        if (hours <= 168) return "1W";
-        return hours.intValue() + "H";
+        if (hours == null || hours <= 0) {
+            return "-";
+        }
+        final double eps = 0.01;
+        double h = hours;
+        if (Math.abs(h - 10.0 / 60.0) < eps) {
+            return "10M";
+        }
+        if (Math.abs(h - 1.0) < eps) {
+            return "1H";
+        }
+        if (Math.abs(h - 4.0) < eps) {
+            return "4H";
+        }
+        if (Math.abs(h - 24.0) < eps) {
+            return "1D";
+        }
+        if (Math.abs(h - 168.0) < eps) {
+            return "1W";
+        }
+        long totalMinutes = Math.round(h * 60.0);
+        if (totalMinutes < 60) {
+            return totalMinutes + " min";
+        }
+        long wholeHours = totalMinutes / 60;
+        long remainderMin = totalMinutes % 60;
+        if (remainderMin == 0) {
+            return wholeHours + "h";
+        }
+        return wholeHours + "h " + remainderMin + "m";
     }
 }

@@ -167,7 +167,7 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 	const id = rawId != null ? ('' + rawId) : null
 	const rawScooterId = item['scooter_id'] != null ? item['scooter_id'] : item['scooterId']
 	const scooterId = rawScooterId != null ? ('' + rawScooterId) : ''
-	const rawDuration = item['duration'] != null ? item['duration'] : '1H'
+	const rawDuration = item['duration'] != null ? item['duration'] : '-'
 	const duration = '' + rawDuration
 	const rawStart = item['start_time'] != null ? item['start_time'] : item['startTime']
 	const startTime = rawStart != null ? ('' + rawStart) : '-'
