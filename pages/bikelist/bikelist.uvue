@@ -67,6 +67,9 @@
 import { ref, onMounted } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
+import { getAppMessage } from '../../common/messages.uts';
+
+const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback);
 
 type ScooterStatus = 'available' | 'rented' | 'maintenance'
 
@@ -250,6 +253,25 @@ const isBookingDisabled = (): boolean => {
 // 预订滑板车
 const bookScooter = () => {
 	if (!isBookingDisabled()) {
+		const tokenRaw = uni.getStorageSync('token');
+		const token = tokenRaw != null ? ('' + tokenRaw).trim() : '';
+		const userIdStorage = uni.getStorageSync('userId');
+		let userId: string = '';
+		if (userIdStorage != null) {
+			userId = '' + userIdStorage;
+		}
+
+		if (token.length == 0) {
+			uni.showToast({ title: authMessage('loginRequired', 'Please login first'), icon: 'none' });
+			setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }); }, 800);
+			return;
+		}
+		if (userId.length == 0) {
+			uni.showToast({ title: authMessage('userInfoMissing', 'User information missing'), icon: 'none' });
+			setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }); }, 800);
+			return;
+		}
+
 		const selectedScooter = scooterList.value[selectedIndex.value]
 		console.log('预订滑板车 ID:', selectedScooter.id);
 		
