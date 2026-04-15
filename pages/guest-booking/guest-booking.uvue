@@ -1,37 +1,464 @@
 <template>
 	<view class="container">
-		<text class="title">Guest Booking (TODO)</text>
+		<scroll-view scroll-y="true" class="scroll-area">
+			<view class="card">
+				<text class="title">Guest Booking</text>
+				<text class="subtitle">Salesperson creates booking for unregistered guest</text>
+
+				<input v-model="form.guestId" class="input" placeholder="Guest ID (e.g. G100, card must be bound)" />
+				<input v-model="form.guestName" class="input" placeholder="Guest name" />
+				<input v-model="form.guestContact" class="input" placeholder="Guest contact (phone or email)" />
+
+				<view class="picker" @click="pickScooter">
+					<text class="picker-label">Scooter</text>
+					<text class="picker-value">{{ selectedScooterLabel }}</text>
+				</view>
+
+				<view class="picker" @click="pickDuration">
+					<text class="picker-label">Duration</text>
+					<text class="picker-value">{{ selectedDurationLabel }}</text>
+				</view>
+
+				<view class="card-section">
+					<text class="section-title">Bind Card For Guest</text>
+					<input v-model="cardForm.holderName" class="input" placeholder="Card holder name" />
+					<input v-model="cardForm.brand" class="input" placeholder="Card brand (e.g. VISA)" />
+					<input v-model="cardForm.cardNumber" class="input" type="number" maxlength="19" placeholder="Card number" />
+					<view class="row">
+						<input v-model="cardForm.expiryMonth" class="input half" type="number" maxlength="2" placeholder="MM" />
+						<input v-model="cardForm.expiryYear" class="input half" type="number" maxlength="4" placeholder="YYYY" />
+					</view>
+				</view>
+
+				<button class="submit-btn" :disabled="isSubmitting" @click="submitGuestBooking">
+					{{ isSubmitting ? 'Submitting...' : 'Bind Card & Create Booking' }}
+				</button>
+			</view>
+		</scroll-view>
 	</view>
 </template>
 
 <script setup lang="uts">
-// TODO(ID9): Build guest booking page for salesperson flow.
+import { computed, reactive, ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { BASE_URL, GUEST_BOOKING_CREATE_URL, SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL, SCOOTER_LIST_URL } from '../../common/api.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showError, showInfo, showSuccess, showThenNavigate } from '../../common/appToast.uts'
+
+type ScooterOption = {
+	id: string
+	label: string
+}
+
+type GuestBookingForm = {
+	salespersonId: string
+	guestId: string
+	guestName: string
+	guestContact: string
+	scooterId: string
+	duration: string
+}
+
+const form = reactive<GuestBookingForm>({
+	salespersonId: '',
+	guestId: '',
+	guestName: '',
+	guestContact: '',
+	scooterId: '',
+	duration: '1H'
+})
+
+const cardForm = reactive({
+	holderName: '',
+	brand: '',
+	cardNumber: '',
+	expiryMonth: '',
+	expiryYear: ''
+})
+
+const isSubmitting = ref(false)
+const scooterOptions = ref<ScooterOption[]>([])
+const selectedScooterLabel = computed((): string => {
+	for (let i = 0; i < scooterOptions.value.length; i++) {
+		const item = scooterOptions.value[i]
+		if (item.id == form.scooterId) return item.label
+	}
+	return 'Select scooter'
+})
+
+const durationCodes = ['10M', '1H', '4H', '1D', '1W']
+const durationLabels = ['10 Minutes', '1 Hour', '4 Hours', '1 Day', '1 Week']
+const selectedDurationLabel = computed((): string => {
+	for (let i = 0; i < durationCodes.length; i++) {
+		if (durationCodes[i] == form.duration) return durationLabels[i]
+	}
+	return 'Select duration'
+})
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const normalizeGuestId = (rawGuestId: string): string => {
+	const raw = ('' + rawGuestId).trim().toUpperCase()
+	let digits = ''
+	for (let i = 0; i < raw.length; i++) {
+		const ch = raw.charAt(i)
+		if (ch >= '0' && ch <= '9') digits += ch
+	}
+	if (digits.length < 1) return ''
+	return 'G' + digits
+}
+
+const persistGuestProfileDraft = (guestId: string, guestName: string, guestContact: string) => {
+	uni.setStorageSync('guestProfile.lastGuestId', guestId)
+	uni.setStorageSync('guestProfile.lastGuestName', guestName)
+	uni.setStorageSync('guestProfile.lastGuestContact', guestContact)
+	uni.setStorageSync('guestProfile.name.' + guestId, guestName)
+	uni.setStorageSync('guestProfile.contact.' + guestId, guestContact)
+}
 
 const loadInitialData = () => {
-	// TODO(ID9): load scooter options and salesperson context.
+	const token = readStorageStringOrNull('token')
+	const userId = readStorageStringOrNull('userId')
+	if (token == null || userId == null) {
+		showThenNavigate(
+			getAppMessage('auth', 'loginRequired', 'Please login first'),
+			'/pages/login/login',
+			false,
+			1500,
+			'reLaunch'
+		)
+		return
+	}
+	form.salespersonId = userId
+
+	uni.request({
+		url: BASE_URL + SCOOTER_LIST_URL + '?_t=' + Date.now(),
+		method: 'GET',
+		header: { 'Cache-Control': 'no-cache' },
+		success: (res) => {
+			if (!(res.statusCode >= 200 && res.statusCode < 300) || res.data == null) {
+				showError(getResponseMessage(res.data, getAppMessage('guestBooking', 'loadInitialFailed', 'Failed to load page data')))
+				return
+			}
+			const raw = res.data as UTSJSONObject
+			let arr: UTSJSONObject[] = []
+			const dataArr = raw.getArray<UTSJSONObject>('data')
+			if (dataArr != null) {
+				arr = dataArr
+			} else if (Array.isArray(raw)) {
+				arr = raw as UTSJSONObject[]
+			}
+
+			const options: ScooterOption[] = []
+			for (let i = 0; i < arr.length; i++) {
+				const item = arr[i]
+				const id = item['id'] != null ? ('' + item['id']) : ''
+				const statusRaw = item['status'] != null ? ('' + item['status']).toUpperCase() : ''
+				const rentedRaw = item['rented']
+				const available = (statusRaw == '' || statusRaw == 'AVAILABLE') && rentedRaw != true
+				if (id.length > 0 && available) {
+					options.push({ id: id, label: 'SC' + id.padStart(3, '0') } as ScooterOption)
+				}
+			}
+			scooterOptions.value = options
+			if (form.scooterId.length < 1 && options.length > 0) {
+				form.scooterId = options[0].id
+			}
+		},
+		fail: () => {
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
+		}
+	})
 }
 
 const validateGuestForm = (): boolean => {
-	// TODO(ID9): validate guest name/contact/scooter/duration.
-	return false
+	const guestId = ('' + form.guestId).trim().toUpperCase()
+	const guestName = ('' + form.guestName).trim()
+	const guestContact = ('' + form.guestContact).trim()
+	const scooterId = ('' + form.scooterId).trim()
+	const duration = ('' + form.duration).trim().toUpperCase()
+	const holderName = ('' + cardForm.holderName).trim()
+	const brand = ('' + cardForm.brand).trim()
+	const cardNumber = ('' + cardForm.cardNumber).replace(/\s/g, '')
+	const month = parseInt(('' + cardForm.expiryMonth).trim())
+	const year = parseInt(('' + cardForm.expiryYear).trim())
+
+	if (!/^G?\d+$/.test(guestId)) {
+		showInfo(getAppMessage('guestBooking', 'guestIdRequired', 'Please enter a valid guest ID (e.g. G100)'))
+		return false
+	}
+	if (guestName.length < 2) {
+		showInfo(getAppMessage('guestBooking', 'guestNameRequired', 'Please enter guest name'))
+		return false
+	}
+	const phoneLike = /^\d{7,15}$/.test(guestContact)
+	const emailLike = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestContact)
+	if (!(phoneLike || emailLike)) {
+		showInfo(getAppMessage('guestBooking', 'guestContactInvalid', 'Please enter a valid phone or email'))
+		return false
+	}
+	if (scooterId.length < 1) {
+		showInfo(getAppMessage('guestBooking', 'scooterRequired', 'Please select scooter'))
+		return false
+	}
+	if (durationCodes.indexOf(duration) < 0) {
+		showInfo(getAppMessage('guestBooking', 'durationRequired', 'Please select duration'))
+		return false
+	}
+	if (holderName.length < 2 || brand.length < 2 || !/^\d{13,19}$/.test(cardNumber) || isNaN(month) || isNaN(year)) {
+		showInfo(getAppMessage('guestBooking', 'cardFormInvalid', 'Please complete valid card info for guest'))
+		return false
+	}
+	return true
+}
+
+const handleGuestBookingError = (res: any | null) => {
+	const statusCode = res != null && typeof res == 'object' && (res as UTSJSONObject)['statusCode'] != null
+		? parseInt('' + (res as UTSJSONObject)['statusCode'])
+		: 0
+	let fallback = getAppMessage('guestBooking', 'submitFailed', 'Failed to create guest booking')
+	if (statusCode == 401) {
+		fallback = getAppMessage('auth', 'loginExpired', 'Login expired, please login again')
+	} else if (statusCode == 403) {
+		fallback = getAppMessage('guestBooking', 'forbidden', 'Current user is not allowed to create guest booking')
+	} else if (statusCode == 409) {
+		fallback = getAppMessage('guestBooking', 'conflict', 'Scooter is unavailable now, please retry with another one')
+	} else if (statusCode == 400) {
+		fallback = getAppMessage('guestBooking', 'guestCardRequired', 'Guest must bind a credit card before booking')
+	}
+	const dataField = res != null && typeof res == 'object' ? (res as UTSJSONObject)['data'] : null
+	showError(getResponseMessage(dataField, fallback))
 }
 
 const submitGuestBooking = () => {
-	// TODO(ID9): submit guest booking request and handle success navigation.
+	if (isSubmitting.value) return
+	if (!validateGuestForm()) return
+
+	const token = readStorageStringOrNull('token')
+	if (token == null) {
+		showThenNavigate(
+			getAppMessage('auth', 'loginRequired', 'Please login first'),
+			'/pages/login/login',
+			false,
+			1500,
+			'reLaunch'
+		)
+		return
+	}
+
+	isSubmitting.value = true
+	const guestId = normalizeGuestId(form.guestId)
+	const guestName = ('' + form.guestName).trim()
+	const guestContact = ('' + form.guestContact).trim()
+	const holderName = ('' + cardForm.holderName).trim()
+	const brand = ('' + cardForm.brand).trim()
+	const cardNumber = ('' + cardForm.cardNumber).replace(/\s/g, '')
+	const month = parseInt(('' + cardForm.expiryMonth).trim())
+	const year = parseInt(('' + cardForm.expiryYear).trim())
+	const bindPath = SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL
+		.replace('{salespersonId}', form.salespersonId)
+		.replace('{guestId}', guestId)
+	uni.request({
+		url: BASE_URL + bindPath,
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		data: {
+			holderName: holderName,
+			brand: brand,
+			cardNumber: cardNumber,
+			expiryMonth: month,
+			expiryYear: year
+		},
+		success: (res) => {
+			if (!(res.statusCode >= 200 && res.statusCode < 300)) {
+				showError(getResponseMessage(res.data, getAppMessage('guestBooking', 'bindCardFailed', 'Failed to bind card for guest')))
+				isSubmitting.value = false
+				return
+			}
+			const payload: UTSJSONObject = {
+				salespersonId: ('' + form.salespersonId).trim(),
+				guestId: guestId,
+				guestName: guestName,
+				guestContact: guestContact,
+				scooterId: ('' + form.scooterId).trim(),
+				duration: ('' + form.duration).trim().toUpperCase()
+			}
+			uni.request({
+				url: BASE_URL + GUEST_BOOKING_CREATE_URL,
+				method: 'POST',
+				header: {
+					'Content-Type': 'application/json',
+					'Authorization': 'Bearer ' + token
+				},
+				data: payload,
+				success: (bookingRes) => {
+					if (bookingRes.statusCode >= 200 && bookingRes.statusCode < 300) {
+						persistGuestProfileDraft(guestId, guestName, guestContact)
+						showThenNavigate(
+							getAppMessage('guestBooking', 'submitSuccess', 'Guest booking created'),
+							'/pages/index/index',
+							false,
+							900,
+							'reLaunch'
+						)
+						return
+					}
+					handleGuestBookingError(bookingRes as UTSJSONObject)
+				},
+				fail: () => {
+					showError(getAppMessage('network', 'requestFailed', 'Network error, please try again'))
+				},
+				complete: () => {
+					isSubmitting.value = false
+				}
+			})
+		},
+		fail: () => {
+			showError(getAppMessage('network', 'requestFailed', 'Network error, please try again'))
+			isSubmitting.value = false
+		},
+		complete: () => {}
+	})
 }
 
-const handleGuestBookingError = (_res: any | null) => {
-	// TODO(ID9): map backend error to user-friendly message.
+const pickScooter = () => {
+	if (scooterOptions.value.length < 1) {
+		showInfo(getAppMessage('guestBooking', 'noScooterAvailable', 'No available scooters'))
+		return
+	}
+	const labels: string[] = []
+	for (let i = 0; i < scooterOptions.value.length; i++) {
+		labels.push(scooterOptions.value[i].label)
+	}
+	uni.showActionSheet({
+		itemList: labels,
+		success: (res) => {
+			const idx = res.tapIndex
+			if (idx >= 0 && idx < scooterOptions.value.length) {
+				form.scooterId = scooterOptions.value[idx].id
+			}
+		}
+	})
 }
+
+const pickDuration = () => {
+	uni.showActionSheet({
+		itemList: durationLabels,
+		success: (res) => {
+			const idx = res.tapIndex
+			if (idx >= 0 && idx < durationCodes.length) {
+				form.duration = durationCodes[idx]
+			}
+		}
+	})
+}
+
+onShow(() => {
+	loadInitialData()
+})
 </script>
 
 <style lang="scss">
 .container {
-	padding: 24px;
+	width: 100%;
+	height: 100%;
+	background-color: #f5f5f5;
+	box-sizing: border-box;
+}
+
+.scroll-area {
+	width: 100%;
+	height: 100%;
+	padding: 16px;
+	box-sizing: border-box;
 }
 
 .title {
-	font-size: 20px;
+	font-size: 22px;
 	font-weight: bold;
+	color: #333;
+}
+
+.subtitle {
+	font-size: 13px;
+	color: #666;
+	margin-top: 6px;
+	margin-bottom: 14px;
+}
+
+.card {
+	background-color: #fff;
+	border-radius: 12px;
+	padding: 14px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.input {
+	margin-top: 10px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 10px;
+	background: #fafafa;
+}
+
+.picker {
+	margin-top: 10px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 10px;
+	background: #fafafa;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.picker-label {
+	font-size: 13px;
+	color: #666;
+}
+
+.picker-value {
+	font-size: 14px;
+	color: #333;
+	font-weight: bold;
+}
+
+.card-section {
+	margin-top: 12px;
+	padding-top: 8px;
+	border-top: 1px solid #eee;
+}
+
+.section-title {
+	font-size: 13px;
+	color: #666;
+	font-weight: bold;
+}
+
+.row {
+	display: flex;
+	gap: 8px;
+}
+
+.half {
+	flex: 1;
+}
+
+.submit-btn {
+	margin-top: 16px;
+	background-color: #4CAF50;
+	color: #fff;
+	border: none;
+	height: 42px;
+	border-radius: 8px;
 }
 </style>

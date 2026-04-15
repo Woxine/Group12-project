@@ -20,4 +20,11 @@ public interface PaymentCardService {
     default PaymentCardResponse bindCardForGuest(String guestId, StorePaymentCardRequest request, String salespersonId) {
         throw new UnsupportedOperationException("TODO(ID9): bindCardForGuest not implemented yet");
     }
+
+    /**
+     * ID9: 店员按 guestId 查询顾客卡片列表。
+     */
+    default List<PaymentCardResponse> listCardsForGuest(String guestId, String salespersonId) {
+        throw new UnsupportedOperationException("TODO(ID9): listCardsForGuest not implemented yet");
+    }
 }

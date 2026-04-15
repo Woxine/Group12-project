@@ -72,7 +72,8 @@ export const APP_MESSAGES = {
 		extendBookingConfirmNoQuote: 'Extend by ',
 		extendBookingConfirmNoQuoteSuffix: '? Additional fee cannot be estimated now. Continue?',
 		extendSuccess: 'Booking extended',
-		extendFailed: 'Failed to extend booking'
+		extendFailed: 'Failed to extend booking',
+		paymentCardRequired: 'Please bind a payment card before booking.'
 	},
 	// 反馈相关文案
 	feedback: {
@@ -100,6 +101,35 @@ export const APP_MESSAGES = {
 		cardNumberInvalid: 'Invalid card number',
 		expiryMonthInvalid: 'Invalid expiry month',
 		expiryYearInvalid: 'Invalid expiry year'
+	},
+	// ID9 guest booking / profile
+	guestBooking: {
+		loadInitialFailed: 'Failed to load initial booking data',
+		guestIdRequired: 'Please enter a valid guest ID (e.g. G100)',
+		guestNameRequired: 'Please enter guest name',
+		guestContactInvalid: 'Please enter a valid phone or email',
+		scooterRequired: 'Please select scooter',
+		durationRequired: 'Please select duration',
+		cardFormInvalid: 'Please complete valid card info for guest',
+		bindCardFailed: 'Failed to bind card for guest',
+		noScooterAvailable: 'No available scooters',
+		submitSuccess: 'Guest booking created',
+		submitFailed: 'Failed to create guest booking',
+		guestCardRequired: 'Guest must bind a credit card before booking',
+		conflict: 'Scooter is unavailable now, please retry with another one',
+		forbidden: 'Current user is not allowed to create guest booking',
+		goOrders: 'Opening booking list...',
+		goGuestProfile: 'Opening guest profile...'
+	},
+	guestProfile: {
+		guestIdInvalid: 'Invalid guest ID',
+		loadSuccess: 'Guest profile loaded',
+		loadFailed: 'Failed to load guest profile',
+		notFound: 'Guest not found',
+		contactMaskedPlaceholder: 'Hidden for privacy',
+		cardFormInvalid: 'Please complete valid card info',
+		bindCardSuccess: 'Card binding request completed',
+		bindCardFailed: 'Failed to bind card for guest'
 	}
 }
 

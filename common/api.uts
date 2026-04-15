@@ -11,3 +11,9 @@
  *   Android 设备需与 PC 在同一 WiFi 网络下
  */
 export const BASE_URL = 'http://localhost:8080'
+
+// ID9 guest booking
+export const GUEST_BOOKING_CREATE_URL = '/api/v1/bookings/guest'
+export const SCOOTER_LIST_URL = '/api/v1/scooters'
+export const USER_BOOKINGS_TEMPLATE_URL = '/api/v1/users/{userId}/bookings'
+export const SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL = '/api/v1/users/{salespersonId}/payment-cards/guest/{guestId}'

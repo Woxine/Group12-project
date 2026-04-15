@@ -50,6 +50,7 @@ class GuestBookingControllerMvcTest {
         String payload = """
                 {
                   "salespersonId":"10",
+                  "guestId":"G100",
                   "guestName":"Guest A",
                   "guestContact":"guest@example.com",
                   "scooterId":"1",

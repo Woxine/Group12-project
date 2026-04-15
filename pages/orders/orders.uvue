@@ -93,7 +93,7 @@
 <script setup lang="uts">
 // 订单列表逻辑：分页获取用户预订、自动刷新活跃订单、结束/取消订单操作
 import { ref, computed, onMounted } from 'vue'
-import { onShow, onHide } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
@@ -138,6 +138,8 @@ const readStorageStringOrNull = (key: string): string | null => {
 }
 
 const isLoggedIn = ref(false)
+const viewingUserId = ref<string | null>(null)
+const viewingGuestId = ref<string | null>(null)
 const isLoading = ref(false)
 const loadError = ref('')
 const bookings = ref<Booking[]>([])
@@ -264,7 +266,7 @@ const startAutoRefresh = () => {
 }
 
 const fetchBookings = (fromPullRefresh: boolean) => {
-	const userId = readStorageStringOrNull('userId')
+	const userId = viewingUserId.value != null ? viewingUserId.value : readStorageStringOrNull('userId')
 	console.log('[orders] uni.getStorageSync("userId") =', userId)
 	const token = readStorageStringOrNull('token')
 
@@ -289,7 +291,9 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 	currentPage.value = 1
 
 	uni.request({
-		url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=' + PAGE_SIZE,
+		url: viewingGuestId.value != null
+			? (BASE_URL + '/api/v1/users/guest/' + viewingGuestId.value + '/bookings?page=1&size=' + PAGE_SIZE)
+			: (BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=' + PAGE_SIZE),
 		method: 'GET',
 		header: {
 			'Content-Type': 'application/json',
@@ -326,7 +330,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 fetchBookingsRef.value = fetchBookings
 
 const loadMore = () => {
-	const userId = readStorageStringOrNull('userId')
+	const userId = viewingUserId.value != null ? viewingUserId.value : readStorageStringOrNull('userId')
 	const token = readStorageStringOrNull('token')
 	if (userId == null || token == null || loadingMore.value || !hasMore.value) return
 
@@ -334,7 +338,9 @@ const loadMore = () => {
 	const nextPage = currentPage.value + 1
 
 	uni.request({
-		url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=' + nextPage + '&size=' + PAGE_SIZE,
+		url: viewingGuestId.value != null
+			? (BASE_URL + '/api/v1/users/guest/' + viewingGuestId.value + '/bookings?page=' + nextPage + '&size=' + PAGE_SIZE)
+			: (BASE_URL + '/api/v1/users/' + userId + '/bookings?page=' + nextPage + '&size=' + PAGE_SIZE),
 		method: 'GET',
 		header: {
 			'Content-Type': 'application/json',
@@ -672,7 +678,7 @@ const setScrollHeight = () => {
 
 onMounted(() => {
 	setScrollHeight()
-	const userId = uni.getStorageSync('userId')
+	const userId = viewingUserId.value != null ? viewingUserId.value : (uni.getStorageSync('userId') as string | null)
 	const hasUser = userId != null && userId != '' && typeof userId == 'string'
 	if (hasUser) {
 		fetchBookings(false)
@@ -681,9 +687,28 @@ onMounted(() => {
 	}
 })
 
+onLoad((options) => {
+	const params = options as UTSJSONObject | null
+	if (params == null) return
+	const queryGuestId = params['guestId']
+	if (queryGuestId != null) {
+		const value = ('' + queryGuestId).trim()
+		if (value.length > 0) {
+			viewingGuestId.value = value
+		}
+	}
+	const queryUserId = params['userId']
+	if (queryUserId != null) {
+		const value = ('' + queryUserId).trim()
+		if (value.length > 0) {
+			viewingUserId.value = value
+		}
+	}
+})
+
 onShow(() => {
 	setScrollHeight()
-	const userId = uni.getStorageSync('userId')
+	const userId = viewingUserId.value != null ? viewingUserId.value : (uni.getStorageSync('userId') as string | null)
 	const hasUser = userId != null && userId != '' && typeof userId == 'string'
 	if (hasUser) {
 		fetchBookings(false)

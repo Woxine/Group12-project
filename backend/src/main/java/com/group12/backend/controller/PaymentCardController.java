@@ -47,6 +47,14 @@ public class PaymentCardController {
         return ResponseEntity.ok(Map.of("data", paymentCardService.listCards(userId)));
     }
 
+    @GetMapping("/guest/{guestId}")
+    public ResponseEntity<Object> listCardsForGuest(@PathVariable String userId,
+                                                    @PathVariable String guestId,
+                                                    HttpServletRequest httpRequest) {
+        ensureUserOwnership(userId, httpRequest);
+        return ResponseEntity.ok(Map.of("data", paymentCardService.listCardsForGuest(guestId, userId)));
+    }
+
     @DeleteMapping("/{cardId}")
     public ResponseEntity<Object> deleteCard(@PathVariable String userId,
                                              @PathVariable String cardId,
@@ -62,6 +70,19 @@ public class PaymentCardController {
                                                  HttpServletRequest httpRequest) {
         ensureUserOwnership(userId, httpRequest);
         return ResponseEntity.ok(Map.of("data", paymentCardService.setDefaultCard(userId, cardId)));
+    }
+
+    /**
+     * ID9: 店员为未注册用户（guest）代绑定信用卡。
+     */
+    @PostMapping("/guest/{guestId}")
+    public ResponseEntity<Object> bindCardForGuest(@PathVariable String userId,
+                                                   @PathVariable String guestId,
+                                                   @Valid @RequestBody StorePaymentCardRequest request,
+                                                   HttpServletRequest httpRequest) {
+        ensureUserOwnership(userId, httpRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("data", paymentCardService.bindCardForGuest(guestId, request, userId)));
     }
 
     private void ensureUserOwnership(String userId, HttpServletRequest httpRequest) {

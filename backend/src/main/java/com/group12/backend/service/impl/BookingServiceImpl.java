@@ -4,8 +4,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +25,7 @@ import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
+import com.group12.backend.repository.PaymentCardRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BillingRule;
@@ -54,6 +59,9 @@ public class BookingServiceImpl implements BookingService {
     @Autowired
     private BillingService billingService;
 
+    @Autowired(required = false)
+    private PaymentCardRepository paymentCardRepository;
+
     @Override
     @Transactional
     /**
@@ -70,6 +78,10 @@ public class BookingServiceImpl implements BookingService {
         java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(userId, "CONFIRMED");
         if (activeBookings != null && !activeBookings.isEmpty()) {
             throw new BusinessException(ErrorMessages.ACTIVE_BOOKING_EXISTS);
+        }
+
+        if (paymentCardRepository != null && !paymentCardRepository.existsByUser_Id(userId)) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_REQUIRED_FOR_BOOKING, HttpStatus.BAD_REQUEST);
         }
 
         Scooter scooter = scooterRepository.findByIdForUpdate(scooterId)
@@ -120,10 +132,14 @@ public class BookingServiceImpl implements BookingService {
         if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
         if (request.getStartLng() != null) booking.setStartLng(request.getStartLng());
 
-        Booking savedBooking = bookingRepository.save(booking);
-
-        scooter.setStatus("RENTED");
-        scooterRepository.save(scooter);
+        Booking savedBooking;
+        try {
+            savedBooking = bookingRepository.save(booking);
+            scooter.setStatus("RENTED");
+            scooterRepository.save(scooter);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BusinessException(ErrorMessages.BOOKING_CONCURRENT_CONFLICT, HttpStatus.CONFLICT);
+        }
 
         sendBookingConfirmationSafely(user, scooter, savedBooking, durationRequest);
 
@@ -148,9 +164,85 @@ public class BookingServiceImpl implements BookingService {
      * TODO(ID9): 预留未注册用户预约入口（店员代下单）。
      */
     @Override
+    @Transactional
     public Object createGuestBooking(CreateGuestBookingRequest request) {
-        // TODO(ID9): validate salesperson permission and create guest booking flow.
-        throw new UnsupportedOperationException("TODO(ID9): createGuestBooking");
+        Long salespersonId = parseId(request.getSalespersonId(), "salespersonId");
+        Long guestUserId = parseGuestOwnerId(request.getGuestId());
+        Long scooterId = parseId(request.getScooterId(), "scooterId");
+        String durationRequest = request.getDuration();
+
+        User salesperson = resolveUserSafely(salespersonId);
+        if (salesperson != null && !isStaffOrAdmin(salesperson)) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+
+        User guestUser = resolveOrCreateGuestUser(guestUserId, request.getGuestName());
+        Long effectiveGuestUserId = guestUser.getId();
+        if (effectiveGuestUserId == null) {
+            throw new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+        if (paymentCardRepository != null && !paymentCardRepository.existsByUser_Id(effectiveGuestUserId)) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_REQUIRED_FOR_BOOKING, HttpStatus.BAD_REQUEST);
+        }
+
+        java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(effectiveGuestUserId, "CONFIRMED");
+        if (activeBookings != null && !activeBookings.isEmpty()) {
+            throw new BusinessException(ErrorMessages.ACTIVE_BOOKING_EXISTS);
+        }
+
+        Scooter scooter = resolveScooterSafely(scooterId);
+        if (scooter == null) {
+            throw new BusinessException(ErrorMessages.SCOOTER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+        if (scooter.getVisible() != null && !scooter.getVisible()) {
+            throw new BusinessException(ErrorMessages.SCOOTER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+        if (!"AVAILABLE".equalsIgnoreCase(scooter.getStatus())) {
+            throw new BusinessException(ErrorMessages.scooterUnavailable(scooter.getStatus()));
+        }
+
+        LocalDateTime startTime = LocalDateTime.now();
+        Double durationHours = resolveDurationHours(durationRequest);
+        LocalDateTime endTime = startTime.plusMinutes(Math.round(durationHours * 60));
+
+        if (bookingRepository != null) {
+            java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
+            if (overlapping != null && !overlapping.isEmpty()) {
+                throw new BusinessException(ErrorMessages.OVERLAPPING_BOOKING);
+            }
+        }
+
+        Booking booking = new Booking();
+        booking.setStatus("CONFIRMED");
+        booking.setStartTime(startTime);
+        booking.setEndTime(endTime);
+        booking.setDurationHours(durationHours);
+        booking.setDiscountType("NONE");
+        booking.setDiscountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        booking.setDiscountMultiplier(BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP));
+        booking.setUser(guestUser);
+        booking.setScooter(scooter);
+
+        String bookingId = "GUEST-" + System.currentTimeMillis();
+        if (bookingRepository != null) {
+            Booking saved = bookingRepository.save(booking);
+            if (saved != null && saved.getId() != null) {
+                bookingId = String.valueOf(saved.getId());
+            }
+            scooter.setStatus("RENTED");
+            scooterRepository.save(scooter);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", bookingId);
+        result.put("status", booking.getStatus());
+        result.put("salespersonId", String.valueOf(salespersonId));
+        result.put("guestId", request.getGuestId());
+        result.put("guestName", request.getGuestName());
+        result.put("guestContact", request.getGuestContact());
+        result.put("scooterId", String.valueOf(scooterId));
+        result.put("duration", durationRequest);
+        return result;
     }
 
     /**
@@ -192,11 +284,11 @@ public class BookingServiceImpl implements BookingService {
      */
     public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         if (!"CONFIRMED".equals(booking.getStatus())) {
-            throw new BusinessException(ErrorMessages.cannotCancelBooking(booking.getStatus()));
+            throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
 
         booking.setStatus("CANCELLED");
@@ -219,10 +311,10 @@ public class BookingServiceImpl implements BookingService {
      */
     public Object completeBooking(String bookingId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
         if (!"CONFIRMED".equals(booking.getStatus())) {
-            throw new BusinessException(ErrorMessages.cannotCompleteBooking(booking.getStatus()));
+            throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
         booking.setStatus("COMPLETED");
         booking.setEndTime(LocalDateTime.now());
@@ -266,5 +358,75 @@ public class BookingServiceImpl implements BookingService {
             return BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
         }
         return resolveDiscountMultiplier(discountBreakdown.getOriginalPrice(), discountBreakdown.getFinalPrice());
+    }
+
+    private Long parseId(String raw, String fieldName) {
+        try {
+            return Long.parseLong(raw);
+        } catch (Exception ex) {
+            throw new BusinessException(fieldName + " is invalid", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private Long parseGuestOwnerId(String guestId) {
+        if (guestId == null) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        String digits = guestId.replaceAll("\\D+", "");
+        if (digits.isEmpty()) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        return parseId(digits, "guestId");
+    }
+
+    private User resolveOrCreateGuestUser(Long guestUserId, String guestName) {
+        User guestUser = resolveUserSafely(guestUserId);
+        String placeholderEmail = "guest+" + guestUserId + "@placeholder.local";
+        if (guestUser == null) {
+            Optional<User> byEmail = userRepository.findByEmail(placeholderEmail);
+            if (byEmail != null) {
+                guestUser = byEmail.orElse(null);
+            }
+        }
+        if (guestUser != null) {
+            return guestUser;
+        }
+
+        User newGuest = new User();
+        newGuest.setName((guestName != null && !guestName.trim().isEmpty()) ? guestName.trim() : ("Guest " + guestUserId));
+        newGuest.setEmail(placeholderEmail);
+        newGuest.setPassword("N/A");
+        newGuest.setRole("CUSTOMER");
+        newGuest.setIsStudent(false);
+        try {
+            return userRepository.save(newGuest);
+        } catch (DataIntegrityViolationException ex) {
+            Optional<User> existing = userRepository.findByEmailIgnoreCase(placeholderEmail);
+            if (existing != null && existing.isPresent()) {
+                return existing.get();
+            }
+            throw ex;
+        }
+    }
+
+    private User resolveUserSafely(Long userId) {
+        if (userRepository == null) {
+            return null;
+        }
+        Optional<User> maybeUser = userRepository.findById(userId);
+        return maybeUser == null ? null : maybeUser.orElse(null);
+    }
+
+    private Scooter resolveScooterSafely(Long scooterId) {
+        if (scooterRepository == null) {
+            return null;
+        }
+        Optional<Scooter> maybeScooter = scooterRepository.findByIdForUpdate(scooterId);
+        return maybeScooter == null ? null : maybeScooter.orElse(null);
+    }
+
+    private boolean isStaffOrAdmin(User user) {
+        String role = user.getRole();
+        return "STAFF".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role);
     }
 }

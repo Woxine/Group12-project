@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.annotation.LogAction;
 import com.group12.backend.dto.CreateBookingRequest;
+import com.group12.backend.dto.CreateGuestBookingRequest;
 import com.group12.backend.service.BookingService;
 
 import jakarta.validation.Valid;
@@ -37,6 +38,15 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<Object> create(@Valid @RequestBody CreateBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createBooking(request)));
+    }
+
+    /**
+     * 店员为未注册用户创建预约订单。
+     */
+    @LogAction(action = "CREATE_GUEST_BOOKING", entityName = "Booking")
+    @PostMapping("/guest")
+    public ResponseEntity<Object> createGuestBooking(@Valid @RequestBody CreateGuestBookingRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createGuestBooking(request)));
     }
 
     /**

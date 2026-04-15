@@ -12,6 +12,8 @@ import com.group12.backend.entity.PaymentCard;
 public interface PaymentCardRepository extends JpaRepository<PaymentCard, Long> {
     List<PaymentCard> findByUser_IdOrderByCreatedAtDesc(Long userId);
 
+    boolean existsByUser_Id(Long userId);
+
     Optional<PaymentCard> findByIdAndUser_Id(Long cardId, Long userId);
 
     Optional<PaymentCard> findByUser_IdAndIsDefaultTrue(Long userId);

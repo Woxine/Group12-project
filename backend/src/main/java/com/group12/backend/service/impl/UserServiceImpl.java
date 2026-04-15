@@ -96,6 +96,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Object getGuestBookings(String guestId, Integer page, Integer size) {
+        Long guestUserId = resolveGuestUserId(guestId);
+        return getUserBookings(String.valueOf(guestUserId), page, size);
+    }
+
+    @Override
     /**
      * 查询指定用户名下的单条预约详情。
      */
@@ -310,5 +316,23 @@ public class UserServiceImpl implements UserService {
             return wholeHours + "h";
         }
         return wholeHours + "h " + remainderMin + "m";
+    }
+
+    private Long resolveGuestUserId(String guestId) {
+        if (guestId == null) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        String digits = guestId.replaceAll("\\D+", "");
+        if (digits.isEmpty()) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        Long parsed = Long.parseLong(digits);
+        if (userRepository.findById(parsed).isPresent()) {
+            return parsed;
+        }
+        String placeholderEmail = "guest+" + parsed + "@placeholder.local";
+        return userRepository.findByEmailIgnoreCase(placeholderEmail)
+                .map(User::getId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
     }
 }

@@ -12,6 +12,10 @@ public class CreateGuestBookingRequest {
     @NotBlank(message = "salespersonId is required")
     private String salespersonId;
 
+    @NotBlank(message = "guestId is required")
+    @Pattern(regexp = "^G?\\d+$", message = "guestId must be a numeric id, optionally prefixed with G")
+    private String guestId;
+
     @NotBlank(message = "guestName is required")
     @Size(min = 2, max = 50, message = "guestName length must be between 2 and 50")
     private String guestName;
@@ -32,6 +36,14 @@ public class CreateGuestBookingRequest {
 
     public void setSalespersonId(String salespersonId) {
         this.salespersonId = salespersonId;
+    }
+
+    public String getGuestId() {
+        return guestId;
+    }
+
+    public void setGuestId(String guestId) {
+        this.guestId = guestId;
     }
 
     public String getGuestName() {

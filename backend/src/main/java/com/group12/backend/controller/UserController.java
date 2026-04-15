@@ -55,6 +55,17 @@ public class UserController {
     }
 
     /**
+     * 根据 guestId 查询对应 guest 的预约历史，支持分页。
+     */
+    @GetMapping("/guest/{guestId}/bookings")
+    public ResponseEntity<Object> getGuestHistory(
+            @PathVariable String guestId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(userService.getGuestBookings(guestId, page, size));
+    }
+
+    /**
      * 查询指定用户的单条预约详情。
      */
     @GetMapping("/{userId}/bookings/{bookingId}")

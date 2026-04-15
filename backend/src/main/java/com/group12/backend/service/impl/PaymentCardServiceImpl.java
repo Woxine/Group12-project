@@ -4,8 +4,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,9 +133,108 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     }
 
     @Override
+    @Transactional
     public PaymentCardResponse bindCardForGuest(String guestId, StorePaymentCardRequest request, String salespersonId) {
-        // TODO(ID9): implement salesperson-owned guest card binding flow.
-        throw new UnsupportedOperationException("TODO(ID9): bindCardForGuest");
+        Long parsedSalespersonId = parseId(salespersonId, "salespersonId");
+        Long guestUserId = parseGuestOwnerId(guestId);
+
+        User salesperson = resolveUserSafely(parsedSalespersonId);
+        if (salesperson != null) {
+            String role = salesperson.getRole();
+            if (!"STAFF".equalsIgnoreCase(role) && !"ADMIN".equalsIgnoreCase(role)) {
+                throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+            }
+        }
+
+        String cardNumber = normalizeCardNumber(request.getCardNumber());
+        validateCardNumber(cardNumber);
+        validateExpiry(request.getExpiryMonth(), request.getExpiryYear());
+
+        User owner = resolveUserSafely(guestUserId);
+        if (owner == null) {
+            String placeholderEmail = "guest+" + guestUserId + "@placeholder.local";
+            Optional<User> existing = userRepository.findByEmailIgnoreCase(placeholderEmail);
+            if (existing != null && existing.isPresent()) {
+                owner = existing.get();
+            }
+        }
+        if (owner == null) {
+            User newGuest = new User();
+            newGuest.setName(request.getHolderName());
+            String placeholderEmail = "guest+" + guestUserId + "@placeholder.local";
+            newGuest.setEmail(placeholderEmail);
+            newGuest.setPassword("N/A");
+            newGuest.setRole("CUSTOMER");
+            newGuest.setIsStudent(false);
+            User savedGuest;
+            try {
+                savedGuest = userRepository.save(newGuest);
+            } catch (DataIntegrityViolationException ex) {
+                Optional<User> existing = userRepository.findByEmailIgnoreCase(placeholderEmail);
+                if (existing != null && existing.isPresent()) {
+                    savedGuest = existing.get();
+                } else {
+                    throw ex;
+                }
+            }
+            owner = savedGuest != null ? savedGuest : newGuest;
+        }
+        Long effectiveOwnerId = owner.getId() != null ? owner.getId() : guestUserId;
+
+        String normalizedBrand = normalizeBrand(request.getBrand());
+        String last4 = cardNumber.substring(cardNumber.length() - 4);
+        boolean duplicate = false;
+        if (paymentCardRepository != null) {
+            duplicate = paymentCardRepository.existsByUser_IdAndBrandIgnoreCaseAndLast4AndExpiryMonthAndExpiryYear(
+                    effectiveOwnerId,
+                    normalizedBrand,
+                    last4,
+                    request.getExpiryMonth(),
+                    request.getExpiryYear());
+        }
+        if (duplicate) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_DUPLICATE, HttpStatus.CONFLICT);
+        }
+
+        PaymentCard card = new PaymentCard();
+        card.setUser(owner);
+        card.setHolderName(request.getHolderName().trim());
+        card.setBrand(normalizedBrand);
+        card.setLast4(last4);
+        card.setExpiryMonth(request.getExpiryMonth());
+        card.setExpiryYear(request.getExpiryYear());
+        card.setIsDefault(determineIsDefault(effectiveOwnerId));
+
+        if (paymentCardRepository != null) {
+            PaymentCard saved = paymentCardRepository.save(card);
+            if (saved != null) {
+                return toResponse(saved);
+            }
+        }
+        return toResponse(card);
+    }
+
+    @Override
+    public List<PaymentCardResponse> listCardsForGuest(String guestId, String salespersonId) {
+        Long parsedSalespersonId = parseId(salespersonId, "salespersonId");
+        User salesperson = resolveUserSafely(parsedSalespersonId);
+        if (salesperson != null) {
+            String role = salesperson.getRole();
+            if (!"STAFF".equalsIgnoreCase(role) && !"ADMIN".equalsIgnoreCase(role)) {
+                throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+            }
+        }
+        Long guestUserId = resolveGuestUserId(guestId);
+        if (guestUserId == null) {
+            return java.util.List.of();
+        }
+        List<PaymentCard> cards = paymentCardRepository.findByUser_IdOrderByCreatedAtDesc(guestUserId);
+        return cards.stream()
+                .sorted(Comparator
+                        .comparing((PaymentCard card) -> !Boolean.TRUE.equals(card.getIsDefault()))
+                        .thenComparing(PaymentCard::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     private void ensureUserExists(Long userId) {
@@ -176,6 +277,46 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     private String normalizeBrand(String brand) {
         return brand == null ? "" : brand.trim();
+    }
+
+    private User resolveUserSafely(Long userId) {
+        if (userRepository == null) {
+            return null;
+        }
+        Optional<User> maybeUser = userRepository.findById(userId);
+        return maybeUser == null ? null : maybeUser.orElse(null);
+    }
+
+    private Long parseGuestOwnerId(String guestId) {
+        if (guestId == null) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        String digits = guestId.replaceAll("\\D+", "");
+        if (digits.isEmpty()) {
+            throw new BusinessException("guestId is invalid", HttpStatus.BAD_REQUEST);
+        }
+        return parseId(digits, "guestId");
+    }
+
+    private Long resolveGuestUserId(String guestId) {
+        Long parsed = parseGuestOwnerId(guestId);
+        if (userRepository.findById(parsed).isPresent()) {
+            return parsed;
+        }
+        String placeholderEmail = "guest+" + parsed + "@placeholder.local";
+        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(placeholderEmail);
+        if (byEmail != null && byEmail.isPresent()) {
+            return byEmail.get().getId();
+        }
+        return null;
+    }
+
+    private boolean determineIsDefault(Long userId) {
+        if (paymentCardRepository == null) {
+            return true;
+        }
+        Optional<PaymentCard> defaultCard = paymentCardRepository.findByUser_IdAndIsDefaultTrue(userId);
+        return defaultCard == null || defaultCard.isEmpty();
     }
 
     private boolean isLuhnValid(String cardNumber) {

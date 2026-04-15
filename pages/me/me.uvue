@@ -135,6 +135,10 @@
 					<text class="menu-text">Payment Cards</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
+				<navigator v-if="isStaffRole" url="/pages/guest-profile/guest-profile" open-type="navigate" class="menu-item">
+					<text class="menu-text">Guest Profile</text>
+					<text class="menu-arrow">›</text>
+				</navigator>
 				<navigator url="/pages/discount_verify/discount_verify" open-type="navigate" class="menu-item">
 					<text class="menu-text">Discount Verification</text>
 					<text class="menu-arrow">›</text>
@@ -170,6 +174,7 @@ type HeatmapDay = {
 }
 
 const isLoggedIn = ref<boolean>(false)
+const isStaffRole = ref(false)
 const userName = ref<string>('')
 const userEmail = ref<string>('')
 const DEFAULT_AVATAR = '/static/me.png'
@@ -219,6 +224,9 @@ const getUserInfo = () => {
 	userEmail.value = ''
 	const token = uni.getStorageSync('token')
 	isLoggedIn.value = token != null && token != '' && typeof token == 'string'
+	const roleRaw = uni.getStorageSync('role')
+	const role = roleRaw != null ? ('' + roleRaw).trim().toUpperCase() : ''
+	isStaffRole.value = role == 'STAFF'
 	if (!isLoggedIn.value) return
 	const userInfoStr = uni.getStorageSync('userInfo')
 	if (userInfoStr != null && userInfoStr != '' && typeof userInfoStr == 'string') {

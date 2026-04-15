@@ -1,32 +1,380 @@
 <template>
 	<view class="container">
-		<text class="title">Guest Profile (TODO)</text>
+		<view class="card">
+			<text class="title">Guest Profile</text>
+			<input v-model="guestIdInput" class="input" placeholder="Guest ID (e.g. G100)" />
+			<button class="btn" :disabled="isLoading" @click="loadGuestProfile(guestIdInput, false)">
+				{{ isLoading ? 'Loading...' : 'Load Profile' }}
+			</button>
+
+			<view v-if="guestProfileLoaded" class="section">
+				<text class="section-title">Basic Info</text>
+				<text class="line">Guest ID: {{ guestId }}</text>
+				<text class="line">Name: {{ guestName }}</text>
+				<text class="line">Contact: {{ guestContact }}</text>
+				<text class="line">Related bookings: {{ bookingCount }}</text>
+			</view>
+
+			<view v-if="guestProfileLoaded" class="section">
+				<text class="section-title">Payment Card</text>
+				<text v-if="hasBoundCard" class="line">Card already bound ({{ cardCount }})</text>
+				<button v-if="hasBoundCard && !showBindForm" class="btn ghost" @click="openBindAnotherCard">
+					Bind Another Card
+				</button>
+				<view v-if="showBindForm">
+					<input v-model="cardForm.holderName" class="input" placeholder="Card holder name" />
+					<input v-model="cardForm.brand" class="input" placeholder="Card brand (e.g. VISA)" />
+					<input v-model="cardForm.cardNumber" class="input" type="number" maxlength="19" placeholder="Card number" />
+					<view class="row">
+						<input v-model="cardForm.expiryMonth" class="input half" type="number" maxlength="2" placeholder="MM" />
+						<input v-model="cardForm.expiryYear" class="input half" type="number" maxlength="4" placeholder="YYYY" />
+					</view>
+					<button class="btn" :disabled="isBindingCard" @click="bindCardForGuest">
+						{{ isBindingCard ? 'Binding...' : 'Bind Card' }}
+					</button>
+				</view>
+			</view>
+
+			<view v-if="guestProfileLoaded" class="section">
+				<button class="btn ghost" @click="goToGuestBookings">View Guest Bookings</button>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
-// TODO(ID9): Build guest profile maintenance page.
+import { reactive, ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { BASE_URL, SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL } from '../../common/api.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showError, showInfo, showSuccess } from '../../common/appToast.uts'
 
-const loadGuestProfile = (_guestId: string) => {
-	// TODO(ID9): load guest details, linked cards and booking summary.
+const guestIdInput = ref('')
+const guestProfileLoaded = ref(false)
+const isLoading = ref(false)
+const isBindingCard = ref(false)
+const hasBoundCard = ref(false)
+const cardCount = ref(0)
+const showBindForm = ref(true)
+
+const guestId = ref('')
+const guestName = ref('-')
+const guestContact = ref('-')
+const bookingCount = ref(0)
+
+const cardForm = reactive({
+	holderName: '',
+	brand: '',
+	cardNumber: '',
+	expiryMonth: '',
+	expiryYear: ''
+})
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const normalizeGuestId = (rawGuestId: string): string => {
+	const raw = ('' + rawGuestId).trim()
+	if (raw.length < 1) return ''
+	let digits = ''
+	for (let i = 0; i < raw.length; i++) {
+		const ch = raw.charAt(i)
+		if (ch >= '0' && ch <= '9') digits += ch
+	}
+	if (digits.length < 1) return ''
+	return 'G' + digits
+}
+
+const guestNameKey = (normalizedGuestId: string): string => {
+	return 'guestProfile.name.' + normalizedGuestId
+}
+
+const guestContactKey = (normalizedGuestId: string): string => {
+	return 'guestProfile.contact.' + normalizedGuestId
+}
+
+const saveGuestSnapshot = (normalizedGuestId: string, name: string, contact: string) => {
+	uni.setStorageSync('guestProfile.lastGuestId', normalizedGuestId)
+	uni.setStorageSync('guestProfile.lastGuestName', name)
+	uni.setStorageSync('guestProfile.lastGuestContact', contact)
+	uni.setStorageSync(guestNameKey(normalizedGuestId), name)
+	uni.setStorageSync(guestContactKey(normalizedGuestId), contact)
+}
+
+const loadGuestCards = (rawGuestId: string) => {
+	const token = readStorageStringOrNull('token')
+	const salespersonId = readStorageStringOrNull('userId')
+	const normalizedGuestId = normalizeGuestId(rawGuestId)
+	if (token == null || salespersonId == null || normalizedGuestId.length < 1) return
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + salespersonId + '/payment-cards/guest/' + normalizedGuestId,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null && typeof res.data == 'object') {
+				const obj = res.data as UTSJSONObject
+				const data = obj['data']
+				if (data != null && Array.isArray(data)) {
+					const arr = data as UTSJSONObject[]
+					cardCount.value = arr.length
+					hasBoundCard.value = arr.length > 0
+					showBindForm.value = arr.length < 1
+					return
+				}
+			}
+			cardCount.value = 0
+			hasBoundCard.value = false
+			showBindForm.value = true
+		},
+		fail: () => {
+			cardCount.value = 0
+			hasBoundCard.value = false
+			showBindForm.value = true
+		}
+	})
+}
+
+const loadGuestProfile = (rawGuestId: string, silent: boolean) => {
+	const token = readStorageStringOrNull('token')
+	const normalizedGuestId = normalizeGuestId(rawGuestId)
+	if (token == null) {
+		if (!silent) showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'))
+		return
+	}
+	if (normalizedGuestId.length < 1) {
+		if (!silent) showInfo(getAppMessage('guestProfile', 'guestIdInvalid', 'Invalid guest ID'))
+		return
+	}
+
+	isLoading.value = true
+	const requestUrl = BASE_URL + '/api/v1/users/guest/' + normalizedGuestId + '/bookings?page=1&size=1'
+	uni.request({
+		url: requestUrl,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode == 404) {
+				if (!silent) showInfo(getAppMessage('guestProfile', 'notFound', 'Guest not found'))
+				return
+			}
+			if (!(res.statusCode >= 200 && res.statusCode < 300)) {
+				if (!silent) showError(getResponseMessage(res.data, getAppMessage('guestProfile', 'loadFailed', 'Failed to load guest profile')))
+				return
+			}
+			const obj = res.data as UTSJSONObject | null
+			const totalRaw = obj != null ? obj['total'] : null
+			bookingCount.value = totalRaw != null ? parseInt('' + totalRaw) : 0
+			guestId.value = normalizedGuestId
+			const perGuestName = readStorageStringOrNull(guestNameKey(normalizedGuestId))
+			const perGuestContact = readStorageStringOrNull(guestContactKey(normalizedGuestId))
+			const rawLastGuestId = readStorageStringOrNull('guestProfile.lastGuestId')
+			const normalizedLastGuestId = rawLastGuestId != null ? normalizeGuestId(rawLastGuestId) : ''
+			const cachedName = readStorageStringOrNull('guestProfile.lastGuestName')
+			const cachedContact = readStorageStringOrNull('guestProfile.lastGuestContact')
+			if (perGuestName != null && perGuestName.length > 0) {
+				guestName.value = perGuestName
+			} else if (normalizedLastGuestId == normalizedGuestId && cachedName != null && cachedName.length > 0) {
+				guestName.value = cachedName
+			} else {
+				guestName.value = guestId.value
+			}
+			if (perGuestContact != null && perGuestContact.length > 0) {
+				guestContact.value = perGuestContact
+			} else if (normalizedLastGuestId == normalizedGuestId && cachedContact != null && cachedContact.length > 0) {
+				guestContact.value = cachedContact
+			} else {
+				guestContact.value = getAppMessage('guestProfile', 'contactMaskedPlaceholder', 'Hidden for privacy')
+			}
+			saveGuestSnapshot(guestId.value, guestName.value, guestContact.value)
+			guestProfileLoaded.value = true
+			loadGuestCards(guestId.value)
+			if (!silent) showSuccess(getAppMessage('guestProfile', 'loadSuccess', 'Guest profile loaded'))
+		},
+		fail: () => {
+			if (!silent) showError(getAppMessage('network', 'requestFailed', 'Network error'))
+		},
+		complete: () => {
+			isLoading.value = false
+		}
+	})
 }
 
 const bindCardForGuest = () => {
-	// TODO(ID9): bind payment card for guest flow.
+	if (isBindingCard.value) return
+	const token = readStorageStringOrNull('token')
+	const salespersonId = readStorageStringOrNull('userId')
+	const normalizedGuestId = normalizeGuestId(guestId.value)
+	if (token == null || salespersonId == null) {
+		showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'))
+		return
+	}
+	if (normalizedGuestId.length < 1) {
+		showInfo(getAppMessage('guestProfile', 'guestIdInvalid', 'Invalid guest ID'))
+		return
+	}
+	const holderName = ('' + cardForm.holderName).trim()
+	const brand = ('' + cardForm.brand).trim()
+	const cardNumber = ('' + cardForm.cardNumber).replace(/\s/g, '')
+	const month = parseInt(('' + cardForm.expiryMonth).trim())
+	const year = parseInt(('' + cardForm.expiryYear).trim())
+	if (holderName.length < 2 || brand.length < 2 || !/^\d{13,19}$/.test(cardNumber) || isNaN(month) || isNaN(year)) {
+		showInfo(getAppMessage('guestProfile', 'cardFormInvalid', 'Please complete valid card info'))
+		return
+	}
+
+	const bindPath = SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL
+		.replace('{salespersonId}', salespersonId)
+		.replace('{guestId}', normalizedGuestId)
+	isBindingCard.value = true
+	uni.request({
+		url: BASE_URL + bindPath,
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		data: {
+			holderName: holderName,
+			brand: brand,
+			cardNumber: cardNumber,
+			expiryMonth: month,
+			expiryYear: year
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				showSuccess(getAppMessage('guestProfile', 'bindCardSuccess', 'Card binding request completed'))
+				saveGuestSnapshot(guestId.value, guestName.value, guestContact.value)
+				cardForm.holderName = ''
+				cardForm.brand = ''
+				cardForm.cardNumber = ''
+				cardForm.expiryMonth = ''
+				cardForm.expiryYear = ''
+				loadGuestCards(guestId.value)
+				return
+			}
+			showError(getResponseMessage(res.data, getAppMessage('guestProfile', 'bindCardFailed', 'Failed to bind card for guest')))
+		},
+		fail: () => {
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
+		},
+		complete: () => {
+			isBindingCard.value = false
+		}
+	})
 }
 
 const goToGuestBookings = () => {
-	// TODO(ID9): navigate to guest booking history list.
+	if (guestId.value.length < 1) {
+		showInfo(getAppMessage('guestProfile', 'guestIdInvalid', 'Invalid guest ID'))
+		return
+	}
+	uni.navigateTo({
+		url: '/pages/orders/orders?guestId=' + guestId.value
+	})
 }
+
+const openBindAnotherCard = () => {
+	showBindForm.value = true
+}
+
+onShow(() => {
+	const cachedGuestId = readStorageStringOrNull('guestProfile.lastGuestId')
+	if (cachedGuestId == null) return
+	const normalized = normalizeGuestId(cachedGuestId)
+	if (normalized.length < 1) return
+	const perGuestName = readStorageStringOrNull(guestNameKey(normalized))
+	const perGuestContact = readStorageStringOrNull(guestContactKey(normalized))
+	const cachedName = readStorageStringOrNull('guestProfile.lastGuestName')
+	const cachedContact = readStorageStringOrNull('guestProfile.lastGuestContact')
+	guestIdInput.value = normalized
+	guestId.value = normalized
+	guestName.value = perGuestName != null ? perGuestName : (cachedName != null ? cachedName : normalized)
+	guestContact.value = perGuestContact != null ? perGuestContact : (cachedContact != null ? cachedContact : getAppMessage('guestProfile', 'contactMaskedPlaceholder', 'Hidden for privacy'))
+	guestProfileLoaded.value = true
+	// Auto-refresh cached guest silently, avoid popup before manual input.
+	loadGuestProfile(normalized, true)
+})
 </script>
 
 <style lang="scss">
 .container {
-	padding: 24px;
+	padding: 16px;
+	background-color: #f5f5f5;
+	min-height: 100%;
 }
 
 .title {
-	font-size: 20px;
+	font-size: 22px;
 	font-weight: bold;
+	color: #333;
+	margin-bottom: 10px;
+}
+
+.card {
+	background-color: #fff;
+	border-radius: 12px;
+	padding: 14px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid #eee;
+}
+
+.section-title {
+	font-size: 14px;
+	font-weight: bold;
+	color: #666;
+}
+
+.line {
+	display: block;
+	margin-top: 6px;
+	font-size: 14px;
+	color: #333;
+}
+
+.input {
+	margin-top: 10px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 10px;
+	background: #fafafa;
+}
+
+.row {
+	display: flex;
+	gap: 8px;
+}
+
+.half {
+	flex: 1;
+}
+
+.btn {
+	margin-top: 12px;
+	background-color: #4CAF50;
+	color: #fff;
+	border: none;
+	height: 40px;
+	border-radius: 8px;
+}
+
+.ghost {
+	background-color: #fff;
+	color: #4CAF50;
+	border: 1px solid #4CAF50;
 }
 </style>

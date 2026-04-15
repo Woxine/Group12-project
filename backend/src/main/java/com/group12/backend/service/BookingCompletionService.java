@@ -30,7 +30,7 @@ public class BookingCompletionService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completeSingleBooking(Booking booking) {
-        Booking fresh = bookingRepository.findById(booking.getId())
+        Booking fresh = bookingRepository.findByIdForUpdate(booking.getId())
                 .orElseThrow(() -> new IllegalStateException("Booking not found: " + booking.getId()));
 
         if (!"CONFIRMED".equals(fresh.getStatus())) {

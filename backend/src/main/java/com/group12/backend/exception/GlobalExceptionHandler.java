@@ -3,6 +3,7 @@ package com.group12.backend.exception;
 import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +52,16 @@ public class GlobalExceptionHandler {
                         status,
                         ErrorMessages.BUSINESS_ERROR,
                         e.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Object> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.CONFLICT,
+                        ErrorMessages.BUSINESS_ERROR,
+                        ErrorMessages.BOOKING_CONCURRENT_CONFLICT
                 ));
     }
 

@@ -37,7 +37,7 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
     @Override
     @Transactional
     public Object extendBooking(String bookingId, ExtendBookingRequest request, Long authUserId) {
-        Booking booking = bookingRepository.findById(Long.parseLong(bookingId))
+        Booking booking = bookingRepository.findByIdForUpdate(Long.parseLong(bookingId))
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         if (!booking.getUser().getId().equals(authUserId)) {
@@ -45,7 +45,7 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
         }
 
         if (!"CONFIRMED".equalsIgnoreCase(booking.getStatus())) {
-            throw new BusinessException(ErrorMessages.cannotExtendBooking(booking.getStatus()));
+            throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
 
         String durationRequest = request.getDuration();

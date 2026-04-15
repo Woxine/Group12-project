@@ -34,6 +34,7 @@
 
 			<view class="button-group">
 				<button class="confirm-btn" @click="confirm">Confirm</button>
+				<button v-if="isStaffRole" class="guest-btn" @click="goGuestBooking">Guest Booking</button>
 				<button class="cancel-btn" @click="cancel">Cancel</button>
 			</view>
 
@@ -134,6 +135,7 @@ const endTime = ref<string>('');
 const durationCode = ref<string>('');
 const durationLabel = ref<string>('');
 const estimatedTotalDisplay = ref<string>('0.00');
+const isStaffRole = ref<boolean>(false);
 
 const updateEstimatedTotal = () => {
 	if (startTime.value.length > 0 && endTime.value.length > 0) {
@@ -209,6 +211,9 @@ onMounted(() => {
 
 onShow(() => {
 	fetchHourRate();
+	const roleRaw = uni.getStorageSync('role');
+	const role = roleRaw != null ? ('' + roleRaw).trim().toUpperCase() : '';
+	isStaffRole.value = role == 'STAFF' || role == 'ADMIN';
 });
 
 const selectStartTime = () => {
@@ -352,6 +357,8 @@ const stepSendBooking = () => {
 };
 
 const hasActivePending = ref<boolean>(false);
+const hasPaymentCard = ref<boolean>(false);
+let stepCheckActiveBooking: () => void = () => {};
 
 const stepAfterActiveCheck = () => {
 	if (hasActivePending.value) {
@@ -361,7 +368,49 @@ const stepAfterActiveCheck = () => {
 	}
 };
 
-const stepCheckActiveBooking = () => {
+const stepAfterPaymentCardCheck = () => {
+	if (!hasPaymentCard.value) {
+		showThenNavigate(
+			bookingMessage('paymentCardRequired', 'Please bind a payment card before booking.'),
+			'/pages/payment-card/payment-card',
+			false,
+			1800,
+			'navigateTo'
+		);
+	} else {
+		setTimeout(() => { stepCheckActiveBooking(); }, 10);
+	}
+};
+
+const stepCheckPaymentCard = () => {
+	const userId = pendingUserId.value;
+	const token = pendingToken.value;
+	hasPaymentCard.value = false;
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null && typeof res.data == 'object') {
+				const obj = res.data as UTSJSONObject;
+				const data = obj['data'];
+				if (data != null && Array.isArray(data)) {
+					const arr = data as UTSJSONObject[];
+					hasPaymentCard.value = arr.length > 0;
+				}
+			}
+			setTimeout(() => { stepAfterPaymentCardCheck(); }, 10);
+		},
+		fail: () => {
+			showError(networkMessage('requestFailed', 'Network error, please try again'));
+		}
+	});
+};
+
+stepCheckActiveBooking = () => {
 	const userId = pendingUserId.value;
 	const token = pendingToken.value;
 	hasActivePending.value = false;
@@ -400,7 +449,7 @@ const scooterAvailable = ref<boolean>(true);
 
 const stepAfterScooterCheck = () => {
 	if (scooterAvailable.value) {
-		setTimeout(() => { stepCheckActiveBooking(); }, 10);
+		setTimeout(() => { stepCheckPaymentCard(); }, 10);
 	} else {
 		showError(bookingMessage('scooterUnavailable', 'This scooter is no longer available.'));
 		setTimeout(() => { uni.navigateBack({}); }, 3000);
@@ -498,6 +547,10 @@ const cancel = () => {
 		}
 	}
 	uni.reLaunch({ url: '/pages/index/index' })
+};
+
+const goGuestBooking = () => {
+	uni.navigateTo({ url: '/pages/guest-booking/guest-booking' });
 };
 </script>
 
@@ -627,6 +680,18 @@ const cancel = () => {
 		border-radius: 8px;
 		font-size: 16px;
 		font-weight: bold;
+	}
+
+	.guest-btn {
+		width: 80%;
+		height: 45px;
+		background-color: #2196F3;
+		color: white;
+		border: none;
+		border-radius: 8px;
+		font-size: 16px;
+		font-weight: bold;
+		margin-bottom: 15px;
 	}
 
 	.pricing-ref-title {

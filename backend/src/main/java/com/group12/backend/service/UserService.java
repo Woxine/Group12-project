@@ -21,6 +21,11 @@ public interface UserService {
     Object getUserBookings(String userId, Integer page, Integer size);
 
     /**
+     * 根据 guestId 查询对应用户的预约历史记录。
+     */
+    Object getGuestBookings(String guestId, Integer page, Integer size);
+
+    /**
      * 查询指定用户的单条预约详情。
      */
     Object getBookingById(String userId, String bookingId);

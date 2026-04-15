@@ -23,10 +23,12 @@ public final class ErrorMessages {
     public static final String SCOOTER_NOT_FOUND = "Scooter not found";
     public static final String OVERLAPPING_BOOKING = "Scooter has overlapping reservation. Please try another scooter or time.";
     public static final String ACTIVE_BOOKING_EXISTS = "You already have an active booking. Please cancel it or wait until it ends before booking again.";
+    public static final String BOOKING_CONCURRENT_CONFLICT = "Booking conflict detected. Another client may have updated this booking.";
     public static final String PAYMENT_CARD_NOT_FOUND = "Payment card not found";
     public static final String PAYMENT_CARD_DUPLICATE = "Payment card already exists";
     public static final String PAYMENT_CARD_EXPIRED = "Payment card is expired";
     public static final String INVALID_CARD_NUMBER = "Invalid card number";
+    public static final String PAYMENT_CARD_REQUIRED_FOR_BOOKING = "Please bind a payment card before booking.";
 
     private ErrorMessages() {
     }
@@ -41,6 +43,10 @@ public final class ErrorMessages {
 
     public static String cannotCompleteBooking(String status) {
         return "Cannot complete booking with status: " + status;
+    }
+
+    public static String bookingStateChanged(String status) {
+        return "Booking state has changed to: " + status;
     }
 
     public static String cannotExtendBooking(String status) {
