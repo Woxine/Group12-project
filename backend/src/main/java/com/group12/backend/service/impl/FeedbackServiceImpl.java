@@ -50,7 +50,18 @@ public class FeedbackServiceImpl implements FeedbackService {
         Feedback feedback = new Feedback();
         feedback.setUser(user);
         feedback.setContent(request.getDescription());
-        feedback.setPriority("LOW");
+        
+        String reqPriority = request.getPriority();
+        if (reqPriority == null || reqPriority.trim().isEmpty()) {
+            feedback.setPriority("LOW");
+        } else {
+            String p = reqPriority.trim().toUpperCase();
+            if (!p.equals("LOW") && !p.equals("HIGH")) {
+                throw new BusinessException("Invalid priority value, must be LOW or HIGH", HttpStatus.BAD_REQUEST);
+            }
+            feedback.setPriority(p);
+        }
+        
         feedback.setResolved(false);
 
         if (request.getScooter_id() != null && !request.getScooter_id().isEmpty()) {

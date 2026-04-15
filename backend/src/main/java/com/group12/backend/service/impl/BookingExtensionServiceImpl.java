@@ -1,5 +1,6 @@
 package com.group12.backend.service.impl;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -16,7 +17,10 @@ import com.group12.backend.entity.Booking;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.BookingExtensionService;
+import com.group12.backend.service.pricing.RentalPricing;
 
 /**
  * TODO(ID10&11): 预订延长实现骨架（仅 TODO，不含业务实现）。
@@ -26,6 +30,9 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private BillingService billingService;
 
     @Override
     @Transactional
@@ -78,9 +85,17 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
 
         // Update fields
         booking.setEndTime(newEndTime);
-        booking.setDurationHours(booking.getDurationHours() + extraDurationHours);
-        java.math.BigDecimal extraPrice = booking.getScooter().getHourRate().multiply(java.math.BigDecimal.valueOf(extraDurationHours));
-        booking.setTotalPrice(booking.getTotalPrice().add(extraPrice));
+        double newDurationHours = booking.getDurationHours() + extraDurationHours;
+        booking.setDurationHours(newDurationHours);
+        BillingRule billingRule = billingService.getCurrentRule();
+        BigDecimal newOriginalPrice = RentalPricing.computeTotal(booking.getScooter().getHourRate(), newDurationHours, billingRule);
+        BigDecimal multiplier = booking.getDiscountMultiplier() == null
+                ? BigDecimal.ONE
+                : booking.getDiscountMultiplier();
+        BigDecimal newTotalPrice = newOriginalPrice.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.setTotalPrice(newTotalPrice);
+        booking.setOriginalPrice(newOriginalPrice);
+        booking.setDiscountAmount(newOriginalPrice.subtract(newTotalPrice).setScale(2, java.math.RoundingMode.HALF_UP));
 
         Booking savedBooking = bookingRepository.save(booking);
 
@@ -97,6 +112,10 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
         response.setEndTime(savedBooking.getEndTime() == null ? null : savedBooking.getEndTime().format(fmt));
         response.setDuration(savedBooking.getDurationHours() == null ? null : savedBooking.getDurationHours() + " hours");
         response.setTotalPrice(savedBooking.getTotalPrice() == null ? null : savedBooking.getTotalPrice().doubleValue());
+        response.setOriginalPrice(savedBooking.getOriginalPrice() == null ? null : savedBooking.getOriginalPrice().doubleValue());
+        response.setDiscountAmount(savedBooking.getDiscountAmount() == null ? null : savedBooking.getDiscountAmount().doubleValue());
+        response.setDiscountMultiplier(savedBooking.getDiscountMultiplier() == null ? null : savedBooking.getDiscountMultiplier().doubleValue());
+        response.setDiscountType(savedBooking.getDiscountType());
         response.setStartLat(savedBooking.getStartLat());
         response.setStartLng(savedBooking.getStartLng());
         response.setEndLat(savedBooking.getEndLat());

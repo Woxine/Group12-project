@@ -41,6 +41,18 @@ public class Booking implements Serializable {
     @Column(name = "total_price")
     private BigDecimal totalPrice;
 
+    @Column(name = "original_price")
+    private BigDecimal originalPrice;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount;
+
+    @Column(name = "discount_multiplier")
+    private BigDecimal discountMultiplier;
+
+    @Column(name = "discount_type")
+    private String discountType;
+
     @Column(nullable = false)
     private String status; // CONFIRMED, COMPLETED, CANCELLED
 
@@ -78,6 +90,18 @@ public class Booking implements Serializable {
 
     public BigDecimal getTotalPrice() { return totalPrice; }
     public void setTotalPrice(BigDecimal totalPrice) { this.totalPrice = totalPrice; }
+
+    public BigDecimal getOriginalPrice() { return originalPrice; }
+    public void setOriginalPrice(BigDecimal originalPrice) { this.originalPrice = originalPrice; }
+
+    public BigDecimal getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+
+    public BigDecimal getDiscountMultiplier() { return discountMultiplier; }
+    public void setDiscountMultiplier(BigDecimal discountMultiplier) { this.discountMultiplier = discountMultiplier; }
+
+    public String getDiscountType() { return discountType; }
+    public void setDiscountType(String discountType) { this.discountType = discountType; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

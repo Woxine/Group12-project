@@ -115,6 +115,18 @@
 			}
 		},
 		{
+			"path": "pages/discount-verification/discount-verification",
+			"style": {
+				"navigationBarTitleText": "Discount Verification"
+			}
+		},
+		{
+			"path": "pages/discount_verify/discount_verify",
+			"style": {
+				"navigationBarTitleText": "Discount Verification"
+			}
+		},
+		{
 			"path": "pages/guest-booking/guest-booking",
 			"style": {
 				"navigationBarTitleText": "Guest Booking"

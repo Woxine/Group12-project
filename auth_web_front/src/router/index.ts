@@ -5,6 +5,8 @@ import RevenueView from "@/views/admin/RevenueView.vue";
 import ScootersView from "@/views/admin/ScootersView.vue";
 import FeedbacksView from "@/views/admin/FeedbacksView.vue";
 import AnalyticsView from "@/views/admin/AnalyticsView.vue";
+import DiscountVerificationsView from "@/views/admin/DiscountVerificationsView.vue";
+import BillingSettingsView from "@/views/admin/BillingSettingsView.vue";
 import LoginView from "@/views/LoginView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -24,7 +26,9 @@ const router = createRouter({
         { path: "analytics", component: AnalyticsView },
         { path: "revenue", component: RevenueView },
         { path: "scooters", component: ScootersView },
-        { path: "feedbacks", component: FeedbacksView }
+        { path: "feedbacks", component: FeedbacksView },
+        { path: "discount-verifications", component: DiscountVerificationsView },
+        { path: "billing", component: BillingSettingsView }
       ]
     }
   ]

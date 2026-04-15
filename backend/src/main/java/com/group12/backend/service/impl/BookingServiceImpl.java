@@ -1,5 +1,7 @@
 package com.group12.backend.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -21,9 +23,12 @@ import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.BookingService;
 import com.group12.backend.service.DiscountService;
 import com.group12.backend.service.EmailNotificationService;
+import com.group12.backend.service.pricing.RentalPricing;
 
 /**
  * 实现预约订单创建、取消、完成和车辆状态同步的业务逻辑。
@@ -46,6 +51,9 @@ public class BookingServiceImpl implements BookingService {
     @Autowired(required = false)
     private DiscountService discountService;
 
+    @Autowired
+    private BillingService billingService;
+
     @Override
     @Transactional
     /**
@@ -67,41 +75,35 @@ public class BookingServiceImpl implements BookingService {
         Scooter scooter = scooterRepository.findByIdForUpdate(scooterId)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.SCOOTER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
+        if (scooter.getVisible() != null && !scooter.getVisible()) {
+            throw new BusinessException(ErrorMessages.SCOOTER_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
         if (!"AVAILABLE".equalsIgnoreCase(scooter.getStatus())) {
             throw new BusinessException(ErrorMessages.scooterUnavailable(scooter.getStatus()));
         }
 
         LocalDateTime startTime = LocalDateTime.now();
-        LocalDateTime endTime;
-        Double durationHours;
-
-        if ("10M".equalsIgnoreCase(durationRequest)) {
-            durationHours = 10.0 / 60.0;
-            endTime = startTime.plusMinutes(10);
-        } else if ("1H".equalsIgnoreCase(durationRequest)) {
-            durationHours = 1.0;
-            endTime = startTime.plusHours(1);
-        } else if ("4H".equalsIgnoreCase(durationRequest)) {
-            durationHours = 4.0;
-            endTime = startTime.plusHours(4);
-        } else if ("1D".equalsIgnoreCase(durationRequest)) {
-            durationHours = 24.0;
-            endTime = startTime.plusHours(24);
-        } else if ("1W".equalsIgnoreCase(durationRequest)) {
-            durationHours = 168.0;
-            endTime = startTime.plusHours(168);
-        } else {
-            durationHours = 1.0;
-            endTime = startTime.plusHours(1);
-        }
+        Double durationHours = resolveDurationHours(durationRequest);
+        LocalDateTime endTime = startTime.plusMinutes(Math.round(durationHours * 60));
 
         java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
         if (overlapping != null && !overlapping.isEmpty()) {
             throw new BusinessException(ErrorMessages.OVERLAPPING_BOOKING);
         }
 
-        java.math.BigDecimal rate = scooter.getHourRate();
-        java.math.BigDecimal totalPrice = rate.multiply(java.math.BigDecimal.valueOf(durationHours));
+        BigDecimal rate = scooter.getHourRate();
+        BillingRule billingRule = billingService.getCurrentRule();
+        BigDecimal originalPrice = RentalPricing.computeTotal(rate, durationHours, billingRule);
+        DiscountBreakdownResponse discountBreakdown = discountService != null
+                ? discountService.calculateDiscount(userId, scooterId, durationRequest)
+                : null;
+        BigDecimal discountMultiplier = resolveDiscountMultiplierFromBreakdown(discountBreakdown);
+        BigDecimal totalPrice = originalPrice.multiply(discountMultiplier).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discountAmount = originalPrice.subtract(totalPrice).setScale(2, RoundingMode.HALF_UP);
+        String discountType = discountBreakdown != null && discountBreakdown.getDiscountType() != null
+                ? discountBreakdown.getDiscountType()
+                : "NONE";
 
         Booking booking = new Booking();
         booking.setUser(user);
@@ -110,6 +112,10 @@ public class BookingServiceImpl implements BookingService {
         booking.setEndTime(endTime);
         booking.setDurationHours(durationHours);
         booking.setTotalPrice(totalPrice);
+        booking.setOriginalPrice(originalPrice);
+        booking.setDiscountAmount(discountAmount);
+        booking.setDiscountMultiplier(discountMultiplier);
+        booking.setDiscountType(discountType);
         booking.setStatus("CONFIRMED");
         if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
         if (request.getStartLng() != null) booking.setStartLng(request.getStartLng());
@@ -131,6 +137,10 @@ public class BookingServiceImpl implements BookingService {
             createdAtStr
         );
         response.setTotalPrice(savedBooking.getTotalPrice() != null ? savedBooking.getTotalPrice().doubleValue() : null);
+        response.setOriginalPrice(savedBooking.getOriginalPrice() != null ? savedBooking.getOriginalPrice().doubleValue() : null);
+        response.setDiscountAmount(savedBooking.getDiscountAmount() != null ? savedBooking.getDiscountAmount().doubleValue() : null);
+        response.setDiscountMultiplier(savedBooking.getDiscountMultiplier() != null ? savedBooking.getDiscountMultiplier().doubleValue() : null);
+        response.setDiscountType(savedBooking.getDiscountType());
         return response;
     }
 
@@ -148,8 +158,17 @@ public class BookingServiceImpl implements BookingService {
      */
     @Override
     public DiscountBreakdownResponse previewDiscount(String userId, String scooterId, String duration) {
-        // TODO(ID22): delegate to DiscountService with proper parameter parsing.
-        throw new UnsupportedOperationException("TODO(ID22): previewDiscount");
+        Long parsedUserId = Long.parseLong(userId);
+        Long parsedScooterId = Long.parseLong(scooterId);
+        if (discountService == null) {
+            BillingRule billingRule = billingService.getCurrentRule();
+            BigDecimal fallbackOriginal = scooterRepository.findById(parsedScooterId)
+                    .map(s -> RentalPricing.computeTotal(s.getHourRate(), resolveDurationHours(duration), billingRule))
+                    .orElse(BigDecimal.ZERO)
+                    .setScale(2, RoundingMode.HALF_UP);
+            return DiscountBreakdownResponse.of(fallbackOriginal, "NONE", BigDecimal.ZERO, fallbackOriginal, "discount.none");
+        }
+        return discountService.calculateDiscount(parsedUserId, parsedScooterId, duration);
     }
 
     private void sendBookingConfirmationSafely(User user, Scooter scooter, Booking booking, String durationRequest) {
@@ -214,5 +233,38 @@ public class BookingServiceImpl implements BookingService {
         scooter.setStatus("AVAILABLE");
         scooterRepository.save(scooter);
         return "Booking completed successfully";
+    }
+
+    private static double resolveDurationHours(String durationRequest) {
+        if ("10M".equalsIgnoreCase(durationRequest)) {
+            return 10.0 / 60.0;
+        }
+        if ("1H".equalsIgnoreCase(durationRequest)) {
+            return 1.0;
+        }
+        if ("4H".equalsIgnoreCase(durationRequest)) {
+            return 4.0;
+        }
+        if ("1D".equalsIgnoreCase(durationRequest)) {
+            return 24.0;
+        }
+        if ("1W".equalsIgnoreCase(durationRequest)) {
+            return 168.0;
+        }
+        return 1.0;
+    }
+
+    private static BigDecimal resolveDiscountMultiplier(BigDecimal originalPrice, BigDecimal finalPrice) {
+        if (originalPrice == null || finalPrice == null || originalPrice.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
+        }
+        return finalPrice.divide(originalPrice, 4, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal resolveDiscountMultiplierFromBreakdown(DiscountBreakdownResponse discountBreakdown) {
+        if (discountBreakdown == null) {
+            return BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
+        }
+        return resolveDiscountMultiplier(discountBreakdown.getOriginalPrice(), discountBreakdown.getFinalPrice());
     }
 }

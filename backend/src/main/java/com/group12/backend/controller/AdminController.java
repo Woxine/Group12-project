@@ -1,20 +1,35 @@
 package com.group12.backend.controller;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.group12.backend.dto.BillingSettingsResponse;
+import com.group12.backend.dto.BillingSettingsLogResponse;
+import com.group12.backend.dto.CreateScooterRequest;
+import com.group12.backend.dto.UpdateBillingSettingsRequest;
+import com.group12.backend.entity.BillingSettingsLog;
 import com.group12.backend.security.AdminAccessGuard;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.AdminService;
+import com.group12.backend.service.ScooterService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 /**
  * 负责提供后台管理端的营收统计与经营分析接口。
@@ -28,6 +43,48 @@ public class AdminController {
 
     @Autowired
     private AdminAccessGuard adminAccessGuard;
+
+    @Autowired
+    private BillingService billingService;
+
+    @Autowired
+    private ScooterService scooterService;
+
+    /**
+     * 管理端滑板车列表（含已从客户端隐藏的车辆）。
+     */
+    @GetMapping("/scooters")
+    public ResponseEntity<Object> getScootersForAdmin(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer limit,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        Integer finalSize = size != null ? size : limit;
+        return ResponseEntity.ok(scooterService.getScootersForAdmin(status, page, finalSize));
+    }
+
+    /**
+     * 新增滑板车。
+     */
+    @PostMapping("/scooters")
+    public ResponseEntity<Object> createScooter(
+            @Valid @RequestBody CreateScooterRequest body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(Map.of("data", scooterService.createScooter(body)));
+    }
+
+    /**
+     * 删除滑板车（存在订单记录时不允许删除）。
+     */
+    @DeleteMapping("/scooters/{scooterId}")
+    public ResponseEntity<Object> deleteScooter(@PathVariable Long scooterId, HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        scooterService.deleteScooter(scooterId);
+        return ResponseEntity.ok(Map.of("message", "Scooter deleted"));
+    }
 
     // API-008: 获取收入统计信息
     /**
@@ -74,6 +131,76 @@ public class AdminController {
             HttpServletRequest request) {
         adminAccessGuard.requireAdmin(request);
         return ResponseEntity.ok(Map.of("data", adminService.getDashboardOverview(start_date, end_date)));
+    }
+
+    @GetMapping("/billing-settings")
+    public ResponseEntity<Object> getBillingSettings(HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        BillingRule rule = billingService.getCurrentRule();
+        return ResponseEntity.ok(Map.of("data", toBillingSettingsResponse(rule)));
+    }
+
+    @PutMapping("/billing-settings")
+    public ResponseEntity<Object> updateBillingSettings(
+            @Valid @RequestBody UpdateBillingSettingsRequest updateRequest,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        Long operatorUserId = extractUserId(request);
+        BillingRule updated = billingService.updateMultipliers(
+                java.math.BigDecimal.valueOf(updateRequest.getLongRentHourRateMultiplier()),
+                java.math.BigDecimal.valueOf(updateRequest.getExtraLongRentHourRateMultiplier()),
+                operatorUserId);
+        return ResponseEntity.ok(Map.of("data", toBillingSettingsResponse(updated)));
+    }
+
+    @GetMapping("/billing-settings/logs")
+    public ResponseEntity<Object> getBillingSettingsLogs(
+            @RequestParam(required = false, defaultValue = "20") Integer limit,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        List<BillingSettingsLog> logs = billingService.getRecentLogs(limit == null ? 20 : limit);
+        List<Object> data = logs.stream().map(AdminController::toBillingSettingsLogResponse).map(o -> (Object) o).toList();
+        return ResponseEntity.ok(Map.of("data", data, "total", data.size()));
+    }
+
+    private static BillingSettingsResponse toBillingSettingsResponse(BillingRule rule) {
+        BillingSettingsResponse response = new BillingSettingsResponse();
+        response.setLongRentThresholdHours(
+                rule.longRentThresholdHours() == null ? null : rule.longRentThresholdHours().doubleValue());
+        response.setExtraLongRentThresholdHours(
+                rule.extraLongRentThresholdHours() == null ? null : rule.extraLongRentThresholdHours().doubleValue());
+        response.setLongRentHourRateMultiplier(
+                rule.longRentHourRateMultiplier() == null ? null : rule.longRentHourRateMultiplier().doubleValue());
+        response.setExtraLongRentHourRateMultiplier(
+                rule.extraLongRentHourRateMultiplier() == null ? null : rule.extraLongRentHourRateMultiplier().doubleValue());
+        response.setUpdatedAt(rule.updatedAt());
+        return response;
+    }
+
+    private static BillingSettingsLogResponse toBillingSettingsLogResponse(BillingSettingsLog log) {
+        BillingSettingsLogResponse response = new BillingSettingsLogResponse();
+        response.setId(log.getId());
+        response.setOldLongRentHourRateMultiplier(
+                log.getOldLongRentMultiplier() == null ? null : log.getOldLongRentMultiplier().doubleValue());
+        response.setNewLongRentHourRateMultiplier(
+                log.getNewLongRentMultiplier() == null ? null : log.getNewLongRentMultiplier().doubleValue());
+        response.setOldExtraLongRentHourRateMultiplier(
+                log.getOldExtraLongRentMultiplier() == null ? null : log.getOldExtraLongRentMultiplier().doubleValue());
+        response.setNewExtraLongRentHourRateMultiplier(
+                log.getNewExtraLongRentMultiplier() == null ? null : log.getNewExtraLongRentMultiplier().doubleValue());
+        response.setOperatorUserId(log.getOperatorUserId());
+        response.setCreatedAt(log.getCreatedAt());
+        return response;
+    }
+
+    private static Long extractUserId(HttpServletRequest request) {
+        Object authUserId = request.getAttribute("userId");
+        if (authUserId == null) return null;
+        try {
+            return Long.valueOf(String.valueOf(authUserId));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }
 

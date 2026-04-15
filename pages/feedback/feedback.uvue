@@ -36,6 +36,17 @@
 					placeholder-class="input-placeholder"
 				/>
 			</view>
+			<view class="form-row">
+				<text class="label">Priority</text>
+				<view class="priority-options">
+					<view :class="['priority-btn', 'priority-btn-margin', priority === 'LOW' ? 'priority-btn-active-low' : '']" @click="priority = 'LOW'">
+						<text :class="['priority-text', priority === 'LOW' ? 'priority-text-active' : '']">LOW (General)</text>
+					</view>
+					<view :class="['priority-btn', priority === 'HIGH' ? 'priority-btn-active-high' : '']" @click="priority = 'HIGH'">
+						<text :class="['priority-text', priority === 'HIGH' ? 'priority-text-active' : '']">HIGH (Urgent)</text>
+					</view>
+				</view>
+			</view>
 
 			<view v-if="submitError.length > 0" class="error-row">
 				<text class="error-text">{{ submitError }}</text>
@@ -51,10 +62,12 @@
 import { ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 import { APP_MESSAGES, getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 const scooterId = ref('')
 const description = ref('')
 const location = ref('')
+const priority = ref('LOW')
 const isSubmitting = ref(false)
 const submitError = ref('')
 
@@ -71,12 +84,12 @@ const onSubmit = () => {
 
 	if (sid.length < 1) {
 		submitError.value = enterScooterIdMessage
-		uni.showToast({ title: enterScooterIdMessage, icon: 'none' })
+		showInfo(enterScooterIdMessage)
 		return
 	}
 	if (desc.length < 1) {
 		submitError.value = enterDescriptionMessage
-		uni.showToast({ title: enterDescriptionMessage, icon: 'none' })
+		showInfo(enterDescriptionMessage)
 		return
 	}
 
@@ -93,7 +106,8 @@ const onSubmit = () => {
 
 	const body: UTSJSONObject = {
 		'scooter_id': sid,
-		'description': desc
+		'description': desc,
+		'priority': priority.value
 	}
 	if (loc.length > 0) {
 		body['location'] = loc
@@ -106,19 +120,20 @@ const onSubmit = () => {
 		data: body,
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				uni.showToast({ title: submitSuccessMessage, icon: 'success' })
+				showSuccess(submitSuccessMessage)
 				scooterId.value = ''
 				description.value = ''
 				location.value = ''
+				priority.value = 'LOW'
 			} else {
 				const msg = getResponseMessage(res.data, submitFailedMessage)
 				submitError.value = msg
-				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+				showError(msg, 3000)
 			}
 		},
 		fail: () => {
 			submitError.value = requestFailedMessage
-			uni.showToast({ title: requestFailedMessage, icon: 'none' })
+			showError(requestFailedMessage)
 		},
 		complete: () => {
 			isSubmitting.value = false
@@ -231,5 +246,47 @@ const onSubmit = () => {
 
 .submit-btn-disabled {
 	background-color: #ccc;
+}
+
+.priority-options {
+	display: flex;
+	flex-direction: row;
+}
+
+.priority-btn {
+	flex: 1;
+	height: 44px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #ddd;
+	border-radius: 8px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: white;
+}
+
+.priority-btn-margin {
+	margin-right: 12px;
+}
+
+.priority-btn-active-low {
+	background-color: #4CAF50;
+	border-color: #4CAF50;
+}
+
+.priority-btn-active-high {
+	background-color: #f44336;
+	border-color: #f44336;
+}
+
+.priority-text {
+	font-size: 14px;
+	color: #333;
+}
+
+.priority-text-active {
+	color: white;
+	font-weight: bold;
 }
 </style>

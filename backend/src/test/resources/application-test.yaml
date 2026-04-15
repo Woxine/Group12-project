@@ -10,3 +10,25 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+
+discount:
+  enabled: true
+  rate: 0.8
+  elderly-min-age: 60
+  rolling-days: 7
+  heavy-user-hours-threshold: 8.0
+
+billing:
+  long-rent-threshold-hours: 24
+  extra-long-rent-threshold-hours: 72
+  long-rent-hour-rate-multiplier: 0.85
+  extra-long-rent-hour-rate-multiplier: 0.75
+
+discount-verification:
+  storage:
+    root-dir: target/test-uploads/discount-verifications
+    max-file-size-bytes: 5242880
+    allowed-mime-types:
+      - image/jpeg
+      - image/png
+      - application/pdf

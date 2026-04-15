@@ -12,8 +12,14 @@
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else-if="!hasRoute" class="no-route-section">
-			<text class="no-route-text">Route data not available for this booking.</text>
-			<text class="no-route-hint">Start and end locations are recorded when you start and end the ride.</text>
+			<view class="no-route-icon-wrap">
+				<svg class="no-route-icon" viewBox="0 0 64 64">
+					<line x1="18" y1="18" x2="46" y2="46" stroke="#ef4444" stroke-width="6" stroke-linecap="round"></line>
+					<line x1="46" y1="18" x2="18" y2="46" stroke="#ef4444" stroke-width="6" stroke-linecap="round"></line>
+				</svg>
+			</view>
+			<text class="no-route-text">No route information available.</text>
+			<text class="no-route-hint">GPS data for this ride is missing or incomplete.</text>
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else class="map-wrap">
@@ -104,6 +110,7 @@ const includePoints = ref([] as LocationObject[])
 const mapKey = ref(0)
 const mapUpdatedOnce = ref(false)
 const mapContext = ref(null as MapContext | null)
+const mapReady = ref(false)
 
 const readStorageStringOrNull = (key: string): string | null => {
 	const raw = uni.getStorageSync(key)
@@ -137,7 +144,18 @@ const zoomOut = () => {
 	}
 }
 
+const ensureMapContext = () => {
+	if (!mapReady.value || mapContext.value != null || !hasRoute.value) return
+	const instance = getCurrentInstance()
+	if (instance != null && instance.proxy != null) {
+		mapContext.value = uni.createMapContext('routeMap', instance.proxy!)
+	} else {
+		mapContext.value = uni.createMapContext('routeMap')
+	}
+}
+
 const syncMarkersToMap = () => {
+	ensureMapContext()
 	if (mapContext.value == null) return
 	if (markers.value.length == 0) return
 	const tempMarkers = JSON.parse<Marker[]>(JSON.stringify(markers.value))!
@@ -189,12 +207,9 @@ const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
 }
 
 onReady(() => {
-	const instance = getCurrentInstance()
-	if (instance != null && instance.proxy != null) {
-		mapContext.value = uni.createMapContext('routeMap', instance.proxy!)
-	} else {
-		mapContext.value = uni.createMapContext('routeMap')
-	}
+	mapReady.value = true
+	if (!hasRoute.value) return
+	ensureMapContext()
 	syncMarkersToMap()
 })
 
@@ -225,11 +240,6 @@ const loadBooking = () => {
 				let slng = slngVal != null && typeof slngVal == 'number' ? slngVal as number : null
 				let elat = elatVal != null && typeof elatVal == 'number' ? elatVal as number : null
 				let elng = elngVal != null && typeof elngVal == 'number' ? elngVal as number : null
-				// If we have start but no end (e.g. auto-completed order), use start as end so map can show
-				if (slat != null && slng != null && (elat == null || elng == null)) {
-					elat = slat
-					elng = slng
-				}
 				startLat.value = slat
 				startLng.value = slng
 				endLat.value = elat
@@ -267,12 +277,8 @@ onLoad((options: UTSJSONObject) => {
 	bookingId.value = id
 	const slatOpt = options != null ? parseNum(options['startLat']) : null
 	const slngOpt = options != null ? parseNum(options['startLng']) : null
-	let elatOpt = options != null ? parseNum(options['endLat']) : null
-	let elngOpt = options != null ? parseNum(options['endLng']) : null
-	if (slatOpt != null && slngOpt != null && (elatOpt == null || elngOpt == null)) {
-		elatOpt = slatOpt
-		elngOpt = slngOpt
-	}
+	const elatOpt = options != null ? parseNum(options['endLat']) : null
+	const elngOpt = options != null ? parseNum(options['endLng']) : null
 
 	if (slatOpt != null && slngOpt != null && elatOpt != null && elngOpt != null) {
 		startLat.value = slatOpt
@@ -341,14 +347,31 @@ onLoad((options: UTSJSONObject) => {
 	font-size: 16px;
 	color: #666;
 	text-align: center;
-	margin-bottom: 12px;
+	margin-bottom: 8px;
 }
 
 .no-route-hint {
 	font-size: 14px;
 	color: #999;
 	text-align: center;
+	margin-top: 0;
 	margin-bottom: 20px;
+}
+
+.no-route-icon-wrap {
+	width: 84px;
+	height: 84px;
+	border-radius: 42px;
+	background-color: #fee2e2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 14px;
+}
+
+.no-route-icon {
+	width: 52px;
+	height: 52px;
 }
 
 .back-btn {
@@ -364,7 +387,6 @@ onLoad((options: UTSJSONObject) => {
 	font-weight: bold;
 	min-width: 180px;
 	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-	backdrop-filter: blur(8px);
 }
 
 .map-wrap {
@@ -385,7 +407,6 @@ onLoad((options: UTSJSONObject) => {
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-	backdrop-filter: blur(8px);
 	margin-bottom: 18px;
 }
 
@@ -437,7 +458,6 @@ onLoad((options: UTSJSONObject) => {
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
 	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
-	backdrop-filter: blur(8px);
 }
 
 .control-btn {
@@ -454,9 +474,11 @@ onLoad((options: UTSJSONObject) => {
 	border-top-color: rgba(15, 23, 42, 0.08);
 }
 
-.control-btn-text {
-	display: inline-block;
-	width: 42px;
+  .control-btn-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
 	height: 42px;
 	line-height: 42px;
 	text-align: center;
@@ -493,16 +515,16 @@ onLoad((options: UTSJSONObject) => {
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
-	backdrop-filter: blur(8px);
 }
 
 .info-card + .info-card {
 	margin-left: 14px;
 }
 
-.info-card-title {
-	display: block;
-	font-size: 14px;
+  .info-card-title {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
 	font-weight: 700;
 	color: #0f172a;
 	margin-bottom: 12px;
@@ -522,9 +544,10 @@ onLoad((options: UTSJSONObject) => {
 	margin-bottom: 0;
 }
 
-.info-label {
-	display: block;
-	font-size: 12px;
+  .info-label {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
 	color: #64748b;
 	margin-bottom: 4px;
 	font-weight: 600;
@@ -532,7 +555,8 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .info-value {
-	display: block;
+	display: flex;
+	flex-direction: column;
 	font-size: 14px;
 	color: #1f2937;
 	line-height: 1.5;

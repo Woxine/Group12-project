@@ -62,6 +62,7 @@
 // 收入统计逻辑：支持默认本周视图与自定义日期范围的营收总览和租期分类
 import { ref, onMounted } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 type DurationRow = {
 	durationType: string
@@ -154,7 +155,7 @@ const loadRevenueData = (rangeStart: string, rangeEnd: string, durationPath: str
 
 	const token = getAuthToken()
 	if (token.length < 1) {
-		uni.showToast({ title: 'Please login first', icon: 'none' })
+		showInfo('Please login first')
 		return
 	}
 
@@ -194,12 +195,12 @@ const loadRevenueData = (rangeStart: string, rangeEnd: string, durationPath: str
 				}
 			} else {
 				hasError = true
-				uni.showToast({ title: 'Failed to load summary', icon: 'none' })
+				showError('Failed to load summary')
 			}
 		},
 		fail: () => {
 			hasError = true
-			uni.showToast({ title: 'Network error', icon: 'none' })
+			showError('Network error')
 		},
 		complete: () => {
 			finishRequest()
@@ -221,12 +222,12 @@ const loadRevenueData = (rangeStart: string, rangeEnd: string, durationPath: str
 				}
 			} else {
 				hasError = true
-				uni.showToast({ title: 'Failed to load breakdown', icon: 'none' })
+				showError('Failed to load breakdown')
 			}
 		},
 		fail: () => {
 			hasError = true
-			uni.showToast({ title: 'Network error', icon: 'none' })
+			showError('Network error')
 		},
 		complete: () => {
 			finishRequest()
@@ -256,12 +257,12 @@ const searchByRange = () => {
 	const rangeEnd = endDate.value.trim()
 
 	if (!isValidDateText(rangeStart) || !isValidDateText(rangeEnd)) {
-		uni.showToast({ title: 'Use YYYY-MM-DD dates', icon: 'none' })
+		showInfo('Use YYYY-MM-DD dates')
 		return
 	}
 
 	if (rangeStart > rangeEnd) {
-		uni.showToast({ title: 'Start date must be before end date', icon: 'none' })
+		showInfo('Start date must be before end date')
 		return
 	}
 

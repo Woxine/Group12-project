@@ -1,0 +1,101 @@
+/**
+ * Unified Toast Notification Module for mobile app
+ * Replaces direct usages of uni.showToast to provide better defaults,
+ * longer durations, and automatic fallback to modal for long texts.
+ */
+
+// Error message length threshold for switching from Toast to Modal
+const LONG_TEXT_THRESHOLD = 50
+
+/**
+ * Display a success toast message.
+ * @param title The success message to display
+ * @param duration Duration in milliseconds (default: 2500)
+ */
+export function showSuccess(title: string, duration: number = 2500) {
+	uni.showToast({
+		title: title,
+		icon: 'success',
+		duration: duration
+	})
+}
+
+/**
+ * Display an error message.
+ * If the message is long, it automatically falls back to a modal dialogue to avoid text truncation.
+ * @param title The error message to display
+ * @param duration Duration in milliseconds (default: 4000)
+ */
+export function showError(title: string, duration: number = 4000) {
+	if (title.length > LONG_TEXT_THRESHOLD) {
+		uni.showModal({
+			title: 'Notice',
+			content: title,
+			showCancel: false,
+			confirmText: 'OK'
+		})
+	} else {
+		uni.showToast({
+			title: title,
+			icon: 'none',
+			duration: duration
+		})
+	}
+}
+
+/**
+ * Display a general info message (no icon).
+ * If the message is long, it automatically falls back to a modal dialogue.
+ * @param title The info message to display
+ * @param duration Duration in milliseconds (default: 2800)
+ */
+export function showInfo(title: string, duration: number = 2800) {
+	if (title.length > LONG_TEXT_THRESHOLD) {
+		uni.showModal({
+			title: 'Notice',
+			content: title,
+			showCancel: false,
+			confirmText: 'OK'
+		})
+	} else {
+		uni.showToast({
+			title: title,
+			icon: 'none',
+			duration: duration
+		})
+	}
+}
+
+/**
+ * Display a toast message and navigate to a specified URL after the duration.
+ * @param title The message to display
+ * @param url The URL to navigate to
+ * @param isSuccess Whether it is a success message (determines the icon)
+ * @param delayMs Duration to wait before navigating (default: 2500)
+ * @param navigateType Navigation type ('navigateTo' | 'navigateBack' | 'redirectTo' | 'reLaunch')
+ */
+export function showThenNavigate(
+	title: string,
+	url: string,
+	isSuccess: boolean = true,
+	delayMs: number = 2500,
+	navigateType: string = 'navigateTo'
+) {
+	if (isSuccess) {
+		showSuccess(title, delayMs)
+	} else {
+		showError(title, delayMs)
+	}
+
+	setTimeout(() => {
+		if (navigateType == 'navigateBack') {
+			uni.navigateBack({})
+		} else if (navigateType == 'redirectTo') {
+			uni.redirectTo({ url: url })
+		} else if (navigateType == 'reLaunch') {
+			uni.reLaunch({ url: url })
+		} else {
+			uni.navigateTo({ url: url })
+		}
+	}, delayMs)
+}

@@ -96,6 +96,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 const PAGE_SIZE = 10
 const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback)
@@ -109,6 +110,11 @@ type Booking = {
 	startTime: string
 	endTime: string
 	price: number
+	hourRate?: number | null
+	longRentThresholdHours?: number | null
+	extraLongRentThresholdHours?: number | null
+	longRentHourRateMultiplier?: number | null
+	extraLongRentHourRateMultiplier?: number | null
 	status: string
 	startLat?: number | null
 	startLng?: number | null
@@ -162,6 +168,13 @@ const formatBikeId = (scooterId: string | null): string => {
 	return 'SC' + scooterId.padStart(3, '0')
 }
 
+const parseMaybeNumber = (value: any | null): number | null => {
+	if (value == null) return null
+	if (typeof value == 'number') return value as number
+	const parsed = parseFloat('' + value)
+	return isNaN(parsed) ? null : parsed
+}
+
 const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 	const rawId = item['id']
 	const id = rawId != null ? ('' + rawId) : null
@@ -175,6 +188,12 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 	const endTime = rawEnd != null ? ('' + rawEnd) : '-'
 	const rawPrice = item['total_price'] != null ? item['total_price'] : item['price']
 	const price = rawPrice != null ? (rawPrice as number) : 0
+	const rawHourRate = item['hour_rate'] != null ? item['hour_rate'] : item['hourRate']
+	const hourRate = parseMaybeNumber(rawHourRate)
+	const longRentThresholdHours = parseMaybeNumber(item['longRentThresholdHours'])
+	const extraLongRentThresholdHours = parseMaybeNumber(item['extraLongRentThresholdHours'])
+	const longRentHourRateMultiplier = parseMaybeNumber(item['longRentHourRateMultiplier'])
+	const extraLongRentHourRateMultiplier = parseMaybeNumber(item['extraLongRentHourRateMultiplier'])
 	const rawStatus = item['status']
 	const statusVal = rawStatus != null ? ('' + rawStatus).trim() : 'Unknown'
 	const startLat = item['start_lat'] != null && typeof item['start_lat'] == 'number' ? item['start_lat'] as number : null
@@ -188,6 +207,11 @@ const parseApiBooking = (item: UTSJSONObject, index: number): Booking => {
 		startTime: startTime,
 		endTime: endTime,
 		price: price,
+		hourRate: hourRate,
+		longRentThresholdHours: longRentThresholdHours,
+		extraLongRentThresholdHours: extraLongRentThresholdHours,
+		longRentHourRateMultiplier: longRentHourRateMultiplier,
+		extraLongRentHourRateMultiplier: extraLongRentHourRateMultiplier,
 		status: statusVal,
 		startLat: startLat,
 		startLng: startLng,
@@ -344,19 +368,11 @@ const onPullRefresh = () => {
  * Status -> visible actions mapping (single source of truth)
  *   CONFIRMED  => endRide, cancelOrder, extendBooking
  *   PENDING    => endRide, cancelOrder
- *   COMPLETED  => viewRoute (only when all 4 GPS coordinates are present)
+ *   COMPLETED  => viewRoute
  *   CANCELLED  => (none)
  *   Unknown/empty => (none)
  */
 type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking'
-
-const hasRoute = (booking: Booking): boolean => {
-	const slat = booking.startLat
-	const slng = booking.startLng
-	const elat = booking.endLat
-	const elng = booking.endLng
-	return slat != null && !isNaN(slat) && slng != null && !isNaN(slng) && elat != null && !isNaN(elat) && elng != null && !isNaN(elng)
-}
 
 const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
@@ -364,7 +380,7 @@ const getOrderActions = (booking: Booking): ActionType[] => {
 	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED') return ['endRide', 'extendBooking', 'cancelOrder']
 	if (s == 'PENDING') return ['endRide', 'cancelOrder']
-	if (s == 'COMPLETED') return hasRoute(booking) ? ['viewRoute'] : []
+	if (s == 'COMPLETED') return ['viewRoute']
 	if (s == 'CANCELLED' || s == 'CANCELED') return []
 	return []
 }
@@ -380,7 +396,7 @@ const hasAction = (booking: Booking, action: ActionType): boolean => {
 const goToRoute = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
@@ -389,7 +405,7 @@ const goToRoute = (booking: Booking) => {
 const submitExtendBooking = (bid: string, duration: string) => {
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
+		showInfo(authMessage('loginAgain', 'Please log in again'))
 		return
 	}
 	uni.request({
@@ -402,28 +418,80 @@ const submitExtendBooking = (bid: string, duration: string) => {
 		},
 		success: (resp) => {
 			if (resp.statusCode >= 200 && resp.statusCode < 300) {
-				uni.showToast({ title: bookingMessage('extendSuccess', 'Booking extended'), icon: 'success' })
+				showSuccess(bookingMessage('extendSuccess', 'Booking extended'))
 				fetchBookings(false)
 			} else {
 				const msg = getResponseMessage(resp.data, bookingMessage('extendFailed', 'Failed to extend booking'))
-				uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+				showError(msg, 3000)
 			}
 		},
 		fail: () => {
-			uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
+			showError(networkMessage('requestFailed', 'Network error, please try again'))
 		}
 	})
+}
+
+const extraHoursForDuration = (duration: string): number => {
+	if (duration == '10M') return 10.0 / 60.0
+	if (duration == '1H') return 1.0
+	if (duration == '4H') return 4.0
+	if (duration == '1D') return 24.0
+	if (duration == '1W') return 168.0
+	return 1.0
+}
+
+const parseDurationToHours = (duration: string): number | null => {
+	const raw = (duration != null ? ('' + duration) : '').trim().toUpperCase()
+	if (raw.length < 1) return null
+	if (raw == '10M') return 10.0 / 60.0
+	if (raw == '1H') return 1.0
+	if (raw == '4H') return 4.0
+	if (raw == '1D') return 24.0
+	if (raw == '1W') return 168.0
+	if (raw.endsWith(' MIN')) {
+		const n = parseFloat(raw.replace(' MIN', ''))
+		return isNaN(n) ? null : (n / 60.0)
+	}
+	if (raw.endsWith('H')) {
+		const n = parseFloat(raw.replace('H', ''))
+		if (!isNaN(n)) return n
+	}
+	const reg = /^(\d+)H\s+(\d+)M$/
+	const matched = raw.match(reg)
+	if (matched != null && matched.length >= 3) {
+		const hStr = matched[1]
+		const mStr = matched[2]
+		if (hStr != null && mStr != null) {
+			const h = parseFloat(hStr)
+			const m = parseFloat(mStr)
+			if (!isNaN(h) && !isNaN(m)) {
+				return h + m / 60.0
+			}
+		}
+	}
+	if (raw.endsWith(' HOURS')) {
+		const n = parseFloat(raw.replace(' HOURS', ''))
+		return isNaN(n) ? null : n
+	}
+	return null
+}
+
+const computeSegmentedTotal = (rate: number, hours: number, t1: number, t2: number, m1: number, m2: number): number => {
+	if (hours <= 0) return 0
+	if (hours <= t1) return rate * hours
+	if (hours <= t2) return rate * t1 + rate * m1 * (hours - t1)
+	return rate * t1 + rate * m1 * (t2 - t1) + rate * m2 * (hours - t2)
 }
 
 const onExtendBooking = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
 		return
 	}
 	const es = ('' + booking.status).trim().toUpperCase()
 	if (es != 'CONFIRMED') {
-		uni.showToast({ title: bookingMessage('cannotExtendBooking', 'This booking cannot be extended'), icon: 'none' })
+		showInfo(bookingMessage('cannotExtendBooking', 'This booking cannot be extended'))
 		return
 	}
 	
@@ -431,8 +499,46 @@ const onExtendBooking = (booking: Booking) => {
 		itemList: ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week'],
 		success: (res) => {
 			const durArr = ['10M', '1H', '4H', '1D', '1W']
-			const duration = durArr[res.tapIndex]
-			submitExtendBooking(bid, duration)
+			const idx = res.tapIndex
+			if (idx < 0 || idx >= durArr.length) return
+			const durationLabelArr = ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week']
+			const durationLabel = durationLabelArr[idx]
+			const duration = durArr[idx]
+			const hourRate = booking.hourRate
+			let confirmContent = ''
+			if (hourRate != null && !isNaN(hourRate) && hourRate >= 0) {
+				const extraHours = extraHoursForDuration(duration)
+				const currentHours = parseDurationToHours(booking.duration)
+				const t1 = booking.longRentThresholdHours != null ? booking.longRentThresholdHours : 24.0
+				const t2 = booking.extraLongRentThresholdHours != null ? booking.extraLongRentThresholdHours : 72.0
+				const m1 = booking.longRentHourRateMultiplier != null ? booking.longRentHourRateMultiplier : 1.0
+				const m2 = booking.extraLongRentHourRateMultiplier != null ? booking.extraLongRentHourRateMultiplier : 1.0
+				let newTotal = booking.price + extraHours * hourRate
+				if (currentHours != null && !isNaN(currentHours) && currentHours > 0) {
+					newTotal = computeSegmentedTotal(hourRate, currentHours + extraHours, t1, t2, m1, m2)
+				}
+				const extraPrice = newTotal - booking.price
+				confirmContent = bookingMessage('extendBookingConfirmWithQuotePrefix', 'Extend by ')
+					+ durationLabel
+					+ bookingMessage('extendBookingConfirmWithQuoteMiddle', '? Additional fee: £')
+					+ extraPrice.toFixed(2)
+					+ bookingMessage('extendBookingConfirmWithQuoteSuffix', ', estimated new total: £')
+					+ newTotal.toFixed(2)
+					+ '.'
+			} else {
+				confirmContent = bookingMessage('extendBookingConfirmNoQuote', 'Extend by ')
+					+ durationLabel
+					+ bookingMessage('extendBookingConfirmNoQuoteSuffix', '? Additional fee cannot be estimated now. Continue?')
+			}
+			uni.showModal({
+				title: bookingMessage('extendBookingTitle', 'Extend Booking'),
+				content: confirmContent,
+				success: (modalRes) => {
+					if (!!modalRes.confirm) {
+						submitExtendBooking(bid, duration)
+					}
+				}
+			})
 		}
 	})
 }
@@ -440,17 +546,17 @@ const onExtendBooking = (booking: Booking) => {
 const cancelOrder = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
 		return
 	}
 	const cs = ('' + booking.status).trim().toUpperCase()
 	if (cs != 'CONFIRMED' && cs != 'PENDING') {
-		uni.showToast({ title: bookingMessage('cannotCancelBooking', 'This booking cannot be cancelled'), icon: 'none' })
+		showInfo(bookingMessage('cannotCancelBooking', 'This booking cannot be cancelled'))
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
+		showInfo(authMessage('loginAgain', 'Please log in again'))
 		return
 	}
 	uni.showModal({
@@ -475,15 +581,15 @@ const cancelOrder = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
-								uni.showToast({ title: bookingMessage('cancelBookingSuccess', 'Booking cancelled'), icon: 'success' })
+								showSuccess(bookingMessage('cancelBookingSuccess', 'Booking cancelled'))
 								fetchBookings(false)
 							} else {
 								const msg = getResponseMessage(resp.data, bookingMessage('cancelBookingFailed', 'Failed to cancel'))
-								uni.showToast({ title: msg, icon: 'none', duration: 3000 })
+								showError(msg, 3000)
 							}
 						},
 						fail: (err) => {
-							uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
+							showError(networkMessage('requestFailed', 'Network error, please try again'))
 							console.error('Cancel booking failed:', err)
 						}
 					})
@@ -501,46 +607,53 @@ const cancelOrder = (booking: Booking) => {
 const endRide = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
-		uni.showToast({ title: bookingMessage('invalidBooking', 'Invalid booking'), icon: 'none' })
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
 		return
 	}
 	const es = ('' + booking.status).trim().toUpperCase()
 	if (es != 'CONFIRMED' && es != 'PENDING') {
-		uni.showToast({ title: bookingMessage('cannotEndRide', 'This booking cannot be ended'), icon: 'none' })
+		showInfo(bookingMessage('cannotEndRide', 'This booking cannot be ended'))
 		return
 	}
 	const token = readStorageString('token')
 	if (token == '') {
-		uni.showToast({ title: authMessage('loginAgain', 'Please log in again'), icon: 'none' })
+		showInfo(authMessage('loginAgain', 'Please log in again'))
 		return
 	}
-	uni.getLocation({
-		type: 'gcj02',
-		success: (loc) => {
-			uni.request({
-				url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
-				method: 'PATCH',
-				data: { endLat: loc.latitude, endLng: loc.longitude },
-				header: {
-					'Content-Type': 'application/json',
-					'Authorization': 'Bearer ' + token
-				},
-				success: (resp) => {
-					if (resp.statusCode >= 200 && resp.statusCode < 300) {
-						uni.showToast({ title: bookingMessage('endRideSuccess', 'Ride ended'), icon: 'success' })
-						fetchBookings(false)
-					} else {
-						const msg = getResponseMessage(resp.data, bookingMessage('endRideFailed', 'Failed to end ride'))
-						uni.showToast({ title: msg, icon: 'none', duration: 3000 })
-					}
+	uni.showModal({
+		title: bookingMessage('endRideTitle', 'End Ride'),
+		content: bookingMessage('endRideConfirm', 'Are you sure you want to end this ride?'),
+		success: (modalRes) => {
+			if (!modalRes.confirm) return
+			uni.getLocation({
+				type: 'gcj02',
+				success: (loc) => {
+					uni.request({
+						url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
+						method: 'PATCH',
+						data: { endLat: loc.latitude, endLng: loc.longitude },
+						header: {
+							'Content-Type': 'application/json',
+							'Authorization': 'Bearer ' + token
+						},
+						success: (resp) => {
+							if (resp.statusCode >= 200 && resp.statusCode < 300) {
+								showSuccess(bookingMessage('endRideSuccess', 'Ride ended'))
+								fetchBookings(false)
+							} else {
+								const msg = getResponseMessage(resp.data, bookingMessage('endRideFailed', 'Failed to end ride'))
+								showError(msg, 3000)
+							}
+						},
+						fail: () => {
+							showError(networkMessage('requestFailed', 'Network error, please try again'))
+						}
+					})
 				},
 				fail: () => {
-					uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' })
+					showError(bookingMessage('locationUnavailable', 'Location unavailable, cannot end ride'))
 				}
 			})
-		},
-		fail: () => {
-			uni.showToast({ title: bookingMessage('locationUnavailable', 'Location unavailable, cannot end ride'), icon: 'none' })
 		}
 	})
 }

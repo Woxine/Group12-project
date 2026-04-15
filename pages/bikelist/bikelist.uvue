@@ -68,6 +68,7 @@ import { ref, onMounted } from 'vue';
 import { onShow, onHide } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage } from '../../common/messages.uts';
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback);
 
@@ -227,10 +228,7 @@ onHide(() => {
 const toggleSelection = (index: number) => {
 	if (scooterList.value[index].status != 'available') {
 		const isMaintenance = scooterList.value[index].status == 'maintenance';
-		uni.showToast({
-			title: isMaintenance ? 'This scooter is under maintenance' : 'This scooter is rented',
-			icon: 'none'
-		});
+		showInfo(isMaintenance ? 'This scooter is under maintenance' : 'This scooter is rented');
 		return;
 	}
 	if (selectedIndex.value == index) {
@@ -262,13 +260,11 @@ const bookScooter = () => {
 		}
 
 		if (token.length == 0) {
-			uni.showToast({ title: authMessage('loginRequired', 'Please login first'), icon: 'none' });
-			setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }); }, 800);
+			showThenNavigate(authMessage('loginRequired', 'Please login first'), '/pages/login/login', false, 800, 'navigateTo');
 			return;
 		}
 		if (userId.length == 0) {
-			uni.showToast({ title: authMessage('userInfoMissing', 'User information missing'), icon: 'none' });
-			setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }); }, 800);
+			showThenNavigate(authMessage('userInfoMissing', 'User information missing'), '/pages/login/login', false, 800, 'navigateTo');
 			return;
 		}
 
@@ -283,13 +279,7 @@ const bookScooter = () => {
 			console.error('Failed to save selected scooter ID:', e)
 		}
 		
-		uni.showToast({
-			title: 'Scooter ' + selectedScooter.id + ' selected',
-			icon: 'success'
-		});
-		uni.navigateTo({
-			url: '/pages/price/price'
-		});
+		showThenNavigate('Scooter ' + selectedScooter.id + ' selected', '/pages/price/price', true, 800, 'navigateTo');
 	}
 };
 </script>

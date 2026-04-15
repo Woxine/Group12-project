@@ -17,6 +17,7 @@ import com.group12.backend.dto.ChangePasswordRequest;
 import com.group12.backend.dto.ChangeEmailRequest;
 import com.group12.backend.dto.ChangeNameRequest;
 import com.group12.backend.dto.RegisterRequest;
+import com.group12.backend.dto.UpdateProfileRequest;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.UserService;
@@ -69,6 +70,18 @@ public class UserController {
     @GetMapping("/{userId}/profile")
     public ResponseEntity<Object> getProfile(@PathVariable String userId) {
         return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));
+    }
+
+    @PostMapping("/{userId}/profile")
+    public ResponseEntity<Object> updateProfile(
+            @PathVariable String userId,
+            @Valid @RequestBody UpdateProfileRequest request,
+            HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        return ResponseEntity.ok(Map.of("data", userService.updateUserProfile(userId, request)));
     }
 
     /**

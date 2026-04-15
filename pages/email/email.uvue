@@ -31,6 +31,7 @@
 import { reactive, ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
 
 type EmailForm = {
 	newEmail: string
@@ -52,13 +53,6 @@ const isValidEmail = (email: string): boolean => {
 	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-const showToast = (title: string) => {
-	uni.showToast({
-		title: title,
-		icon: 'none',
-		duration: 2500
-	})
-}
 
 const updateLocalUserEmail = (email: string) => {
 	const userInfoRaw = uni.getStorageSync('userInfo')
@@ -80,17 +74,17 @@ const handleChangeEmail = () => {
 	const confirmEmail = trimOrEmpty(form.confirmEmail).toLowerCase()
 
 	if (newEmail.length == 0 || confirmEmail.length == 0) {
-		showToast('Please complete all email fields')
+		showInfo('Please complete all email fields')
 		return
 	}
 
 	if (!isValidEmail(newEmail)) {
-		showToast('Please enter a valid email address')
+		showInfo('Please enter a valid email address')
 		return
 	}
 
 	if (newEmail != confirmEmail) {
-		showToast('The two emails do not match')
+		showInfo('The two emails do not match')
 		return
 	}
 
@@ -100,7 +94,7 @@ const handleChangeEmail = () => {
 	const token = tokenRaw == null ? '' : ('' + tokenRaw).trim()
 
 	if (userId.length == 0 || token.length == 0) {
-		showToast(getAppMessage('auth', 'loginAgain', 'Please log in again'))
+		showInfo(getAppMessage('auth', 'loginAgain', 'Please log in again'))
 		uni.reLaunch({
 			url: '/pages/login/login'
 		})
@@ -123,25 +117,18 @@ const handleChangeEmail = () => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				updateLocalUserEmail(newEmail)
 
-				uni.showToast({
-					title: 'Email changed successfully',
-					icon: 'success'
-				})
+				showThenNavigate('Email changed successfully', '', true, 2000, 'navigateBack')
 
 				form.newEmail = ''
 				form.confirmEmail = ''
-
-				setTimeout(() => {
-					uni.navigateBack()
-				}, 800)
 				return
 			}
 
 			const msg = getResponseMessage(res.data, 'Failed to change email')
-			showToast(msg)
+			showError(msg)
 		},
 		fail: () => {
-			showToast(getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.'))
+			showError(getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.'))
 		},
 		complete: () => {
 			isSubmitting.value = false

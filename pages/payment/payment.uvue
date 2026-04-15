@@ -171,6 +171,7 @@ import { reactive, ref } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 // 支付方式列表
 const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay'];
@@ -265,18 +266,12 @@ const loadSavedCards = () => {
 				selectedCardId.value = defaultCardId.length > 0 ? defaultCardId : (savedCards.value.length > 0 ? ('' + savedCards.value[0]['id']) : '');
 				return;
 			}
-			uni.showToast({
-				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')),
-				icon: 'none'
-			});
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')));
 			savedCards.value = [];
 			selectedCardId.value = '';
 		},
 		fail: () => {
-			uni.showToast({
-				title: getAppMessage('network', 'requestFailed', 'Network error'),
-				icon: 'none'
-			});
+			showError(getAppMessage('network', 'requestFailed', 'Network error'));
 			savedCards.value = [];
 			selectedCardId.value = '';
 		}
@@ -361,35 +356,23 @@ const validatePaymentInfo = (): boolean => {
 		// 银行卡验证
 		const cardNum = paymentInfo.cardNumber.replace(/\s/g, '');
 		if (cardNum == '' || cardNum.length != 16) {
-			uni.showToast({
-				title: 'Please enter a valid 16-digit card number',
-				icon: 'none'
-			});
+			showInfo('Please enter a valid 16-digit card number');
 			return false;
 		}
 		
 		if (paymentInfo.cardPassword == '' || paymentInfo.cardPassword.length < 6) {
-			uni.showToast({
-				title: 'Please enter payment password (at least 6 characters)',
-				icon: 'none'
-			});
+			showInfo('Please enter payment password (at least 6 characters)');
 			return false;
 		}
 	} else if (method == 1) {
 		// 支付宝验证
 		if (paymentInfo.alipayAccount == '' || paymentInfo.alipayAccount.trim().length == 0) {
-			uni.showToast({
-				title: 'Please enter Alipay account',
-				icon: 'none'
-			});
+			showInfo('Please enter Alipay account');
 			return false;
 		}
 		
 		if (paymentInfo.alipayPassword == '' || paymentInfo.alipayPassword.length < 6) {
-			uni.showToast({
-				title: 'Please enter Alipay password (at least 6 characters)',
-				icon: 'none'
-			});
+			showInfo('Please enter Alipay password (at least 6 characters)');
 			return false;
 		}
 	} else if (method == 2) {
@@ -436,11 +419,8 @@ const onPayment = () => {
 	setTimeout(() => {
 		const method = paymentMethods[paymentMethodIndex.value];
 		const cardMessage = selectedCardId.value.length > 0 ? ' (saved card)' : '';
-		uni.showToast({
-			title: `Payment successful via ${method}${cardMessage}!`,
-			icon: 'success',
-			duration: 2000
-		});
+		
+		showSuccess(`Payment successful via ${method}${cardMessage}!`, 2000);
 		
 		isPaymentProcessing.value = false;
 		uni.removeStorageSync('totalPrice');
@@ -473,10 +453,7 @@ const onCancel = () => {
 
 	const token = readStorageStringOrNull('token');
 	if (token == null || token.length == 0) {
-		uni.showToast({
-			title: getAppMessage('auth', 'loginRequired', 'Please login first'),
-			icon: 'none'
-		});
+		showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'));
 		return;
 	}
 
@@ -492,27 +469,13 @@ const onCancel = () => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				uni.removeStorageSync('pendingBookingId');
 				uni.removeStorageSync('totalPrice');
-				uni.showToast({
-					title: getAppMessage('booking', 'cancelBookingSuccess', 'Booking cancelled'),
-					icon: 'success'
-				});
-				setTimeout(() => {
-					uni.reLaunch({
-						url: '/pages/bikelist/bikelist'
-					});
-				}, 800);
+				showThenNavigate(getAppMessage('booking', 'cancelBookingSuccess', 'Booking cancelled'), '/pages/bikelist/bikelist', true, 2000, 'reLaunch');
 				return;
 			}
-			uni.showToast({
-				title: getResponseMessage(res.data, getAppMessage('booking', 'cancelBookingFailed', 'Failed to cancel')),
-				icon: 'none'
-			});
+			showError(getResponseMessage(res.data, getAppMessage('booking', 'cancelBookingFailed', 'Failed to cancel')));
 		},
 		fail: () => {
-			uni.showToast({
-				title: getAppMessage('network', 'requestFailed', 'Network error'),
-				icon: 'none'
-			});
+			showError(getAppMessage('network', 'requestFailed', 'Network error'));
 		},
 		complete: () => {
 			isPaymentProcessing.value = false;

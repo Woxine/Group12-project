@@ -18,12 +18,15 @@ import com.group12.backend.dto.ChangePasswordRequest;
 import com.group12.backend.dto.ChangeEmailRequest;
 import com.group12.backend.dto.ChangeNameRequest;
 import com.group12.backend.dto.RegisterResponse;
+import com.group12.backend.dto.UpdateProfileRequest;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.UserService;
 
 /**
@@ -40,6 +43,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private BillingService billingService;
 
     @Override
     /**
@@ -121,8 +127,28 @@ public class UserServiceImpl implements UserService {
             "email", user.getEmail(),
             "name", user.getName(),
             "role", user.getRole(),
-            "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false
+            "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false,
+            "age", user.getAge()
         );
+    }
+
+    @Override
+    public Object updateUserProfile(String userId, UpdateProfileRequest request) {
+        Long uId = Long.parseLong(userId);
+        User user = userRepository.findById(uId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        if (request.getIsStudent() != null) {
+            user.setIsStudent(request.getIsStudent());
+        }
+        if (request.getAge() != null) {
+            user.setAge(request.getAge());
+        }
+        User saved = userRepository.save(user);
+        return java.util.Map.of(
+                "message", "Profile updated successfully",
+                "isStudent", saved.getIsStudent() != null ? saved.getIsStudent() : false,
+                "age", saved.getAge());
     }
 
     @Override
@@ -216,6 +242,8 @@ public class UserServiceImpl implements UserService {
         String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
         String durationStr = formatDuration(booking.getDurationHours());
         Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
+        Double originalPrice = booking.getOriginalPrice() == null ? null : booking.getOriginalPrice().doubleValue();
+        Double discountAmount = booking.getDiscountAmount() == null ? null : booking.getDiscountAmount().doubleValue();
 
         Map<String, Object> m = new HashMap<>();
         m.put("id", String.valueOf(booking.getId()));
@@ -227,6 +255,18 @@ public class UserServiceImpl implements UserService {
         m.put("duration", durationStr);
         m.put("total_price", price);
         m.put("price", price);
+        m.put("original_price", originalPrice);
+        m.put("discount_amount", discountAmount);
+        m.put("discount_multiplier", booking.getDiscountMultiplier());
+        m.put("discount_type", booking.getDiscountType());
+        Double hourRate = booking.getScooter().getHourRate() == null ? null : booking.getScooter().getHourRate().doubleValue();
+        BillingRule billingRule = billingService.getCurrentRule();
+        m.put("hourRate", hourRate);
+        m.put("hour_rate", hourRate);
+        m.put("longRentThresholdHours", billingRule.longRentThresholdHours() == null ? null : billingRule.longRentThresholdHours().doubleValue());
+        m.put("extraLongRentThresholdHours", billingRule.extraLongRentThresholdHours() == null ? null : billingRule.extraLongRentThresholdHours().doubleValue());
+        m.put("longRentHourRateMultiplier", billingRule.longRentHourRateMultiplier() == null ? null : billingRule.longRentHourRateMultiplier().doubleValue());
+        m.put("extraLongRentHourRateMultiplier", billingRule.extraLongRentHourRateMultiplier() == null ? null : billingRule.extraLongRentHourRateMultiplier().doubleValue());
         m.put("createdAt", startStr);
         m.put("start_lat", booking.getStartLat());
         m.put("start_lng", booking.getStartLng());

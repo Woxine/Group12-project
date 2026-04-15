@@ -1,6 +1,5 @@
 <template>
 	<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
-	<!-- 登录页：背景图、邮箱/密码输入框、登录与注册跳转按钮 -->
 	<view class="back">
 		
 		<view class="login_title">
@@ -8,7 +7,6 @@
 		</view>
 		
 		<view class="login_container">
-			<!-- 第一个输入框绑定 email -->
 			<input 
         v-model="userInfo.email" 
         type="text" 
@@ -17,7 +15,6 @@
         class="input"
       />
 			<view class="span1"></view>
-			<!-- 第二个输入框绑定 password -->
 			<input 
         v-model="userInfo.password" 
         type="password" 
@@ -25,7 +22,6 @@
         class="input"
       />
 			<view class="span2"></view>
-			<!-- 登录按钮绑定点击事件 -->
 			<button 
         @click="onSubmit" 
         size="default" 
@@ -48,6 +44,7 @@
 import { reactive, ref } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 // 响应式数据对象，用于存储用户输入
 type UserInfo = {
@@ -75,10 +72,7 @@ const onSubmit = () => {
 
 	// 简单校验
 	if (userInfo.email == null || userInfo.email == '' || userInfo.password == null || userInfo.password == '') {
-		uni.showToast({
-			title: fillCredentialsMessage,
-			icon: 'none'
-		});
+		showInfo(fillCredentialsMessage);
 		return;
 	}
 
@@ -187,14 +181,7 @@ const onSubmit = () => {
 						const targetUrl = isAdmin ? '/pages/admin/home' : '/pages/index/index'
 						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
 						
-						uni.showToast({
-							title: isAdmin ? adminLoginSuccessMessage : loginSuccessMessage,
-							icon: 'success'
-						});
-						
-						setTimeout(() => {
-							uni.reLaunch({ url: targetUrl })
-						}, 800)
+						showThenNavigate(isAdmin ? adminLoginSuccessMessage : loginSuccessMessage, targetUrl, true, 800, 'reLaunch');
 						return;
 					}
 				}
@@ -207,18 +194,11 @@ const onSubmit = () => {
 			
 			console.error('Login failed. Status:', res.statusCode, 'Response:', JSON.stringify(retObj));
 			
-			uni.showToast({
-				title: msg,
-				icon: 'none',
-				duration: 3000
-			});
+			showError(msg, 3000);
 		},
 		fail: (err) => {
 			console.error('Login request failed:', err);
-			uni.showToast({
-				title: requestFailedLaterMessage,
-				icon: 'none'
-			});
+			showError(requestFailedLaterMessage);
 		},
 		complete: () => {
 			// 请求完成后，无论成功失败都重置提交状态

@@ -25,6 +25,7 @@
 import { ref } from 'vue'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
 
 const newUsername = ref('')
 const isSubmitting = ref(false)
@@ -33,13 +34,6 @@ const trimOrEmpty = (value: string): string => {
 	return value == null ? '' : value.trim()
 }
 
-const showToast = (title: string) => {
-	uni.showToast({
-		title: title,
-		icon: 'none',
-		duration: 2500
-	})
-}
 
 const isValidEnglishUsername = (value: string): boolean => {
 	return /^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(value)
@@ -62,12 +56,12 @@ const handleChangeUsername = () => {
 
 	const username = trimOrEmpty(newUsername.value)
 	if (username.length == 0) {
-		showToast('Please enter a new username')
+		showInfo('Please enter a new username')
 		return
 	}
 
 	if (!isValidEnglishUsername(username)) {
-		showToast('Username must start with a letter and be 3-20 chars')
+		showInfo('Username must start with a letter and be 3-20 chars')
 		return
 	}
 
@@ -78,7 +72,7 @@ const handleChangeUsername = () => {
 			const currentNameRaw = userInfo['name']
 			const currentName = currentNameRaw == null ? '' : ('' + currentNameRaw).trim()
 			if (currentName == username) {
-				showToast('New username must be different from current username')
+				showInfo('New username must be different from current username')
 				return
 			}
 		} catch (e) {
@@ -92,7 +86,7 @@ const handleChangeUsername = () => {
 	const token = tokenRaw == null ? '' : ('' + tokenRaw).trim()
 
 	if (userId.length == 0 || token.length == 0) {
-		showToast(getAppMessage('auth', 'loginAgain', 'Please log in again'))
+		showInfo(getAppMessage('auth', 'loginAgain', 'Please log in again'))
 		uni.reLaunch({
 			url: '/pages/login/login'
 		})
@@ -114,22 +108,16 @@ const handleChangeUsername = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				updateLocalUserName(username)
-				uni.showToast({
-					title: 'Username changed successfully',
-					icon: 'success'
-				})
+				showThenNavigate('Username changed successfully', '', true, 2000, 'navigateBack')
 				newUsername.value = ''
-				setTimeout(() => {
-					uni.navigateBack()
-				}, 800)
 				return
 			}
 
 			const msg = getResponseMessage(res.data, 'Failed to change username')
-			showToast(msg)
+			showError(msg)
 		},
 		fail: () => {
-			showToast(getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.'))
+			showError(getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.'))
 		},
 		complete: () => {
 			isSubmitting.value = false

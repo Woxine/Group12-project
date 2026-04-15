@@ -21,6 +21,8 @@ import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.entity.User;
 import com.group12.backend.repository.BookingRepository;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.impl.BookingExtensionServiceImpl;
 
 /**
@@ -35,6 +37,9 @@ class BookingExtensionServiceTest {
 
     @Mock
     private BookingRepository bookingRepository;
+
+    @Mock
+    private BillingService billingService;
 
     @Test
     @DisplayName("extendBooking：成功时返回非空结果且不抛异常")
@@ -58,6 +63,12 @@ class BookingExtensionServiceTest {
 
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(billingService.getCurrentRule()).thenReturn(new BillingRule(
+                new BigDecimal("24"),
+                new BigDecimal("72"),
+                new BigDecimal("0.85"),
+                new BigDecimal("0.75"),
+                null));
 
         ExtendBookingRequest req = new ExtendBookingRequest();
         req.setDuration("1H");

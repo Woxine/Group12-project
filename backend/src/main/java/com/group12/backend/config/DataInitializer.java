@@ -6,16 +6,19 @@ import org.springframework.stereotype.Component;
 
 import com.group12.backend.entity.User;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.BillingService;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BillingService billingService;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder, BillingService billingService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.billingService = billingService;
     }
 
     @Override
@@ -38,5 +41,6 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("密码: admin123");
             System.out.println("==========================================================");
         }
+        billingService.getCurrentRule();
     }
 }

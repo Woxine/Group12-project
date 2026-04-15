@@ -13,6 +13,8 @@ public class FeedbackRequest {
     private String description;
     
     private String location;
+    
+    private String priority;
 
     // Getters Setters
     public String getScooter_id() { return scooter_id; }
@@ -21,5 +23,7 @@ public class FeedbackRequest {
     public void setDescription(String description) { this.description = description; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
 }
 

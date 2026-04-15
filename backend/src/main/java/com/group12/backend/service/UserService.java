@@ -4,6 +4,7 @@ import com.group12.backend.dto.RegisterRequest;
 import com.group12.backend.dto.ChangePasswordRequest;
 import com.group12.backend.dto.ChangeEmailRequest;
 import com.group12.backend.dto.ChangeNameRequest;
+import com.group12.backend.dto.UpdateProfileRequest;
 
 /**
  * 定义用户注册、资料查询和预约历史查询相关的服务能力。
@@ -28,6 +29,11 @@ public interface UserService {
      * 获取指定用户的个人资料。
      */
     Object getUserProfile(String userId);
+
+    /**
+     * 更新指定用户的年龄与学生身份信息。
+     */
+    Object updateUserProfile(String userId, UpdateProfileRequest request);
 
     /**
      * 修改指定用户密码（需校验原密码）。

@@ -12,6 +12,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 const DEFAULT_AVATAR = '/static/me.png'
 const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
@@ -64,10 +65,7 @@ const handleChooseAvatar = () => {
 				const avatarKey = getAvatarStorageKey()
 				avatarUrl.value = selectedPath
 				uni.setStorageSync(avatarKey, selectedPath)
-				uni.showToast({
-					title: '头像已更新',
-					icon: 'success'
-				})
+				showSuccess('头像已更新')
 			}
 		}
 	})

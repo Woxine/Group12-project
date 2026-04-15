@@ -22,6 +22,14 @@
           <el-icon><ChatDotSquare /></el-icon>
           <span>Feedback</span>
         </el-menu-item>
+        <el-menu-item index="/admin/discount-verifications">
+          <el-icon><DocumentChecked /></el-icon>
+          <span>Verification Review</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/billing">
+          <el-icon><Setting /></el-icon>
+          <span>Billing</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -54,7 +62,16 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
-import { DataLine, Money, Bicycle, ChatDotSquare, Platform, SwitchButton } from '@element-plus/icons-vue';
+import {
+  DataLine,
+  Money,
+  Bicycle,
+  ChatDotSquare,
+  DocumentChecked,
+  Setting,
+  Platform,
+  SwitchButton
+} from '@element-plus/icons-vue';
 
 import { useAuthStore } from "@/stores/auth";
 

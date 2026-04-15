@@ -1,12 +1,10 @@
 <template>
-	<!-- 时长选择页：选择开始/结束时间，显示费用预估及定价参考卡片 -->
 	<view class="container">
 		<scroll-view scroll-y="true" class="scroll-area">
 			<view class="title">
 				<text class="title-text">Select Booking Duration</text>
 			</view>
 
-			<!-- Start Time Selection -->
 			<view class="time-section">
 				<view class="section-title">
 					<text class="section-title-text">Start Time</text>
@@ -17,7 +15,6 @@
 				</view>
 			</view>
 
-			<!-- Duration Selection -->
 			<view class="time-section">
 				<view class="section-title">
 					<text class="section-title-text">Duration</text>
@@ -28,7 +25,6 @@
 				</view>
 			</view>
 
-			<!-- Estimated Total -->
 			<view v-if="startTime.length > 0 && endTime.length > 0" class="estimated-total-section">
 				<view class="estimated-total-row">
 					<text class="estimated-total-label">Estimated Total</text>
@@ -41,7 +37,6 @@
 				<button class="cancel-btn" @click="cancel">Cancel</button>
 			</view>
 
-			<!-- Pricing Reference (moved to bottom) -->
 			<view class="pricing-ref-title">
 				<text class="pricing-ref-title-text">Pricing Reference</text>
 			</view>
@@ -69,6 +64,7 @@ import { ref, onMounted } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 type DurationItem = {
 	time: string;
@@ -81,6 +77,10 @@ type UserInfo = {
 }
 
 const hourRate = ref<number>(1.0);
+const longRentThresholdHours = ref<number>(24.0);
+const extraLongRentThresholdHours = ref<number>(72.0);
+const longRentHourRateMultiplier = ref<number>(1.0);
+const extraLongRentHourRateMultiplier = ref<number>(1.0);
 const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback);
 const bookingMessage = (key: string, fallback: string): string => getAppMessage('booking', key, fallback);
 const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback);
@@ -102,14 +102,29 @@ const durations = ref<DurationItem[]>([
 	{ time: '1 Week', price: '0.00' } as DurationItem
 ]);
 
+const computeSegmentedTotal = (rate: number, hours: number): number => {
+	if (hours <= 0) return 0;
+	const t1 = longRentThresholdHours.value;
+	const t2 = extraLongRentThresholdHours.value;
+	const m1 = longRentHourRateMultiplier.value;
+	const m2 = extraLongRentHourRateMultiplier.value;
+	if (hours <= t1) {
+		return rate * hours;
+	}
+	if (hours <= t2) {
+		return rate * t1 + rate * m1 * (hours - t1);
+	}
+	return rate * t1 + rate * m1 * (t2 - t1) + rate * m2 * (hours - t2);
+};
+
 const updateDurations = () => {
 	const rate = hourRate.value;
 	const items: DurationItem[] = [
-		{ time: '10 Minutes', price: formatPrice(rate * 10 / 60) } as DurationItem,
-		{ time: '1 Hour', price: formatPrice(rate * 1) } as DurationItem,
-		{ time: '4 Hours', price: formatPrice(rate * 4) } as DurationItem,
-		{ time: '1 Day', price: formatPrice(rate * 24) } as DurationItem,
-		{ time: '1 Week', price: formatPrice(rate * 168) } as DurationItem
+		{ time: '10 Minutes', price: formatPrice(computeSegmentedTotal(rate, 10 / 60)) } as DurationItem,
+		{ time: '1 Hour', price: formatPrice(computeSegmentedTotal(rate, 1)) } as DurationItem,
+		{ time: '4 Hours', price: formatPrice(computeSegmentedTotal(rate, 4)) } as DurationItem,
+		{ time: '1 Day', price: formatPrice(computeSegmentedTotal(rate, 24)) } as DurationItem,
+		{ time: '1 Week', price: formatPrice(computeSegmentedTotal(rate, 168)) } as DurationItem
 	];
 	durations.value = items;
 };
@@ -126,7 +141,7 @@ const updateEstimatedTotal = () => {
 		const endDateObj = new Date(endTime.value);
 		const durationMs = endDateObj.getTime() - startDateObj.getTime();
 		const durationHours = durationMs / (1000 * 60 * 60);
-		const total = durationHours * hourRate.value;
+		const total = computeSegmentedTotal(hourRate.value, durationHours);
 		estimatedTotalDisplay.value = formatPrice(total);
 	}
 };
@@ -160,6 +175,22 @@ const fetchHourRate = () => {
 					const rateVal = dataObj['hourRate'];
 					if (rateVal != null) {
 						hourRate.value = rateVal as number;
+					}
+					const t1Val = dataObj['longRentThresholdHours'];
+					if (t1Val != null) {
+						longRentThresholdHours.value = t1Val as number;
+					}
+					const t2Val = dataObj['extraLongRentThresholdHours'];
+					if (t2Val != null) {
+						extraLongRentThresholdHours.value = t2Val as number;
+					}
+					const m1Val = dataObj['longRentHourRateMultiplier'];
+					if (m1Val != null) {
+						longRentHourRateMultiplier.value = m1Val as number;
+					}
+					const m2Val = dataObj['extraLongRentHourRateMultiplier'];
+					if (m2Val != null) {
+						extraLongRentHourRateMultiplier.value = m2Val as number;
 					}
 				}
 			}
@@ -213,7 +244,7 @@ const selectStartTime = () => {
 
 const selectEndTime = () => {
 	if (startTime.value == '') {
-		uni.showToast({ title: bookingMessage('selectStartTimeFirst', 'Please select start time first'), icon: 'none' });
+		showInfo(bookingMessage('selectStartTimeFirst', 'Please select start time first'));
 		return;
 	}
 
@@ -290,32 +321,32 @@ const stepSendBooking = () => {
 				if (bookingId.length > 0) {
 					uni.setStorageSync('pendingBookingId', bookingId);
 				}
-				uni.showToast({ title: bookingMessage('bookingSuccess', 'Booking successful, proceed to payment'), icon: 'success', duration: 800 });
 				let paymentUrl = '/pages/payment/payment?amount=' + priceStr;
 				if (bookingId.length > 0) {
 					paymentUrl = paymentUrl + '&bookingId=' + bookingId;
 				}
-				uni.navigateTo({ url: paymentUrl });
+				showThenNavigate(bookingMessage('bookingSuccess', 'Booking successful, proceed to payment'), paymentUrl, true, 2500, 'navigateTo');
 			} else {
 				let errorMsg: string = getResponseMessage(res.data, bookingMessage('bookingFailed', 'Booking failed, please try again'));
 				if (res.statusCode == 401) {
-					uni.showToast({ title: authMessage('loginExpired', 'Login expired, please login again'), icon: 'none', duration: 2500 });
-					setTimeout(() => { uni.reLaunch({ url: '/pages/login/login' }); }, 2500);
+					showThenNavigate(authMessage('loginExpired', 'Login expired, please login again'), '/pages/login/login', false, 2500, 'reLaunch');
 				} else {
 					const msgLower = errorMsg.toLowerCase();
 					if (msgLower.indexOf('bookingresponse') >= 0 || msgLower.indexOf('type definition error') >= 0) {
 						errorMsg = bookingMessage('bookingServiceError', 'Booking service error, please try again later');
 					}
-					uni.showToast({ title: errorMsg, icon: 'none', duration: 3000 });
+					
 					const isScooterUnavailable = msgLower.indexOf('overlapping') >= 0 || msgLower.indexOf('not available') >= 0;
 					if (isScooterUnavailable) {
-						setTimeout(() => { uni.navigateBack({}); }, 3000);
+						showThenNavigate(errorMsg, '', false, 3000, 'navigateBack');
+					} else {
+						showError(errorMsg, 3000);
 					}
 				}
 			}
 		},
 		fail: () => {
-			uni.showToast({ title: networkMessage('requestFailed', 'Network error, please try again'), icon: 'none' });
+			showError(networkMessage('requestFailed', 'Network error, please try again'));
 		}
 	});
 };
@@ -324,7 +355,7 @@ const hasActivePending = ref<boolean>(false);
 
 const stepAfterActiveCheck = () => {
 	if (hasActivePending.value) {
-		uni.showToast({ title: bookingMessage('activeBookingExists', 'You already have an active booking.'), icon: 'none', duration: 3000 });
+		showInfo(bookingMessage('activeBookingExists', 'You already have an active booking.'));
 	} else {
 		setTimeout(() => { stepSendBooking(); }, 10);
 	}
@@ -360,7 +391,7 @@ const stepCheckActiveBooking = () => {
 			setTimeout(() => { stepAfterActiveCheck(); }, 10);
 		},
 		fail: () => {
-			uni.showToast({ title: bookingMessage('checkBookingsFailed', 'Failed to check bookings'), icon: 'none' });
+			showError(bookingMessage('checkBookingsFailed', 'Failed to check bookings'));
 		}
 	});
 };
@@ -371,7 +402,7 @@ const stepAfterScooterCheck = () => {
 	if (scooterAvailable.value) {
 		setTimeout(() => { stepCheckActiveBooking(); }, 10);
 	} else {
-		uni.showToast({ title: bookingMessage('scooterUnavailable', 'This scooter is no longer available.'), icon: 'none', duration: 3000 });
+		showError(bookingMessage('scooterUnavailable', 'This scooter is no longer available.'));
 		setTimeout(() => { uni.navigateBack({}); }, 3000);
 	}
 };
@@ -397,7 +428,7 @@ const stepCheckScooter = () => {
 			setTimeout(() => { stepAfterScooterCheck(); }, 10);
 		},
 		fail: () => {
-			uni.showToast({ title: bookingMessage('verifyScooterFailed', 'Failed to verify scooter availability'), icon: 'none' });
+			showError(bookingMessage('verifyScooterFailed', 'Failed to verify scooter availability'));
 		}
 	});
 };
@@ -407,7 +438,7 @@ const confirm = () => {
 		const msg = startTime.value == '' ?
 			bookingMessage('selectStartTime', 'Please select start time') :
 			bookingMessage('selectEndTime', 'Please select end time');
-		uni.showToast({ title: msg, icon: 'none' });
+		showInfo(msg);
 	} else {
 		const tokenRaw = uni.getStorageSync('token');
 		const token = tokenRaw != null ? ('' + tokenRaw).trim() : '';
@@ -418,9 +449,9 @@ const confirm = () => {
 		}
 
 		if (token.length == 0) {
-			uni.showToast({ title: authMessage('loginRequired', 'Please login first'), icon: 'none' });
+			showInfo(authMessage('loginRequired', 'Please login first'));
 		} else if (userId.length == 0) {
-			uni.showToast({ title: authMessage('userInfoMissing', 'User information missing'), icon: 'none' });
+			showInfo(authMessage('userInfoMissing', 'User information missing'));
 		} else {
 			const selectedScooterId = uni.getStorageSync('selectedScooterId');
 			let scooterId: string = selectedScooterId != null ? selectedScooterId as string : 'SC001';
@@ -439,7 +470,7 @@ const confirm = () => {
 			const endDateObj = new Date(endTime.value);
 			const durationMs = endDateObj.getTime() - startDateObj.getTime();
 			const durationHours = durationMs / (1000 * 60 * 60);
-		const totalPrice = durationHours * hourRate.value;
+		const totalPrice = computeSegmentedTotal(hourRate.value, durationHours);
 
 		pendingScooterId.value = numericScooterId;
 		pendingUserId.value = userId;
@@ -454,7 +485,7 @@ const confirm = () => {
 const cancel = () => {
 	startTime.value = '';
 	endTime.value = '';
-	uni.showToast({ title: commonMessage('cancelled', 'Cancelled'), icon: 'none' });
+	showInfo(commonMessage('cancelled', 'Cancelled'));
 	// 若栈底仍是首页（index → bikelist → price），用 navigateBack 保留首页实例，避免 reLaunch 后地图白屏
 	const pages = getCurrentPages()
 	if (pages.length >= 3) {

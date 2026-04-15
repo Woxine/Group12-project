@@ -52,6 +52,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 type PaymentCardItem = {
 	id: string
@@ -89,7 +90,7 @@ const getAuth = (): UTSJSONObject | null => {
 	const userId = readStorageStringOrNull('userId')
 	const token = readStorageStringOrNull('token')
 	if (userId == null || token == null) {
-		uni.showToast({ title: getAppMessage('auth', 'loginRequired', 'Please login first'), icon: 'none' })
+		showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'))
 		return null
 	}
 	const auth = {} as UTSJSONObject
@@ -133,23 +134,23 @@ const validateForm = (): boolean => {
 	const month = parseInt('' + form.expiryMonth)
 	const year = parseInt('' + form.expiryYear)
 	if (holderName.length < 2) {
-		uni.showToast({ title: getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'), icon: 'none' })
+		showInfo(getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'))
 		return false
 	}
 	if (brand.length < 2) {
-		uni.showToast({ title: getAppMessage('paymentCard', 'brandInvalid', 'Invalid brand'), icon: 'none' })
+		showInfo(getAppMessage('paymentCard', 'brandInvalid', 'Invalid brand'))
 		return false
 	}
 	if (!/^\d{13,19}$/.test(cardNumber)) {
-		uni.showToast({ title: getAppMessage('paymentCard', 'cardNumberInvalid', 'Invalid card number'), icon: 'none' })
+		showInfo(getAppMessage('paymentCard', 'cardNumberInvalid', 'Invalid card number'))
 		return false
 	}
 	if (isNaN(month) || month < 1 || month > 12) {
-		uni.showToast({ title: getAppMessage('paymentCard', 'expiryMonthInvalid', 'Invalid expiry month'), icon: 'none' })
+		showInfo(getAppMessage('paymentCard', 'expiryMonthInvalid', 'Invalid expiry month'))
 		return false
 	}
 	if (isNaN(year) || year < 2024) {
-		uni.showToast({ title: getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'), icon: 'none' })
+		showInfo(getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'))
 		return false
 	}
 	return true
@@ -170,11 +171,11 @@ const loadCards = () => {
 		},
 		success: (res) => {
 			if (res.statusCode == 401) {
-				uni.showToast({ title: getAppMessage('auth', 'loginExpired', 'Login expired'), icon: 'none' })
+				showInfo(getAppMessage('auth', 'loginExpired', 'Login expired'))
 				return
 			}
 			if (res.statusCode == 403) {
-				uni.showToast({ title: getAppMessage('auth', 'loginAgain', 'Please log in again'), icon: 'none' })
+				showInfo(getAppMessage('auth', 'loginAgain', 'Please log in again'))
 				cards.value = []
 				return
 			}
@@ -184,13 +185,10 @@ const loadCards = () => {
 				cards.value = parseCardList(dataField)
 				return
 			}
-			uni.showToast({
-				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')),
-				icon: 'none'
-			})
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')))
 		},
 		fail: () => {
-			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
 		},
 		complete: () => {
 			isLoading.value = false
@@ -222,7 +220,7 @@ const submitAddCard = () => {
 		},
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				uni.showToast({ title: getAppMessage('paymentCard', 'addSuccess', 'Card added'), icon: 'success' })
+				showSuccess(getAppMessage('paymentCard', 'addSuccess', 'Card added'))
 				form.holderName = ''
 				form.brand = ''
 				form.cardNumber = ''
@@ -231,13 +229,10 @@ const submitAddCard = () => {
 				loadCards()
 				return
 			}
-			uni.showToast({
-				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Failed to add card')),
-				icon: 'none'
-			})
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Failed to add card')))
 		},
 		fail: () => {
-			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
 		},
 		complete: () => {
 			isSubmitting.value = false
@@ -261,17 +256,14 @@ const onSetDefault = (cardId: string) => {
 		},
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				uni.showToast({ title: getAppMessage('paymentCard', 'setDefaultSuccess', 'Default card updated'), icon: 'success' })
+				showSuccess(getAppMessage('paymentCard', 'setDefaultSuccess', 'Default card updated'))
 				loadCards()
 				return
 			}
-			uni.showToast({
-				title: getResponseMessage(res.data, getAppMessage('paymentCard', 'setDefaultFailed', 'Failed to set default card')),
-				icon: 'none'
-			})
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'setDefaultFailed', 'Failed to set default card')))
 		},
 		fail: () => {
-			uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
 		},
 		complete: () => {
 			activeCardActionId.value = ''
@@ -300,17 +292,14 @@ const onDeleteCard = (cardId: string) => {
 				},
 				success: (res) => {
 					if (res.statusCode >= 200 && res.statusCode < 300) {
-						uni.showToast({ title: getAppMessage('paymentCard', 'deleteSuccess', 'Card deleted'), icon: 'success' })
+						showSuccess(getAppMessage('paymentCard', 'deleteSuccess', 'Card deleted'))
 						loadCards()
 						return
 					}
-					uni.showToast({
-						title: getResponseMessage(res.data, getAppMessage('paymentCard', 'deleteFailed', 'Failed to delete card')),
-						icon: 'none'
-					})
+					showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'deleteFailed', 'Failed to delete card')))
 				},
 				fail: () => {
-					uni.showToast({ title: getAppMessage('network', 'requestFailed', 'Network error'), icon: 'none' })
+					showError(getAppMessage('network', 'requestFailed', 'Network error'))
 				},
 				complete: () => {
 					activeCardActionId.value = ''

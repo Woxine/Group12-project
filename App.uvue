@@ -1,3 +1,5 @@
+<template></template>
+
 <script lang="uts">
 	// #ifdef APP-ANDROID || APP-HARMONY
 	let firstBackTime = 0
@@ -19,6 +21,7 @@
 				uni.showToast({
 					title: '再按一次退出应用',
 					position: 'bottom',
+					duration: 2000,
 				})
 				firstBackTime = Date.now()
 				setTimeout(() => {

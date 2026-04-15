@@ -29,6 +29,7 @@
 import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
 
 type LocationPoint = { latitude: number, longitude: number }
 
@@ -166,16 +167,7 @@ const logout = () => {
 				uni.removeStorageSync('role')
 				uni.removeStorageSync('selectedScooterId')
 
-				uni.showToast({
-					title: 'Logged out successfully',
-					icon: 'success'
-				})
-
-				setTimeout(() => {
-					uni.reLaunch({
-						url: '/pages/login/login'
-					})
-				}, 800)
+				showThenNavigate('Logged out successfully', '/pages/login/login', true, 800, 'reLaunch')
 			}
 		}
 	})

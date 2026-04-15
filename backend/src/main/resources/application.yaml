@@ -44,3 +44,25 @@ spring:
           ssl.trust: ${SPRING_MAIL_SMTP_SSL_TRUST:smtp.qq.com}
           starttls:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
+
+billing:
+  long-rent-threshold-hours: ${BILLING_LONG_RENT_THRESHOLD_HOURS:24}
+  extra-long-rent-threshold-hours: ${BILLING_EXTRA_LONG_RENT_THRESHOLD_HOURS:72}
+  long-rent-hour-rate-multiplier: ${BILLING_LONG_RENT_HOUR_RATE_MULTIPLIER:0.85}
+  extra-long-rent-hour-rate-multiplier: ${BILLING_EXTRA_LONG_RENT_HOUR_RATE_MULTIPLIER:0.75}
+
+discount:
+  enabled: ${DISCOUNT_ENABLED:true}
+  rate: ${DISCOUNT_RATE:0.8}
+  elderly-min-age: ${DISCOUNT_ELDERLY_MIN_AGE:60}
+  rolling-days: ${DISCOUNT_ROLLING_DAYS:7}
+  heavy-user-hours-threshold: ${DISCOUNT_HEAVY_USER_HOURS_THRESHOLD:8.0}
+
+discount-verification:
+  storage:
+    root-dir: ${DISCOUNT_VERIFICATION_STORAGE_ROOT:uploads/discount-verifications}
+    max-file-size-bytes: ${DISCOUNT_VERIFICATION_MAX_FILE_SIZE_BYTES:5242880}
+    allowed-mime-types:
+      - image/jpeg
+      - image/png
+      - application/pdf

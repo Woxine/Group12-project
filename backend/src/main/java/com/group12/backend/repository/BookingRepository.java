@@ -25,4 +25,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findOverlappingBookings(@Param("scooterId") Long scooterId,
                                          @Param("startTime") LocalDateTime startTime,
                                          @Param("endTime") LocalDateTime endTime);
+
+    @Query("SELECT COALESCE(SUM(b.durationHours), 0) FROM Booking b " +
+           "WHERE b.user.id = :userId AND b.status = 'COMPLETED' " +
+           "AND b.endTime >= :fromTime AND b.endTime <= :toTime")
+    Double sumCompletedDurationHours(@Param("userId") Long userId,
+                                     @Param("fromTime") LocalDateTime fromTime,
+                                     @Param("toTime") LocalDateTime toTime);
 }

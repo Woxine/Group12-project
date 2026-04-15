@@ -36,6 +36,12 @@ public class Scooter implements Serializable {
     @JoinColumn(name = "location_point_id")
     private LocationPoint locationPoint;
 
+    /**
+     * When false, the scooter is omitted from public listings and cannot be booked (soft-remove from fleet).
+     */
+    @Column(nullable = false)
+    private Boolean visible = true;
+
     public Scooter() {}
 
     public Long getId() { return id; }
@@ -55,4 +61,7 @@ public class Scooter implements Serializable {
 
     public LocationPoint getLocationPoint() { return locationPoint; }
     public void setLocationPoint(LocationPoint locationPoint) { this.locationPoint = locationPoint; }
+
+    public Boolean getVisible() { return visible; }
+    public void setVisible(Boolean visible) { this.visible = visible; }
 }

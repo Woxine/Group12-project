@@ -4,8 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "guard:no-generated-js": "node ./scripts/check-no-generated-js.mjs",
+    "dev": "npm run guard:no-generated-js && vite",
+    "build": "npm run guard:no-generated-js && vue-tsc --noEmit -p tsconfig.app.json && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

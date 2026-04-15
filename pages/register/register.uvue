@@ -60,6 +60,7 @@
 import { ref, computed } from 'vue';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
+import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 // --- Types ---
 // We don't need to define a specific RegisterResponse type since we'll handle the response as a generic object
@@ -115,13 +116,6 @@ const isFormValid = computed((): boolean => {
 });
 
 // --- Methods ---
-const showToast = (message: string): void => {
-	uni.showToast({
-		title: message,
-		icon: 'none',
-		duration: 3000
-	});
-};
 
 const registerMessage = (key: string, fallback: string): string => getAppMessage('register', key, fallback);
 const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback);
@@ -129,22 +123,22 @@ const commonMessage = (key: string, fallback: string): string => getAppMessage('
 
 const handleRegister = async (): Promise<void> => {
 	if (!isNameValid.value) {
-		showToast(registerMessage('enterName', 'Please enter your name.'));
+		showInfo(registerMessage('enterName', 'Please enter your name.'));
 		return;
 	}
 
 	if (!isEmailValid.value) {
-		showToast(registerMessage('enterValidEmail', 'Please enter a valid email address.'));
+		showInfo(registerMessage('enterValidEmail', 'Please enter a valid email address.'));
 		return;
 	}
 
 	if (!isPasswordValid.value) {
-		showToast(registerMessage('passwordTooShort', 'Password must be at least 6 characters long.'));
+		showInfo(registerMessage('passwordTooShort', 'Password must be at least 6 characters long.'));
 		return;
 	}
 
 	if (!passwordsMatch.value) {
-		showToast(registerMessage('passwordsMismatch', 'Passwords do not match.'));
+		showInfo(registerMessage('passwordsMismatch', 'Passwords do not match.'));
 		return;
 	}
 
@@ -204,12 +198,7 @@ const handleRegister = async (): Promise<void> => {
 						welcomeName = regData['name'] as string;
 					}
 					
-					showToast('Registration successful! Welcome, ' + welcomeName + '!');
-					
-					// Optionally navigate to login page
-					setTimeout(() => {
-						uni.navigateTo({ url: '/pages/login/login' });
-					}, 1500);
+					showThenNavigate('Registration successful! Welcome, ' + welcomeName + '!', '/pages/login/login', true, 2000, 'navigateTo');
 				} else {
 					let errorMessage = '';
 					switch(response.statusCode) {
@@ -251,18 +240,18 @@ const handleRegister = async (): Promise<void> => {
 					}
 					
 					console.error('Registration failed (HTTP Status):', errorMessage);
-					showToast(errorMessage);
+					showError(errorMessage);
 				}
 			},
 			fail: (error) => {
 				console.error('Network error during registration:', error);
 				
 				if (error.errMsg != null && error.errMsg.includes('request:fail')) {
-					showToast(networkMessage('connectFailed', 'Failed to connect to server. Please check your network connection.'));
+					showError(networkMessage('connectFailed', 'Failed to connect to server. Please check your network connection.'));
 				} else if (error.errMsg != null && error.errMsg.includes('timeout')) {
-					showToast(networkMessage('timeout', 'Request timed out. Please check your server and try again.'));
+					showError(networkMessage('timeout', 'Request timed out. Please check your server and try again.'));
 				} else {
-					showToast(networkMessage('unexpected', 'A network error occurred. Please check your connection and try again.'));
+					showError(networkMessage('unexpected', 'A network error occurred. Please check your connection and try again.'));
 				}
 			},
 			complete: () => {
@@ -272,7 +261,7 @@ const handleRegister = async (): Promise<void> => {
 
 	} catch (error) {
 		console.error('Unexpected error during registration attempt:', error);
-		showToast(commonMessage('unexpectedError', 'An unexpected error occurred.'));
+		showError(commonMessage('unexpectedError', 'An unexpected error occurred.'));
 		isSubmitting.value = false;
 	}
 };

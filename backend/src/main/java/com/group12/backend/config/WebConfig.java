@@ -45,7 +45,7 @@ public class WebConfig implements WebMvcConfigurer {
                 // 1. 本地网页调试 (Vite 默认端口): "http://localhost:5173"
                 // 2. HBuilderX 内置浏览器: 通常也是 localhost 的某个端口
                 // 3. 真机调试/App环境: App 发出的请求 Origin 可能为空或特定标识，
-                //    如果是开发阶段图方便，可以使用 allowedOriginPatterns("*") 允许所有。
+                //    如果是开发阶段，可以使用 allowedOriginPatterns("*") 允许所有。
                 // -------------------------------------------------------------------
                 .allowedOrigins( 
                     "http://localhost:5173", 

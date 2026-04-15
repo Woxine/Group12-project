@@ -47,6 +47,7 @@
 	import { onShow } from '@dcloudio/uni-app'
 	import { BASE_URL } from '../../common/api.uts'
 	import { getAppMessage } from '../../common/messages.uts'
+	import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
 	
 	const longitude = ref(116.392325)
 	const latitude = ref(40.01811)
@@ -129,7 +130,7 @@
 	    },
 	    fail: (err) => {
 	      console.error('定位失败', err)
-	      uni.showToast({ title: '定位失败，请开启权限', icon: 'none' })
+	      showInfo('定位失败，请开启权限')
 	    }
 	  })
 	}
@@ -162,13 +163,7 @@
 	const goToBikeList = () => {
 		const token = uni.getStorageSync('token')
 		if (token == null || token == '' || typeof token != 'string') {
-			uni.showToast({
-				title: getAppMessage('auth', 'loginRequired', 'Please login first'),
-				icon: 'none'
-			})
-			uni.navigateTo({
-				url: '/pages/login/login'
-			})
+			showThenNavigate(getAppMessage('auth', 'loginRequired', 'Please login first'), '/pages/login/login', false, 800, 'navigateTo')
 			return
 		}
 		uni.navigateTo({

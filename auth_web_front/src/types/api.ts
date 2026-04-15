@@ -29,6 +29,30 @@ export interface Scooter {
   locationLng: number | null;
   hourRate: number;
   locationName: string;
+  /** false = hidden from client app map/list */
+  visible?: boolean;
+  longRentThresholdHours?: number;
+  extraLongRentThresholdHours?: number;
+  longRentHourRateMultiplier?: number;
+  extraLongRentHourRateMultiplier?: number;
+}
+
+export interface BillingSettings {
+  longRentThresholdHours: number;
+  extraLongRentThresholdHours: number;
+  longRentHourRateMultiplier: number;
+  extraLongRentHourRateMultiplier: number;
+  updatedAt?: string;
+}
+
+export interface BillingSettingsLog {
+  id: number;
+  oldLongRentHourRateMultiplier: number;
+  newLongRentHourRateMultiplier: number;
+  oldExtraLongRentHourRateMultiplier: number;
+  newExtraLongRentHourRateMultiplier: number;
+  operatorUserId?: number | null;
+  createdAt: string;
 }
 
 export interface FeedbackItem {
@@ -38,6 +62,22 @@ export interface FeedbackItem {
   content: string;
   priority: string;
   resolved: boolean;
+}
+
+export interface DiscountVerificationSubmission {
+  id: number;
+  userId: number;
+  type: "STUDENT" | "SENIOR";
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewerUserId: number | null;
+  rejectReason: string | null;
+  version: number;
 }
 
 export interface OrderStats {
