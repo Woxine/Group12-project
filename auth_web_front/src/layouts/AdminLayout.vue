@@ -22,6 +22,10 @@
           <el-icon><ChatDotSquare /></el-icon>
           <span>Feedback</span>
         </el-menu-item>
+        <el-menu-item index="/admin/high-priority-issues">
+          <el-icon><WarningFilled /></el-icon>
+          <span>High Priority Issues</span>
+        </el-menu-item>
         <el-menu-item index="/admin/discount-verifications">
           <el-icon><DocumentChecked /></el-icon>
           <span>Verification Review</span>
@@ -67,6 +71,7 @@ import {
   Money,
   Bicycle,
   ChatDotSquare,
+  WarningFilled,
   DocumentChecked,
   Setting,
   Platform,

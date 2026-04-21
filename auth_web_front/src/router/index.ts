@@ -4,6 +4,7 @@ import AdminLayout from "@/layouts/AdminLayout.vue";
 import RevenueView from "@/views/admin/RevenueView.vue";
 import ScootersView from "@/views/admin/ScootersView.vue";
 import FeedbacksView from "@/views/admin/FeedbacksView.vue";
+import HighPriorityIssuesView from "@/views/admin/HighPriorityIssuesView.vue";
 import AnalyticsView from "@/views/admin/AnalyticsView.vue";
 import DiscountVerificationsView from "@/views/admin/DiscountVerificationsView.vue";
 import BillingSettingsView from "@/views/admin/BillingSettingsView.vue";
@@ -27,6 +28,7 @@ const router = createRouter({
         { path: "revenue", component: RevenueView },
         { path: "scooters", component: ScootersView },
         { path: "feedbacks", component: FeedbacksView },
+        { path: "high-priority-issues", component: HighPriorityIssuesView },
         { path: "discount-verifications", component: DiscountVerificationsView },
         { path: "billing", component: BillingSettingsView }
       ]

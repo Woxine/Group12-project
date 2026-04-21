@@ -19,6 +19,7 @@ import com.group12.backend.dto.DashboardOverviewDTO;
 import com.group12.backend.dto.DurationRevenueDTO;
 import com.group12.backend.dto.FaultStatsDTO;
 import com.group12.backend.dto.OrderStatsDTO;
+import com.group12.backend.dto.PopularRentalDateDTO;
 import com.group12.backend.dto.RevenueStatsDTO;
 import com.group12.backend.dto.VehicleStatsDTO;
 import com.group12.backend.entity.Booking;
@@ -95,6 +96,16 @@ public class AdminServiceImpl implements AdminService {
                 buildVehicleStats(),
                 buildFaultStats(),
                 buildDailyTrend(validBookings, startDate, endDate));
+    }
+
+    @Override
+    public List<PopularRentalDateDTO> getPopularRentalDatesThisWeek() {
+        // TODO(ID20): implement weekly popular rental dates leaderboard.
+        // Suggested implementation:
+        // 1) get this week's daily trend points
+        // 2) sort by revenue desc, then orderCount desc
+        // 3) assign rank and return top N entries
+        throw new UnsupportedOperationException("TODO: implement getPopularRentalDatesThisWeek");
     }
 
     private OrderStatsDTO buildOrderStats(List<Booking> allBookingsInRange, List<Booking> validBookings) {

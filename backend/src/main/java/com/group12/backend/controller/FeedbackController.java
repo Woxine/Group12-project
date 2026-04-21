@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.FeedbackRequest;
+import com.group12.backend.dto.ProcessFeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
@@ -90,5 +91,32 @@ public class FeedbackController {
             HttpServletRequest httpRequest) {
         adminAccessGuard.requireAdmin(httpRequest);
         return ResponseEntity.ok(Map.of("data", feedbackService.updateFeedback(feedbackId, request)));
+    }
+
+    /**
+     * ID14 TODO: 按优先级处理反馈（低优先级直接处理，高优先级执行上报）。
+     */
+    @PutMapping("/{feedbackId}/process-priority")
+    public ResponseEntity<Object> processByPriority(
+            @PathVariable String feedbackId,
+            @Valid @RequestBody ProcessFeedbackRequest request,
+            HttpServletRequest httpRequest) {
+        adminAccessGuard.requireAdmin(httpRequest);
+        Long operatorUserId = extractUserId(httpRequest);
+        return ResponseEntity.ok(Map.of("data",
+                feedbackService.processFeedbackByPriority(feedbackId, request, operatorUserId)));
+    }
+
+    /**
+     * ID15 TODO: 查询高优先级问题（默认管理员使用）。
+     */
+    @GetMapping("/high-priority")
+    public ResponseEntity<Object> getHighPriorityIssues(
+            @RequestParam(required = false) Boolean escalated,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(feedbackService.getHighPriorityIssues(escalated, page, size));
     }
 }

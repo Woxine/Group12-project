@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.FeedbackResponse;
+import com.group12.backend.dto.EscalatedFeedbackResponse;
+import com.group12.backend.dto.ProcessFeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
 import com.group12.backend.entity.Scooter;
@@ -133,6 +135,23 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .map(dto -> (Object) dto)
                 .toList();
         return Map.of("data", data, "total", total);
+    }
+
+    @Override
+    public EscalatedFeedbackResponse processFeedbackByPriority(String feedbackId, ProcessFeedbackRequest request, Long operatorUserId) {
+        // TODO(ID14): implement priority-based feedback handling.
+        // - LOW: allow direct handle by first-line owner.
+        // - HIGH: require escalation to management/professional team.
+        // - persist escalation metadata and operation audit trail.
+        throw new UnsupportedOperationException("TODO: implement processFeedbackByPriority");
+    }
+
+    @Override
+    public Map<String, Object> getHighPriorityIssues(Boolean escalated, Integer page, Integer size) {
+        // TODO(ID15): implement query for escalated high-priority issues.
+        // - filter by priority=HIGH and optional escalation status
+        // - support stable sorting/pagination for admin usage
+        throw new UnsupportedOperationException("TODO: implement getHighPriorityIssues");
     }
 
     /**

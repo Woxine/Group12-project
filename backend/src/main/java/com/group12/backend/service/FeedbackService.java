@@ -2,7 +2,9 @@ package com.group12.backend.service;
 
 import java.util.Map;
 
+import com.group12.backend.dto.EscalatedFeedbackResponse;
 import com.group12.backend.dto.FeedbackRequest;
+import com.group12.backend.dto.ProcessFeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 
 /**
@@ -23,4 +25,14 @@ public interface FeedbackService {
      * 查询反馈列表，支持按处理状态、优先级和分页筛选。
      */
     Map<String, Object> getFeedbacks(Boolean resolved, String priority, Integer page, Integer size);
+
+    /**
+     * ID14 TODO: 按优先级处理反馈（低优先级可直接处理，高优先级需上报）。
+     */
+    EscalatedFeedbackResponse processFeedbackByPriority(String feedbackId, ProcessFeedbackRequest request, Long operatorUserId);
+
+    /**
+     * ID15 TODO: 查询高优先级问题列表（支持上报状态筛选）。
+     */
+    Map<String, Object> getHighPriorityIssues(Boolean escalated, Integer page, Integer size);
 }

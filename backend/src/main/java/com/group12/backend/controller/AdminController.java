@@ -122,6 +122,15 @@ public class AdminController {
     }
 
     /**
+     * ID20 TODO: 本周热门租赁日期周榜。
+     */
+    @GetMapping("/revenue/popular-dates-week")
+    public ResponseEntity<Object> getPopularRentalDatesThisWeek(HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(Map.of("data", adminService.getPopularRentalDatesThisWeek()));
+    }
+
+    /**
      * 获取管理端看板总览数据。
      */
     @GetMapping("/dashboard/overview")

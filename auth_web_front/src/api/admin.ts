@@ -6,7 +6,11 @@ import type {
   BillingSettingsLog,
   DiscountVerificationSubmission,
   DurationRevenue,
+  EscalatedFeedbackResponse,
   FeedbackItem,
+  HighPriorityIssue,
+  PopularRentalDate,
+  ProcessFeedbackPayload,
   RevenueStats,
   Scooter
 } from "@/types/api";
@@ -87,6 +91,23 @@ export async function updateFeedback(feedbackId: number, status: string) {
   return response.data.data;
 }
 
+export async function processFeedbackByPriority(feedbackId: number, payload: ProcessFeedbackPayload) {
+  const response = await http.put<ApiEnvelope<EscalatedFeedbackResponse>>(
+    `/api/v1/feedbacks/${feedbackId}/process-priority`,
+    payload
+  );
+  return response.data.data;
+}
+
+export async function getHighPriorityIssues(params: {
+  escalated?: boolean;
+  page?: number;
+  size?: number;
+}) {
+  const response = await http.get<{ data: HighPriorityIssue[]; total: number }>("/api/v1/feedbacks/high-priority", { params });
+  return response.data;
+}
+
 export async function getDiscountVerifications(params: {
   status?: "PENDING" | "APPROVED" | "REJECTED";
   type?: "STUDENT" | "SENIOR";
@@ -133,4 +154,9 @@ export async function fetchBillingSettingsLogs(limit = 20) {
     params: { limit }
   });
   return response.data;
+}
+
+export async function getPopularRentalDatesThisWeek() {
+  const response = await http.get<ApiEnvelope<PopularRentalDate[]>>("/api/v1/admin/revenue/popular-dates-week");
+  return response.data.data;
 }

@@ -62,6 +62,42 @@ export interface FeedbackItem {
   content: string;
   priority: string;
   resolved: boolean;
+  // ID14 TODO fields
+  escalated?: boolean;
+  escalatedTo?: string | null;
+  escalationStatus?: string | null;
+}
+
+export interface ProcessFeedbackPayload {
+  action: "DIRECT_HANDLE" | "ESCALATE";
+  escalateTo?: string;
+  note?: string;
+}
+
+export interface EscalatedFeedbackResponse {
+  feedbackId: number;
+  priority: string;
+  escalated: boolean;
+  escalatedTo?: string | null;
+  status: string;
+}
+
+export interface HighPriorityIssue {
+  feedbackId: number;
+  userId: number | null;
+  scooterId: number | null;
+  content: string;
+  priority: string;
+  escalated: boolean;
+  escalatedTo?: string | null;
+  resolved: boolean;
+}
+
+export interface PopularRentalDate {
+  date: string;
+  rank: number;
+  orderCount: number;
+  revenue: number;
 }
 
 export interface DiscountVerificationSubmission {
