@@ -3,6 +3,8 @@ package com.group12.backend.service.impl;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.FeedbackResponse;
 import com.group12.backend.dto.EscalatedFeedbackResponse;
+import com.group12.backend.dto.HighPriorityIssueItemDTO;
 import com.group12.backend.dto.ProcessFeedbackRequest;
 import com.group12.backend.dto.UpdateFeedbackRequest;
 import com.group12.backend.entity.Feedback;
@@ -65,6 +68,8 @@ public class FeedbackServiceImpl implements FeedbackService {
         }
         
         feedback.setResolved(false);
+        feedback.setEscalated(false);
+        feedback.setEscalationStatus("PENDING");
 
         if (request.getScooter_id() != null && !request.getScooter_id().isEmpty()) {
             try {
@@ -139,19 +144,107 @@ public class FeedbackServiceImpl implements FeedbackService {
 
     @Override
     public EscalatedFeedbackResponse processFeedbackByPriority(String feedbackId, ProcessFeedbackRequest request, Long operatorUserId) {
-        // TODO(ID14): implement priority-based feedback handling.
-        // - LOW: allow direct handle by first-line owner.
-        // - HIGH: require escalation to management/professional team.
-        // - persist escalation metadata and operation audit trail.
-        throw new UnsupportedOperationException("TODO: implement processFeedbackByPriority");
+        Long id;
+        try {
+            id = Long.valueOf(feedbackId);
+        } catch (NumberFormatException ex) {
+            throw new BusinessException(ErrorMessages.INVALID_FEEDBACK_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        Feedback feedback = feedbackRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.feedbackNotFound(feedbackId), HttpStatus.NOT_FOUND));
+
+        String action = request.getAction() == null ? "" : request.getAction().trim().toUpperCase();
+        if (!"DIRECT_HANDLE".equals(action) && !"ESCALATE".equals(action)) {
+            throw new BusinessException(ErrorMessages.INVALID_FEEDBACK_PROCESS_ACTION, HttpStatus.BAD_REQUEST);
+        }
+
+        String priority = feedback.getPriority() == null ? "LOW" : feedback.getPriority().trim().toUpperCase();
+        String note = request.getNote() == null ? null : request.getNote().trim();
+        if (note != null && note.isEmpty()) {
+            note = null;
+        }
+
+        if ("HIGH".equals(priority)) {
+            if (!"ESCALATE".equals(action)) {
+                throw new BusinessException(ErrorMessages.HIGH_PRIORITY_REQUIRES_ESCALATION, HttpStatus.BAD_REQUEST);
+            }
+            if (Boolean.TRUE.equals(feedback.getEscalated())) {
+                throw new BusinessException(ErrorMessages.FEEDBACK_ALREADY_ESCALATED, HttpStatus.CONFLICT);
+            }
+            String escalateTo = request.getEscalateTo() == null ? "" : request.getEscalateTo().trim();
+            if (escalateTo.isEmpty()) {
+                throw new BusinessException(ErrorMessages.ESCALATE_TARGET_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            feedback.setEscalated(true);
+            feedback.setEscalatedTo(escalateTo);
+            feedback.setEscalatedAt(LocalDateTime.now());
+            feedback.setEscalationStatus("ESCALATED");
+            feedback.setResolved(false);
+        } else {
+            if (!"DIRECT_HANDLE".equals(action)) {
+                throw new BusinessException(ErrorMessages.LOW_PRIORITY_DIRECT_HANDLE_ONLY, HttpStatus.BAD_REQUEST);
+            }
+            if (Boolean.TRUE.equals(feedback.getResolved())) {
+                throw new BusinessException(ErrorMessages.FEEDBACK_ALREADY_RESOLVED, HttpStatus.CONFLICT);
+            }
+
+            feedback.setResolved(true);
+            feedback.setEscalated(false);
+            feedback.setEscalatedTo(null);
+            feedback.setEscalatedAt(null);
+            feedback.setEscalationStatus("DIRECT_HANDLED");
+        }
+
+        if (operatorUserId != null && operatorUserId > 0) {
+            userRepository.findById(operatorUserId).ifPresent(feedback::setProcessedBy);
+        }
+        feedback.setProcessNote(note);
+
+        Feedback saved = feedbackRepository.save(feedback);
+
+        EscalatedFeedbackResponse response = new EscalatedFeedbackResponse();
+        response.setFeedbackId(saved.getId());
+        response.setPriority(saved.getPriority());
+        response.setEscalated(saved.getEscalated());
+        response.setEscalatedTo(saved.getEscalatedTo());
+        response.setStatus(saved.getEscalationStatus());
+        return response;
     }
 
     @Override
     public Map<String, Object> getHighPriorityIssues(Boolean escalated, Integer page, Integer size) {
-        // TODO(ID15): implement query for escalated high-priority issues.
-        // - filter by priority=HIGH and optional escalation status
-        // - support stable sorting/pagination for admin usage
-        throw new UnsupportedOperationException("TODO: implement getHighPriorityIssues");
+        List<Feedback> highPriorityFeedbacks;
+        if (escalated != null) {
+            highPriorityFeedbacks = feedbackRepository.findByPriorityIgnoreCaseAndEscalated("HIGH", escalated);
+        } else {
+            highPriorityFeedbacks = feedbackRepository.findByPriorityIgnoreCase("HIGH");
+        }
+
+        List<Feedback> sortedFeedbacks = highPriorityFeedbacks.stream()
+                .sorted(Comparator
+                        .comparing(Feedback::getEscalatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Feedback::getId, Comparator.reverseOrder()))
+                .toList();
+
+        long total = sortedFeedbacks.size();
+        if (page != null && size != null && page > 0 && size > 0) {
+            int skip = (page - 1) * size;
+            List<Object> data = sortedFeedbacks.stream()
+                    .skip(skip)
+                    .limit(size)
+                    .map(this::mapToHighPriorityIssueDTO)
+                    .map(dto -> (Object) dto)
+                    .toList();
+            return Map.of("data", data, "total", total);
+        }
+
+        List<Object> data = sortedFeedbacks.stream()
+                .map(this::mapToHighPriorityIssueDTO)
+                .map(dto -> (Object) dto)
+                .toList();
+        return Map.of("data", data, "total", total);
     }
 
     /**
@@ -164,7 +257,23 @@ public class FeedbackServiceImpl implements FeedbackService {
             (feedback.getScooter() != null) ? feedback.getScooter().getId() : null,
             feedback.getContent(),
             feedback.getPriority(),
-            feedback.getResolved()
+            feedback.getResolved(),
+            feedback.getEscalated(),
+            feedback.getEscalatedTo(),
+            feedback.getEscalationStatus()
         );
+    }
+
+    private HighPriorityIssueItemDTO mapToHighPriorityIssueDTO(Feedback feedback) {
+        HighPriorityIssueItemDTO dto = new HighPriorityIssueItemDTO();
+        dto.setFeedbackId(feedback.getId());
+        dto.setUserId(feedback.getUser() != null ? feedback.getUser().getId() : null);
+        dto.setScooterId(feedback.getScooter() != null ? feedback.getScooter().getId() : null);
+        dto.setContent(feedback.getContent());
+        dto.setPriority(feedback.getPriority());
+        dto.setEscalated(feedback.getEscalated());
+        dto.setEscalatedTo(feedback.getEscalatedTo());
+        dto.setResolved(feedback.getResolved());
+        return dto;
     }
 }

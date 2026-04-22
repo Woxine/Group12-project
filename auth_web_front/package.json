@@ -7,7 +7,9 @@
     "guard:no-generated-js": "node ./scripts/check-no-generated-js.mjs",
     "dev": "npm run guard:no-generated-js && vite",
     "build": "npm run guard:no-generated-js && vue-tsc --noEmit -p tsconfig.app.json && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:a11y": "playwright test -c playwright.config.ts --project=chromium",
+    "test:a11y:headed": "playwright test -c playwright.config.ts --project=chromium --headed"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -20,8 +22,11 @@
     "vue-router": "latest"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
+    "@playwright/test": "^1.59.1",
     "@types/node": "latest",
     "@vitejs/plugin-vue": "latest",
+    "axe-core": "^4.11.3",
     "typescript": "^5.4.5",
     "vite": "latest",
     "vue-tsc": "^2.0.19"

@@ -1,8 +1,8 @@
 <template>
-  <el-card shadow="never" class="revenue-container">
+  <el-card shadow="never" class="revenue-container" role="region" aria-labelledby="revenue-overview-heading">
     <template #header>
       <div class="header">
-        <span class="page-title">Revenue Overview</span>
+        <h1 id="revenue-overview-heading" class="page-title">Revenue Overview</h1>
         <el-space>
           <el-date-picker
             v-model="dateRange"
@@ -11,8 +11,9 @@
             start-placeholder="Start date"
             end-placeholder="End date"
             value-format="YYYY-MM-DD"
+            aria-label="Select revenue date range"
           />
-          <el-button type="primary" :icon="Search" :loading="loading" @click="load">Search</el-button>
+          <el-button type="primary" :icon="Search" :loading="loading" aria-label="Search revenue data" @click="load">Search</el-button>
         </el-space>
       </div>
     </template>
@@ -54,7 +55,8 @@
             <el-icon><Calendar /></el-icon> Duration Breakdown (Selected Range)
           </div>
         </template>
-        <el-table :data="durationData" stripe v-loading="loading">
+        <p id="duration-selected-range-desc" class="sr-only">Revenue by rental duration in the selected date range.</p>
+        <el-table :data="durationData" stripe v-loading="loading" aria-label="Duration breakdown for selected range" aria-describedby="duration-selected-range-desc">
           <el-table-column prop="durationType" label="Duration Type" />
           <el-table-column prop="totalOrders" label="Orders" align="right" />
           <el-table-column label="Revenue" align="right">
@@ -71,7 +73,8 @@
             <el-icon><Calendar /></el-icon> Duration Breakdown (This Week)
           </div>
         </template>
-        <el-table :data="weeklyDurationData" stripe v-loading="loading">
+        <p id="duration-weekly-desc" class="sr-only">Revenue by rental duration for the current week.</p>
+        <el-table :data="weeklyDurationData" stripe v-loading="loading" aria-label="Duration breakdown this week" aria-describedby="duration-weekly-desc">
           <el-table-column prop="durationType" label="Duration Type" />
           <el-table-column prop="totalOrders" label="Orders" align="right" />
           <el-table-column label="Revenue" align="right">
@@ -81,7 +84,27 @@
           </el-table-column>
         </el-table>
       </el-card>
+
+      <el-card shadow="hover" class="table-card">
+        <template #header>
+          <div class="table-title">
+            <el-icon><Calendar /></el-icon> Popular Rental Dates (This Week)
+          </div>
+        </template>
+        <p id="popular-dates-desc" class="sr-only">Ranked list of popular rental dates this week.</p>
+        <el-table :data="popularDatesData" stripe v-loading="loading" aria-label="Popular rental dates this week" aria-describedby="popular-dates-desc">
+          <el-table-column prop="rank" label="Rank" width="80" align="right" />
+          <el-table-column prop="date" label="Date" />
+          <el-table-column prop="orderCount" label="Orders" align="right" />
+          <el-table-column label="Revenue" align="right">
+            <template #default="{ row }">
+              £{{ Number(row.revenue).toFixed(2) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
     </div>
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ liveMessage }}</div>
   </el-card>
 </template>
 
@@ -90,8 +113,8 @@ import { ElMessage } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
 import { Search, Money, Tickets, DataAnalysis, Calendar } from '@element-plus/icons-vue';
 
-import { getRevenueByDuration, getRevenueStats, getWeeklyRevenueByDuration } from "@/api/admin";
-import type { DurationRevenue, RevenueStats } from "@/types/api";
+import { getPopularRentalDatesThisWeek, getRevenueByDuration, getRevenueStats, getWeeklyRevenueByDuration } from "@/api/admin";
+import type { DurationRevenue, PopularRentalDate, RevenueStats } from "@/types/api";
 
 const loading = ref(false);
 const dateRange = ref<[string, string] | null>(null);
@@ -102,6 +125,15 @@ const stats = reactive<RevenueStats>({
 });
 const durationData = ref<DurationRevenue[]>([]);
 const weeklyDurationData = ref<DurationRevenue[]>([]);
+const popularDatesData = ref<PopularRentalDate[]>([]);
+const liveMessage = ref("");
+
+function announce(message: string) {
+  liveMessage.value = "";
+  window.setTimeout(() => {
+    liveMessage.value = message;
+  }, 0);
+}
 
 async function load() {
   loading.value = true;
@@ -110,18 +142,23 @@ async function load() {
       start_date: dateRange.value?.[0],
       end_date: dateRange.value?.[1]
     };
-    const [statsRes, durationRes, weeklyRes] = await Promise.all([
+    const [statsRes, durationRes, weeklyRes, popularDatesRes] = await Promise.all([
       getRevenueStats(params),
       getRevenueByDuration(params),
-      getWeeklyRevenueByDuration()
+      getWeeklyRevenueByDuration(),
+      getPopularRentalDatesThisWeek()
     ]);
     stats.totalRevenue = statsRes.totalRevenue ?? 0;
     stats.totalOrders = statsRes.totalOrders ?? 0;
     stats.averageOrderValue = statsRes.averageOrderValue ?? 0;
     durationData.value = durationRes;
     weeklyDurationData.value = weeklyRes;
+    popularDatesData.value = popularDatesRes;
+    announce("Revenue data loaded.");
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to load revenue data");
+    const message = error?.response?.data?.message ?? "Failed to load revenue data";
+    ElMessage.error(message);
+    announce(message);
   } finally {
     loading.value = false;
   }
@@ -142,6 +179,7 @@ onMounted(load);
 }
 
 .page-title {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #303133;
@@ -186,7 +224,7 @@ onMounted(load);
 
 .stat-title {
   font-size: 14px;
-  color: #909399;
+  color: #4b5563;
   margin-bottom: 8px;
 }
 
@@ -199,7 +237,7 @@ onMounted(load);
 
 .tables {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 24px;
 }
 

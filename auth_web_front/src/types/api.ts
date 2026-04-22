@@ -62,10 +62,9 @@ export interface FeedbackItem {
   content: string;
   priority: string;
   resolved: boolean;
-  // ID14 TODO fields
-  escalated?: boolean;
-  escalatedTo?: string | null;
-  escalationStatus?: string | null;
+  escalated: boolean;
+  escalatedTo: string | null;
+  escalationStatus: string | null;
 }
 
 export interface ProcessFeedbackPayload {

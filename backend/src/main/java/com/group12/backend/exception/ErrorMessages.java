@@ -29,6 +29,13 @@ public final class ErrorMessages {
     public static final String PAYMENT_CARD_EXPIRED = "Payment card is expired";
     public static final String INVALID_CARD_NUMBER = "Invalid card number";
     public static final String PAYMENT_CARD_REQUIRED_FOR_BOOKING = "Please bind a payment card before booking.";
+    public static final String INVALID_FEEDBACK_ID = "Invalid feedback id";
+    public static final String INVALID_FEEDBACK_PROCESS_ACTION = "Invalid process action";
+    public static final String ESCALATE_TARGET_REQUIRED = "Escalate target is required for ESCALATE action";
+    public static final String HIGH_PRIORITY_REQUIRES_ESCALATION = "HIGH priority feedback must use ESCALATE action";
+    public static final String LOW_PRIORITY_DIRECT_HANDLE_ONLY = "LOW priority feedback must use DIRECT_HANDLE action";
+    public static final String FEEDBACK_ALREADY_ESCALATED = "Feedback is already escalated";
+    public static final String FEEDBACK_ALREADY_RESOLVED = "Feedback is already resolved";
 
     private ErrorMessages() {
     }

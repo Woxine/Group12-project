@@ -4,11 +4,13 @@
 		<view class="title-section">
 			<text class="title-text">Submit Feedback</text>
 			<text class="hint-text">Report an issue or suggest an improvement</text>
+			<text class="a11y-hint-text">Fields marked as required must be completed before submission.</text>
 		</view>
 
 		<view class="form-section">
 			<view class="form-row">
 				<text class="label">Scooter ID</text>
+				<text class="field-help">Required. Example: 1 or SC001.</text>
 				<input
 					class="input"
 					v-model="scooterId"
@@ -18,6 +20,7 @@
 			</view>
 			<view class="form-row">
 				<text class="label">Description</text>
+				<text class="field-help">Required. Describe the issue clearly so support can help faster.</text>
 				<textarea
 					class="textarea"
 					v-model="description"
@@ -38,6 +41,7 @@
 			</view>
 			<view class="form-row">
 				<text class="label">Priority</text>
+				<text class="field-help">Choose HIGH only for urgent safety or service-impacting issues.</text>
 				<view class="priority-options">
 					<view :class="['priority-btn', 'priority-btn-margin', priority === 'LOW' ? 'priority-btn-active-low' : '']" @click="priority = 'LOW'">
 						<text :class="['priority-text', priority === 'LOW' ? 'priority-text-active' : '']">LOW (General)</text>
@@ -46,6 +50,10 @@
 						<text :class="['priority-text', priority === 'HIGH' ? 'priority-text-active' : '']">HIGH (Urgent)</text>
 					</view>
 				</view>
+			</view>
+
+			<view v-if="priority === 'HIGH'" class="warning-row">
+				<text class="warning-text">High priority reports are escalated and should include clear details.</text>
 			</view>
 
 			<view v-if="submitError.length > 0" class="error-row">
@@ -168,6 +176,12 @@ const onSubmit = () => {
 .hint-text {
 	font-size: 14px;
 	color: #666;
+	margin-bottom: 6px;
+}
+
+.a11y-hint-text {
+	font-size: 13px;
+	color: #374151;
 }
 
 .form-section {
@@ -189,6 +203,12 @@ const onSubmit = () => {
 	font-size: 14px;
 	font-weight: bold;
 	color: #333;
+	margin-bottom: 8px;
+}
+
+.field-help {
+	font-size: 12px;
+	color: #4b5563;
 	margin-bottom: 8px;
 }
 
@@ -226,15 +246,38 @@ const onSubmit = () => {
 
 .error-row {
 	margin-bottom: 12px;
+	padding: 10px 12px;
+	background-color: #fef2f2;
+	border-radius: 8px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #dc2626;
 }
 
 .error-text {
 	font-size: 14px;
-	color: #f44336;
+	color: #b91c1c;
+	font-weight: bold;
+}
+
+.warning-row {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	background-color: #fff7ed;
+	border-radius: 8px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: #c2410c;
+}
+
+.warning-text {
+	font-size: 13px;
+	color: #9a3412;
 }
 
 .submit-btn {
 	margin-top: 8px;
+	min-height: 48px;
 	padding: 14px;
 	background-color: #4CAF50;
 	color: white;

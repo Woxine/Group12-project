@@ -100,12 +100,35 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public List<PopularRentalDateDTO> getPopularRentalDatesThisWeek() {
-        // TODO(ID20): implement weekly popular rental dates leaderboard.
-        // Suggested implementation:
-        // 1) get this week's daily trend points
-        // 2) sort by revenue desc, then orderCount desc
-        // 3) assign rank and return top N entries
-        throw new UnsupportedOperationException("TODO: implement getPopularRentalDatesThisWeek");
+        LocalDate today = LocalDate.now();
+        LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
+        LocalDate endOfWeek = startOfWeek.plusDays(6);
+
+        List<Booking> validBookingsThisWeek = getValidBookingsWithinRange(startOfWeek, endOfWeek);
+        List<DailyTrendPointDTO> weeklyTrend = buildDailyTrend(validBookingsThisWeek, startOfWeek, endOfWeek);
+
+        Comparator<DailyTrendPointDTO> leaderboardComparator = Comparator
+                .comparing(
+                        (DailyTrendPointDTO point) -> point.getRevenue() == null ? BigDecimal.ZERO : point.getRevenue(),
+                        Comparator.reverseOrder())
+                .thenComparing(DailyTrendPointDTO::getOrderCount, Comparator.reverseOrder())
+                .thenComparing(DailyTrendPointDTO::getDate, Comparator.reverseOrder());
+
+        List<DailyTrendPointDTO> sortedTrend = weeklyTrend.stream()
+                .sorted(leaderboardComparator)
+                .collect(Collectors.toList());
+
+        int rank = 1;
+        List<PopularRentalDateDTO> leaderboard = new java.util.ArrayList<>();
+        for (DailyTrendPointDTO point : sortedTrend) {
+            PopularRentalDateDTO item = new PopularRentalDateDTO();
+            item.setDate(point.getDate());
+            item.setRank(rank++);
+            item.setOrderCount(point.getOrderCount());
+            item.setRevenue(point.getRevenue() == null ? BigDecimal.ZERO : point.getRevenue());
+            leaderboard.add(item);
+        }
+        return leaderboard;
     }
 
     private OrderStatsDTO buildOrderStats(List<Booking> allBookingsInRange, List<Booking> validBookings) {
@@ -240,13 +263,24 @@ public class AdminServiceImpl implements AdminService {
      * 将预约时长换算为统计展示使用的租期分类标签。
      */
     private static String toDurationType(Double hours) {
-        if (hours == null) return "Unknown";
-        if (Math.abs(hours - TEN_MINUTES_IN_HOURS) < 0.001) return "10M";
-        if (Math.abs(hours - 1.0) < 0.001) return "1H";
-        if (Math.abs(hours - 4.0) < 0.001) return "4H";
-        if (Math.abs(hours - 24.0) < 0.001) return "1D";
-        if (Math.abs(hours - 168.0) < 0.001) return "1W";
-        return hours.intValue() + "H";
+        if (hours == null || hours <= 0) return "Unknown";
+        final double eps = 0.01;
+        if (Math.abs(hours - TEN_MINUTES_IN_HOURS) < eps) return "10M";
+        if (Math.abs(hours - 1.0) < eps) return "1H";
+        if (Math.abs(hours - 4.0) < eps) return "4H";
+        if (Math.abs(hours - 24.0) < eps) return "1D";
+        if (Math.abs(hours - 168.0) < eps) return "1W";
+
+        long totalMinutes = Math.round(hours * 60.0);
+        if (totalMinutes < 60) {
+            return totalMinutes + "M";
+        }
+
+        if (totalMinutes % 60 == 0) {
+            return (totalMinutes / 60) + "H";
+        }
+
+        return String.format("%.2fH", hours);
     }
 
     private static int durationOrderIndex(String durationType) {

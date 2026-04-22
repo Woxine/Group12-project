@@ -13,14 +13,6 @@
       </div>
     </template>
 
-    <el-alert
-      title="TODO: This page is a development skeleton for ID15."
-      type="info"
-      :closable="false"
-      show-icon
-      class="todo-alert"
-    />
-
     <el-table :data="rows" stripe v-loading="loading">
       <el-table-column prop="feedbackId" label="Feedback ID" width="120" />
       <el-table-column prop="priority" label="Priority" width="120" />
@@ -28,13 +20,15 @@
       <el-table-column prop="escalatedTo" label="Escalated To" width="180" />
       <el-table-column prop="content" label="Content" min-width="280" show-overflow-tooltip />
       <el-table-column prop="resolved" label="Resolved" width="120" />
-      <el-table-column label="Actions" width="260">
+      <el-table-column label="Actions" width="300">
         <template #default="{ row }">
-          <!-- TODO(ID14): wire direct-handle / escalate actions -->
-          <el-space>
-            <el-button size="small" @click="directHandle(row.feedbackId)">Direct Handle</el-button>
+          <el-space v-if="!row.resolved && !row.escalated">
             <el-button size="small" type="warning" @click="escalate(row.feedbackId)">Escalate</el-button>
           </el-space>
+          <el-space v-else-if="!row.resolved && row.escalated">
+            <el-button size="small" type="success" @click="markResolved(row.feedbackId)">Mark Resolved</el-button>
+          </el-space>
+          <span v-else class="resolved-text">Resolved</span>
         </template>
       </el-table-column>
     </el-table>
@@ -42,9 +36,9 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
-import { getHighPriorityIssues } from "@/api/admin";
+import { getHighPriorityIssues, processFeedbackByPriority, updateFeedback } from "@/api/admin";
 import type { HighPriorityIssue } from "@/types/api";
 
 const loading = ref(false);
@@ -67,14 +61,48 @@ async function load() {
   }
 }
 
-function directHandle(feedbackId: number) {
-  // TODO(ID14): call processFeedbackByPriority with action DIRECT_HANDLE.
-  ElMessage.info(`TODO: Direct handle feedback #${feedbackId}`);
+async function escalate(feedbackId: number) {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      "Input escalate target (e.g. TECH_TEAM / MANAGEMENT)",
+      `Escalate #${feedbackId}`,
+      {
+        confirmButtonText: "Confirm",
+        cancelButtonText: "Cancel",
+        inputPattern: /\S+/,
+        inputErrorMessage: "Escalate target is required"
+      }
+    );
+    await processFeedbackByPriority(feedbackId, {
+      action: "ESCALATE",
+      escalateTo: value.trim()
+    });
+    ElMessage.success(`Feedback #${feedbackId} escalated`);
+    await load();
+  } catch (error: any) {
+    if (error === "cancel" || error === "close") {
+      return;
+    }
+    ElMessage.error(error?.response?.data?.message ?? "Failed to escalate feedback");
+  }
 }
 
-function escalate(feedbackId: number) {
-  // TODO(ID14): call processFeedbackByPriority with action ESCALATE.
-  ElMessage.info(`TODO: Escalate feedback #${feedbackId}`);
+async function markResolved(feedbackId: number) {
+  try {
+    await ElMessageBox.confirm(`Mark feedback #${feedbackId} as resolved?`, "Confirm Resolve", {
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
+      type: "warning"
+    });
+    await updateFeedback(feedbackId, "resolved");
+    ElMessage.success(`Feedback #${feedbackId} marked as resolved`);
+    await load();
+  } catch (error: any) {
+    if (error === "cancel" || error === "close") {
+      return;
+    }
+    ElMessage.error(error?.response?.data?.message ?? "Failed to mark feedback as resolved");
+  }
 }
 
 onMounted(load);
@@ -97,7 +125,8 @@ onMounted(load);
   color: #303133;
 }
 
-.todo-alert {
-  margin-bottom: 16px;
+.resolved-text {
+  color: #67c23a;
+  font-size: 13px;
 }
 </style>

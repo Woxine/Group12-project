@@ -103,6 +103,9 @@ public class FeedbackController {
             HttpServletRequest httpRequest) {
         adminAccessGuard.requireAdmin(httpRequest);
         Long operatorUserId = extractUserId(httpRequest);
+        if (operatorUserId == null || operatorUserId <= 0) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
         return ResponseEntity.ok(Map.of("data",
                 feedbackService.processFeedbackByPriority(feedbackId, request, operatorUserId)));
     }

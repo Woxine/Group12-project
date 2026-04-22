@@ -4,6 +4,7 @@
 		<view class="title-section">
 			<text class="title-text">Admin Home</text>
 			<text class="hint-text">Manage scooters and revenue</text>
+			<text class="a11y-hint-text">Use the actions below to navigate. Buttons are optimized for touch and readability.</text>
 		</view>
 
 		<view class="map-section">
@@ -214,6 +215,12 @@ const logout = () => {
 .hint-text {
 	font-size: 14px;
 	color: #666;
+	margin-bottom: 6px;
+}
+
+.a11y-hint-text {
+	font-size: 13px;
+	color: #374151;
 }
 
 .menu-section {
@@ -222,6 +229,7 @@ const logout = () => {
 }
 
 .menu-btn {
+	min-height: 48px;
 	padding: 14px;
 	border-radius: 8px;
 	border-width: 1px;
@@ -232,18 +240,18 @@ const logout = () => {
 	background-color: #ffffff;
 	color: #333;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-	margin-bottom: 24px;
+	margin-bottom: 16px;
 }
 
 .menu-btn.primary {
-	background-color: #4CAF50;
-	border-color: #4CAF50;
+	background-color: #166534;
+	border-color: #166534;
 	color: #ffffff;
 }
 
 .menu-btn.danger {
-	background-color: #f44336;
-	border-color: #f44336;
+	background-color: #b91c1c;
+	border-color: #b91c1c;
 	color: #ffffff;
 }
 </style>

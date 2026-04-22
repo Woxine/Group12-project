@@ -299,6 +299,8 @@ public class BookingServiceImpl implements BookingService {
 
         Scooter scooter = booking.getScooter();
         scooter.setStatus("AVAILABLE");
+        if (endLat != null) scooter.setLocationLat(endLat);
+        if (endLng != null) scooter.setLocationLng(endLng);
         scooterRepository.save(scooter);
 
         return "Booking cancelled successfully";
@@ -323,6 +325,8 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
         Scooter scooter = booking.getScooter();
         scooter.setStatus("AVAILABLE");
+        if (endLat != null) scooter.setLocationLat(endLat);
+        if (endLng != null) scooter.setLocationLng(endLng);
         scooterRepository.save(scooter);
         return "Booking completed successfully";
     }

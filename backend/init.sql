@@ -145,13 +145,23 @@ CREATE TABLE feedbacks (
   content TEXT NOT NULL,
   priority VARCHAR(20) DEFAULT 'LOW',
   resolved BIT(1) DEFAULT b'0',
+  escalated BIT(1) DEFAULT b'0',
+  escalated_to VARCHAR(100) DEFAULT NULL,
+  escalated_at DATETIME(6) DEFAULT NULL,
+  processed_by_user_id BIGINT DEFAULT NULL,
+  process_note TEXT DEFAULT NULL,
+  escalation_status VARCHAR(32) DEFAULT 'PENDING',
   PRIMARY KEY (id),
   KEY idx_feedbacks_user (user_id),
   KEY idx_feedbacks_scooter (scooter_id),
+  KEY idx_feedbacks_priority_escalated (priority, escalated),
+  KEY idx_feedbacks_processed_by_user (processed_by_user_id),
   CONSTRAINT fk_feedbacks_user
     FOREIGN KEY (user_id) REFERENCES users (id),
   CONSTRAINT fk_feedbacks_scooter
-    FOREIGN KEY (scooter_id) REFERENCES scooters (id)
+    FOREIGN KEY (scooter_id) REFERENCES scooters (id),
+  CONSTRAINT fk_feedbacks_processed_by_user
+    FOREIGN KEY (processed_by_user_id) REFERENCES users (id)
 );
 
 CREATE TABLE audit_logs (

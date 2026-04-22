@@ -1,6 +1,7 @@
 package com.group12.backend.sprint3state2.feedback;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.group12.backend.controller.FeedbackController;
 import com.group12.backend.dto.EscalatedFeedbackResponse;
 import com.group12.backend.dto.ProcessFeedbackRequest;
+import com.group12.backend.exception.BusinessException;
 import com.group12.backend.security.AdminAccessGuard;
 import com.group12.backend.service.FeedbackService;
 
@@ -58,6 +60,21 @@ class State2FeedbackControllerTest {
 
         verify(adminAccessGuard).requireAdmin(request);
         verify(feedbackService).processFeedbackByPriority("88", payload, 100L);
+    }
+
+    @Test
+    @DisplayName("processByPriority_missingOperatorUserId_throwsUnauthorized")
+    void processByPriority_missingOperatorUserId_throwsUnauthorized() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        ProcessFeedbackRequest payload = new ProcessFeedbackRequest();
+        payload.setAction("ESCALATE");
+        payload.setEscalateTo("TECH_TEAM");
+
+        assertThatThrownBy(() -> controller.processByPriority("88", payload, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Unauthorized");
+
+        verify(adminAccessGuard).requireAdmin(request);
     }
 
     @Test

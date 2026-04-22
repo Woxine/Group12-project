@@ -1,8 +1,8 @@
 <template>
-  <el-card shadow="never" class="analytics-container">
+  <el-card shadow="never" class="analytics-container" role="region" aria-labelledby="analytics-heading">
     <template #header>
       <div class="header">
-        <span class="page-title">Management Analytics</span>
+        <h1 id="analytics-heading" class="page-title">Management Analytics</h1>
         <el-space>
           <el-date-picker
             v-model="dateRange"
@@ -11,8 +11,9 @@
             start-placeholder="Start date"
             end-placeholder="End date"
             value-format="YYYY-MM-DD"
+            aria-label="Select analytics date range"
           />
-          <el-button type="primary" :icon="Refresh" :loading="loading" @click="load">Refresh</el-button>
+          <el-button type="primary" :icon="Refresh" :loading="loading" aria-label="Refresh analytics data" @click="load">Refresh</el-button>
         </el-space>
       </div>
     </template>
@@ -66,7 +67,10 @@
           <template #header>
             <div class="chart-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
           </template>
-          <v-chart class="chart" :option="trendChartOption" autoresize />
+          <p id="trend-chart-desc" class="chart-a11y-desc">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
+          <div class="chart-accessible" role="img" aria-labelledby="trend-chart-desc">
+            <v-chart class="chart" :option="trendChartOption" autoresize aria-hidden="true" />
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -77,7 +81,10 @@
           <template #header>
             <div class="chart-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
           </template>
-          <v-chart class="chart" :option="vehicleStatusOption" autoresize />
+          <p id="vehicle-chart-desc" class="chart-a11y-desc">Donut chart showing available, rented, and maintenance scooter counts.</p>
+          <div class="chart-accessible" role="img" aria-labelledby="vehicle-chart-desc">
+            <v-chart class="chart" :option="vehicleStatusOption" autoresize aria-hidden="true" />
+          </div>
         </el-card>
       </el-col>
 
@@ -86,7 +93,10 @@
           <template #header>
             <div class="chart-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
           </template>
-          <v-chart class="chart" :option="faultResolutionOption" autoresize />
+          <p id="fault-resolution-desc" class="chart-a11y-desc">Pie chart comparing resolved and unresolved fault reports.</p>
+          <div class="chart-accessible" role="img" aria-labelledby="fault-resolution-desc">
+            <v-chart class="chart" :option="faultResolutionOption" autoresize aria-hidden="true" />
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -98,7 +108,10 @@
           <template #header>
             <div class="chart-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
           </template>
-          <v-chart class="chart" :option="faultPriorityOption" autoresize />
+          <p id="fault-priority-desc" class="chart-a11y-desc">Horizontal bar chart of fault counts by priority level.</p>
+          <div class="chart-accessible" role="img" aria-labelledby="fault-priority-desc">
+            <v-chart class="chart" :option="faultPriorityOption" autoresize aria-hidden="true" />
+          </div>
         </el-card>
       </el-col>
       
@@ -107,8 +120,11 @@
           <template #header>
             <div class="chart-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
           </template>
+          <p id="heatmap-desc" class="chart-a11y-desc">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
           <div class="heatmap-wrapper">
-            <v-chart class="chart" :option="heatmapOption" autoresize />
+            <div class="chart-accessible" role="img" aria-labelledby="heatmap-desc">
+              <v-chart class="chart" :option="heatmapOption" autoresize aria-hidden="true" />
+            </div>
             <div class="heatmap-stats">
               <el-statistic title="Avg Daily Rides" :value="averageDailyRides" />
               <el-statistic title="Max Daily Rides" :value="maxDailyRides" />
@@ -117,6 +133,17 @@
         </el-card>
       </el-col>
     </el-row>
+    <section class="chart-summary-card" aria-labelledby="chart-summary-heading">
+      <h2 id="chart-summary-heading">Text summary of key analytics</h2>
+      <ul>
+        <li>{{ chartSummary.totalOrders }}</li>
+        <li>{{ chartSummary.totalRevenue }}</li>
+        <li>{{ chartSummary.vehicleUsage }}</li>
+        <li>{{ chartSummary.faultStatus }}</li>
+        <li>{{ chartSummary.activity }}</li>
+      </ul>
+    </section>
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ liveMessage }}</div>
   </el-card>
 </template>
 
@@ -157,6 +184,7 @@ use([
 
 const loading = ref(false);
 const dateRange = ref<[string, string] | null>(getDefaultRange());
+const liveMessage = ref("");
 const overview = reactive<DashboardOverview>({
   orderStats: {
     totalOrders: 0,
@@ -198,6 +226,21 @@ const maxDailyRides = computed(() => {
   return Math.max(...overview.dailyTrend.map(d => d.orderCount));
 });
 
+const chartSummary = computed(() => ({
+  totalOrders: `Total orders: ${overview.orderStats.totalOrders}.`,
+  totalRevenue: `Total revenue: ${overview.revenueStats.totalRevenue.toFixed(2)} pounds.`,
+  vehicleUsage: `Scooter usage rate: ${usageRatePercent.value} percent, with ${overview.vehicleStats.rentedScooters} currently rented scooters.`,
+  faultStatus: `Fault reports: ${overview.faultStats.totalFeedbacks} total, ${overview.faultStats.resolvedFeedbacks} resolved, ${overview.faultStats.unresolvedFeedbacks} unresolved.`,
+  activity: `Riding activity averages ${averageDailyRides.value} rides per day and peaks at ${maxDailyRides.value} rides in a day.`
+}));
+
+function announce(message: string) {
+  liveMessage.value = "";
+  window.setTimeout(() => {
+    liveMessage.value = message;
+  }, 0);
+}
+
 // 1. Orders & Revenue Trend Option
 const trendChartOption = computed(() => {
   const dates = overview.dailyTrend.map(d => d.date);
@@ -206,8 +249,11 @@ const trendChartOption = computed(() => {
 
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Orders', 'Revenue'] },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    legend: {
+      data: ['Orders', 'Revenue'],
+      top: 8
+    },
+    grid: { left: '3%', right: '4%', top: 56, bottom: '3%', containLabel: true },
     xAxis: { type: 'category', data: dates },
     yAxis: [
       { type: 'value', name: 'Orders', position: 'left' },
@@ -373,8 +419,11 @@ async function load() {
       end_date: dateRange.value?.[1]
     });
     Object.assign(overview, payload);
+    announce("Analytics data loaded.");
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to load dashboard data");
+    const message = error?.response?.data?.message ?? "Failed to load dashboard data";
+    ElMessage.error(message);
+    announce(message);
   } finally {
     loading.value = false;
   }
@@ -410,6 +459,7 @@ function formatDate(date: Date) {
 }
 
 .page-title {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #303133;
@@ -493,6 +543,16 @@ function formatDate(date: Date) {
   width: 100%;
 }
 
+.chart-a11y-desc {
+  margin: 0 0 8px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.chart-accessible {
+  width: 100%;
+}
+
 .heatmap-wrapper {
   position: relative;
 }
@@ -519,5 +579,23 @@ function formatDate(date: Date) {
   font-size: 20px;
   font-weight: bold;
   color: #409EFF;
+}
+
+.chart-summary-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.chart-summary-card h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.chart-summary-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #374151;
 }
 </style>

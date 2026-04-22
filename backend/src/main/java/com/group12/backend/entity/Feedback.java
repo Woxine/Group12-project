@@ -1,6 +1,7 @@
 package com.group12.backend.entity;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +36,25 @@ public class Feedback implements Serializable {
 
     private Boolean resolved = false;
 
+    @Column(columnDefinition = "BIT(1) DEFAULT b'0'")
+    private Boolean escalated = false;
+
+    @Column(name = "escalated_to", length = 100)
+    private String escalatedTo;
+
+    @Column(name = "escalated_at")
+    private LocalDateTime escalatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "processed_by_user_id")
+    private User processedBy;
+
+    @Column(name = "process_note", columnDefinition = "TEXT")
+    private String processNote;
+
+    @Column(name = "escalation_status", length = 32)
+    private String escalationStatus = "PENDING";
+
     public Feedback() {}
 
     public Long getId() { return id; }
@@ -54,4 +74,22 @@ public class Feedback implements Serializable {
 
     public Boolean getResolved() { return resolved; }
     public void setResolved(Boolean resolved) { this.resolved = resolved; }
+
+    public Boolean getEscalated() { return escalated; }
+    public void setEscalated(Boolean escalated) { this.escalated = escalated; }
+
+    public String getEscalatedTo() { return escalatedTo; }
+    public void setEscalatedTo(String escalatedTo) { this.escalatedTo = escalatedTo; }
+
+    public LocalDateTime getEscalatedAt() { return escalatedAt; }
+    public void setEscalatedAt(LocalDateTime escalatedAt) { this.escalatedAt = escalatedAt; }
+
+    public User getProcessedBy() { return processedBy; }
+    public void setProcessedBy(User processedBy) { this.processedBy = processedBy; }
+
+    public String getProcessNote() { return processNote; }
+    public void setProcessNote(String processNote) { this.processNote = processNote; }
+
+    public String getEscalationStatus() { return escalationStatus; }
+    public void setEscalationStatus(String escalationStatus) { this.escalationStatus = escalationStatus; }
 }

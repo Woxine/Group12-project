@@ -4,11 +4,14 @@
 		<view class="title-section">
 			<text class="title-text">Revenue by Duration</text>
 			<text class="hint-text">{{ activeRangeLabel }}</text>
+			<text class="a11y-hint-text">Enter dates in YYYY-MM-DD format. Use This Week for quick loading.</text>
 		</view>
 
 		<view class="card filter-card">
 			<text class="section-title">Date Range</text>
+			<text class="field-help">Start date (required)</text>
 			<input v-model="startDate" type="text" class="date-input" placeholder="Start date (YYYY-MM-DD)" />
+			<text class="field-help">End date (required)</text>
 			<input v-model="endDate" type="text" class="date-input" placeholder="End date (YYYY-MM-DD)" />
 			<view class="action-row">
 				<button class="action-btn secondary" :disabled="isLoading" @click="loadCurrentWeekData">This Week</button>
@@ -314,6 +317,12 @@ onMounted(() => {
 .hint-text {
 	font-size: 14px;
 	color: #666;
+	margin-bottom: 6px;
+}
+
+.a11y-hint-text {
+	font-size: 13px;
+	color: #374151;
 }
 
 .card {
@@ -335,9 +344,15 @@ onMounted(() => {
 	margin-bottom: 14px;
 }
 
+.field-help {
+	font-size: 12px;
+	color: #4b5563;
+	margin-bottom: 6px;
+}
+
 .date-input {
 	width: 100%;
-	height: 44px;
+	min-height: 44px;
 	padding: 0 12px;
 	margin-bottom: 12px;
 	border-width: 1px;
@@ -357,6 +372,7 @@ onMounted(() => {
 
 .action-btn {
 	width: 48%;
+	min-height: 46px;
 	padding: 12px 0;
 	border-radius: 8px;
 	border-width: 0;
@@ -365,13 +381,13 @@ onMounted(() => {
 }
 
 .action-btn.primary {
-	background-color: #4CAF50;
+	background-color: #166534;
 	color: #fff;
 }
 
 .action-btn.secondary {
-	background-color: #e8f5e9;
-	color: #2e7d32;
+	background-color: #dcfce7;
+	color: #14532d;
 }
 
 .stats-grid {
@@ -436,7 +452,7 @@ onMounted(() => {
 .revenue-text {
 	font-size: 16px;
 	font-weight: bold;
-	color: #4CAF50;
+	color: #166534;
 }
 
 .loading-text,
@@ -446,8 +462,9 @@ onMounted(() => {
 }
 
 .reload-btn {
+	min-height: 48px;
 	padding: 14px;
-	background-color: #4CAF50;
+	background-color: #166534;
 	color: #fff;
 	border-radius: 8px;
 	border-width: 0;

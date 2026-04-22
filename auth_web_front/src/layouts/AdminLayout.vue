@@ -1,44 +1,46 @@
 <template>
   <el-container class="layout">
-    <el-aside width="240px" class="aside">
+    <el-aside width="240px" class="aside" aria-label="Admin sidebar">
       <div class="brand">
         <el-icon class="brand-icon"><Platform /></el-icon>
         Admin Console
       </div>
-      <el-menu :default-active="route.path" router class="menu">
-        <el-menu-item index="/admin/analytics">
-          <el-icon><DataLine /></el-icon>
-          <span>Analytics</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/revenue">
-          <el-icon><Money /></el-icon>
-          <span>Revenue</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/scooters">
-          <el-icon><Bicycle /></el-icon>
-          <span>Scooters</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/feedbacks">
-          <el-icon><ChatDotSquare /></el-icon>
-          <span>Feedback</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/high-priority-issues">
-          <el-icon><WarningFilled /></el-icon>
-          <span>High Priority Issues</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/discount-verifications">
-          <el-icon><DocumentChecked /></el-icon>
-          <span>Verification Review</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/billing">
-          <el-icon><Setting /></el-icon>
-          <span>Billing</span>
-        </el-menu-item>
-      </el-menu>
+      <nav aria-label="Admin primary navigation">
+        <el-menu :default-active="route.path" router class="menu">
+          <el-menu-item index="/admin/analytics">
+            <el-icon><DataLine /></el-icon>
+            <span>Analytics</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/revenue">
+            <el-icon><Money /></el-icon>
+            <span>Revenue</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/scooters">
+            <el-icon><Bicycle /></el-icon>
+            <span>Scooters</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/feedbacks">
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>Feedback</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/high-priority-issues">
+            <el-icon><WarningFilled /></el-icon>
+            <span>High Priority Issues</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/discount-verifications">
+            <el-icon><DocumentChecked /></el-icon>
+            <span>Verification Review</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/billing">
+            <el-icon><Setting /></el-icon>
+            <span>Billing</span>
+          </el-menu-item>
+        </el-menu>
+      </nav>
     </el-aside>
 
     <el-container>
-      <el-header class="header">
+      <el-header class="header" role="banner">
         <div class="header-left">
           <!-- Optional breadcrumb or title here in the future -->
         </div>
@@ -57,7 +59,7 @@
           </el-space>
         </div>
       </el-header>
-      <el-main class="main-content">
+      <el-main id="main-content" ref="mainContentRef" class="main-content" tabindex="-1">
         <router-view />
       </el-main>
     </el-container>
@@ -66,6 +68,7 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
+import { nextTick, ref, watch } from "vue";
 import {
   DataLine,
   Money,
@@ -83,11 +86,20 @@ import { useAuthStore } from "@/stores/auth";
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const mainContentRef = ref<HTMLElement | null>(null);
 
 function logout() {
   authStore.signOut();
   router.push("/login");
 }
+
+watch(
+  () => route.fullPath,
+  async () => {
+    await nextTick();
+    mainContentRef.value?.focus();
+  }
+);
 </script>
 
 <style scoped>
@@ -132,9 +144,16 @@ function logout() {
 }
 
 .el-menu-item.is-active {
-  background-color: #ecf5ff;
-  color: #409EFF;
+  background-color: #dbeafe;
+  color: #1d4ed8;
   font-weight: 600;
+  border-left: 4px solid #1d4ed8;
+}
+
+.el-menu-item.is-active::after {
+  content: " (current)";
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .header {

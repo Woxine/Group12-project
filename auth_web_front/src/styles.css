@@ -2,6 +2,8 @@
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #1f2937;
   background-color: #f5f7fa;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 * {
@@ -15,4 +17,80 @@ body,
   padding: 0;
   width: 100%;
   min-height: 100vh;
+}
+
+body {
+  color: #1f2937;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -40px;
+  z-index: 10000;
+  background: #111827;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  border: 2px solid #ffffff;
+}
+
+.skip-link:focus-visible {
+  top: 12px;
+}
+
+:focus-visible {
+  outline: 3px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.el-button:focus-visible,
+.el-input__wrapper:focus-within,
+.el-select__wrapper:focus-within,
+.el-textarea__inner:focus-visible,
+.el-pagination button:focus-visible,
+.el-menu-item:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.25);
+}
+
+.el-button--primary {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus-visible {
+  background-color: #1e40af;
+  border-color: #1e40af;
+}
+
+.el-button--danger.is-plain {
+  color: #991b1b;
+  border-color: #991b1b;
+  background: #ffffff;
+}
+
+.el-button--danger.is-plain:hover,
+.el-button--danger.is-plain:focus-visible {
+  color: #ffffff;
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.el-table th.el-table__cell {
+  color: #374151;
 }
