@@ -5,3 +5,4 @@ unpackage/
 *.local
 backend/application-local.yaml
 backend/src/main/resources/application-local.yaml
+front/node_modules/
