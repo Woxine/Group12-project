@@ -17,6 +17,10 @@
 				<navigator url="/pages/register/register" open-type="navigate">
 					<button class="register-btn">Create Account</button>
 				</navigator>
+
+				<navigator url="/pages/about/about" open-type="navigate">
+					<button class="about-btn">About Us</button>
+				</navigator>
 			</view>
 		</view>
 
@@ -141,6 +145,10 @@
 				</navigator>
 				<navigator url="/pages/discount_verify/discount_verify" open-type="navigate" class="menu-item">
 					<text class="menu-text">Discount Verification</text>
+					<text class="menu-arrow">›</text>
+				</navigator>
+				<navigator url="/pages/about/about" open-type="navigate" class="menu-item">
+					<text class="menu-text">About Us</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
 			</view>
@@ -558,6 +566,17 @@ onShow(() => {
 	border-radius: 8px;
 	font-size: 16px;
 	font-weight: bold;
+}
+
+.about-btn {
+	width: 100%;
+	height: 44px;
+	margin-top: 12px;
+	background-color: transparent;
+	color: #666;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	font-size: 14px;
 }
 
 /* ── Logged In Container ── */
