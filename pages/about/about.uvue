@@ -1,0 +1,309 @@
+<template>
+	<!-- About Us 页面：展示项目 GitHub 来源与开发者卡片 -->
+	<scroll-view class="page" scroll-y="true">
+		<view class="container">
+			<view class="hero-card">
+				<text class="hero-title">About Us</text>
+				<text class="hero-subtitle">Built by Group 12 for the Bike Sharing project</text>
+				<text class="hero-text">
+					These profiles were identified from the repository commit history and then cross-checked
+					against public GitHub accounts, so contributors are still shown even when they do not
+					appear in the default contributors list.
+				</text>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">Project Source</text>
+				<text class="section-text">Primary source: GitHub repository and commit history</text>
+				<text class="repo-name">{{ projectName }}</text>
+				<text class="repo-url">{{ projectRepoUrl }}</text>
+				<view class="repo-actions">
+					<button class="action-btn" @click="copyValue(projectRepoUrl, 'Repository link')">Copy Repo Link</button>
+				</view>
+			</view>
+
+			<view class="section-card">
+				<text class="section-title">Developers</text>
+				<text class="section-text">
+					Accounts are deduplicated by git author identity first, then mapped to public GitHub
+					profiles where possible.
+				</text>
+
+				<view v-for="developer in developers" :key="developer.githubUsername" class="developer-card">
+					<image :src="developer.avatarUrl" mode="aspectFill" class="developer-avatar"></image>
+
+					<view class="developer-body">
+						<view class="developer-header">
+							<text class="developer-name">{{ developer.name }}</text>
+							<text class="developer-role">{{ developer.role }}</text>
+						</view>
+
+						<text class="developer-username">@{{ developer.githubUsername }}</text>
+						<text class="developer-bio">{{ developer.bio }}</text>
+						<text class="developer-link">{{ developer.githubUrl }}</text>
+
+						<view class="developer-actions">
+							<button class="mini-btn" @click="copyValue(developer.githubUsername, 'GitHub username')">Copy Username</button>
+							<button class="mini-btn mini-btn-primary" @click="copyValue(developer.githubUrl, 'GitHub profile link')">Copy GitHub Link</button>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</scroll-view>
+</template>
+
+<script setup lang="uts">
+import { showInfo, showSuccess } from '../../common/appToast.uts'
+
+type DeveloperProfile = {
+	name: string
+	githubUsername: string
+	githubUrl: string
+	avatarUrl: string
+	role: string
+	bio: string
+}
+
+const projectName = 'Woxine / Group12-project'
+const projectRepoUrl = 'https://github.com/Woxine/Group12-project'
+
+const developers: DeveloperProfile[] = [
+	{
+		name: 'Dao',
+		githubUsername: 'Mikoto-19909',
+		githubUrl: 'https://github.com/Mikoto-19909',
+		avatarUrl: 'https://avatars.githubusercontent.com/u/204630474?v=4',
+		role: 'Backend and booking systems',
+		bio: 'Mapped from the yukino and Dao commit identities. Major contributor across backend services, auth, booking flow and admin-related updates.',
+	},
+	{
+		name: 'T194586199',
+		githubUsername: 'T194586199',
+		githubUrl: 'https://github.com/T194586199',
+		avatarUrl: 'https://avatars.githubusercontent.com/u/191215991?v=4',
+		role: 'Testing, documentation and design assets',
+		bio: 'GitHub bio: Southwest Jiaotong University, major in Compute Science. Commit history links this account to sprint testing scripts, README updates and ER diagram work.',
+	},
+	{
+		name: 'Gao-K61',
+		githubUsername: 'Gao-K61',
+		githubUrl: 'https://github.com/Gao-K61',
+		avatarUrl: 'https://avatars.githubusercontent.com/u/180283933?v=4',
+		role: 'Profile, payment and user flows',
+		bio: 'Commit history ties this account to the profile page, pricing and payment flows, plus user and feedback service updates in the backend.',
+	},
+	{
+		name: 'k1ndr3d',
+		githubUsername: 'k1ndr3dru4n',
+		githubUrl: 'https://github.com/k1ndr3dru4n',
+		avatarUrl: 'https://avatars.githubusercontent.com/u/149220678?v=4',
+		role: 'Project setup and sprint planning',
+		bio: 'Recovered from the Lumberjack004 commit alias via GitHub commit metadata. Contributed the initial framework and sprint planning TODO updates.',
+	},
+	{
+		name: 'Woxine',
+		githubUsername: 'Woxine',
+		githubUrl: 'https://github.com/Woxine',
+		avatarUrl: 'https://avatars.githubusercontent.com/u/178411766?v=4',
+		role: 'Repository owner and project coordination',
+		bio: 'Owner of the project repository and part of the recorded commit history. The repository itself is published from this GitHub account.',
+	}
+]
+
+const copyValue = (value: string, label: string) => {
+	uni.setClipboardData({
+		data: value,
+		success: () => {
+			showSuccess(label + ' copied')
+		},
+		fail: () => {
+			showInfo(value)
+		}
+	})
+}
+</script>
+
+<style>
+.page {
+	width: 100%;
+	height: 100%;
+	background-color: #f5f5f5;
+}
+
+.container {
+	display: flex;
+	flex-direction: column;
+	padding: 20px 16px 32px;
+	box-sizing: border-box;
+}
+
+.hero-card,
+.section-card {
+	display: flex;
+	flex-direction: column;
+	background-color: white;
+	border-radius: 16px;
+	padding: 20px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hero-card {
+	margin-bottom: 16px;
+	background-color: #1f2937;
+}
+
+.hero-title {
+	font-size: 24px;
+	font-weight: bold;
+	color: white;
+	margin-bottom: 8px;
+}
+
+.hero-subtitle {
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.85);
+	margin-bottom: 12px;
+}
+
+.hero-text {
+	font-size: 13px;
+	line-height: 20px;
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.section-card {
+	margin-bottom: 16px;
+}
+
+.section-title {
+	font-size: 18px;
+	font-weight: bold;
+	color: #222;
+	margin-bottom: 8px;
+}
+
+.section-text {
+	font-size: 13px;
+	line-height: 20px;
+	color: #666;
+	margin-bottom: 12px;
+}
+
+.repo-name {
+	font-size: 16px;
+	font-weight: bold;
+	color: #111827;
+	margin-bottom: 6px;
+}
+
+.repo-url,
+.developer-link {
+	font-size: 12px;
+	line-height: 18px;
+	color: #4CAF50;
+}
+
+.repo-actions,
+.developer-actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	margin-top: 12px;
+}
+
+.action-btn,
+.mini-btn {
+	height: 38px;
+	padding: 0 14px;
+	border-radius: 8px;
+	font-size: 13px;
+	border-width: 1px;
+	border-style: solid;
+}
+
+.action-btn {
+	background-color: #4CAF50;
+	color: white;
+	border-color: #4CAF50;
+}
+
+.mini-btn {
+	margin-right: 10px;
+	margin-bottom: 10px;
+	background-color: white;
+	color: #555;
+	border-color: #ddd;
+}
+
+.mini-btn-primary {
+	background-color: rgba(76, 175, 80, 0.14);
+	color: #2e7d32;
+	border-color: rgba(76, 175, 80, 0.45);
+}
+
+.developer-card {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	padding: 16px 0;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #f0f0f0;
+}
+
+.developer-card:first-of-type {
+	margin-top: 6px;
+}
+
+.developer-avatar {
+	width: 56px;
+	height: 56px;
+	border-radius: 28px;
+	background-color: #e5e7eb;
+	margin-right: 14px;
+	flex-shrink: 0;
+}
+
+.developer-body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.developer-header {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: 4px;
+}
+
+.developer-name {
+	font-size: 16px;
+	font-weight: bold;
+	color: #222;
+	margin-right: 8px;
+}
+
+.developer-role {
+	font-size: 12px;
+	color: #666;
+	background-color: #f3f4f6;
+	padding: 4px 8px;
+	border-radius: 999px;
+}
+
+.developer-username {
+	font-size: 13px;
+	color: #4CAF50;
+	margin-bottom: 8px;
+}
+
+.developer-bio {
+	font-size: 13px;
+	line-height: 20px;
+	color: #555;
+	margin-bottom: 8px;
+}
+</style>

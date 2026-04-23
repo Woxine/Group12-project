@@ -137,6 +137,12 @@
 			"style": {
 				"navigationBarTitleText": "Guest Profile"
 			}
+		},
+		{
+			"path": "pages/about/about",
+			"style": {
+				"navigationBarTitleText": "About Us"
+			}
 		}
 	],
 	"globalStyle": {
