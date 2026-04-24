@@ -17,8 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.group12.backend.annotation.LogAction;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.dto.CreateGuestBookingRequest;
+import com.group12.backend.dto.PayBookingRequest;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.BookingService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 /**
@@ -47,6 +51,18 @@ public class BookingController {
     @PostMapping("/guest")
     public ResponseEntity<Object> createGuestBooking(@Valid @RequestBody CreateGuestBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", bookingService.createGuestBooking(request)));
+    }
+
+    @PostMapping("/{bookingId}/pay")
+    public ResponseEntity<Object> payBooking(
+            @PathVariable String bookingId,
+            @Valid @RequestBody PayBookingRequest request,
+            HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        return ResponseEntity.ok(Map.of("data", bookingService.payBooking(bookingId, Long.parseLong(String.valueOf(authUserId)), request)));
     }
 
     /**

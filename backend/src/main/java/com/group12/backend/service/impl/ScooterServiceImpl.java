@@ -121,10 +121,13 @@ public class ScooterServiceImpl implements ScooterService {
     /**
      * 更新指定滑板车的状态、计费或经纬度信息。
      */
-    public Object updateScooter(Long id, String status, BigDecimal hourRate, Double locationLat, Double locationLng, Boolean visible) {
+    public Object updateScooter(Long id, String type, String status, BigDecimal hourRate, Double locationLat, Double locationLng, Boolean visible) {
         Scooter scooter = scooterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Scooter not found with id: " + id));
 
+        if (type != null && !type.isEmpty()) {
+            scooter.setType(type);
+        }
         if (status != null && !status.isEmpty()) {
             scooter.setStatus(status);
         }
@@ -149,6 +152,8 @@ public class ScooterServiceImpl implements ScooterService {
     @Transactional
     public Object createScooter(CreateScooterRequest request) {
         Scooter scooter = new Scooter();
+        String ty = request.getType();
+        scooter.setType(ty != null && !ty.isEmpty() ? ty : "GEN1");
         String st = request.getStatus();
         scooter.setStatus(st != null && !st.isEmpty() ? st : "AVAILABLE");
         scooter.setHourRate(request.getHour_rate());
@@ -192,6 +197,7 @@ public class ScooterServiceImpl implements ScooterService {
         String locName = (scooter.getLocationPoint() != null) ? scooter.getLocationPoint().getName() : "Unknown";
         return new ScooterResponse(
             scooter.getId(),
+            scooter.getType(),
             scooter.getStatus(),
             scooter.getLocationLat(),
             scooter.getLocationLng(),

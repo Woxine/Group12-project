@@ -31,8 +31,8 @@
 			<!-- Empty -->
 			<view v-else-if="bookings.length == 0" class="empty-section">
 				<text class="empty-text">No bookings yet</text>
-				<text class="empty-hint">Head over to the Bike List to book your first scooter</text>
-				<navigator url="/pages/bikelist/bikelist" open-type="reLaunch">
+				<text class="empty-hint">Head over to the e-Scooter List to book your first scooter</text>
+				<navigator url="/pages/escooters/escooters" open-type="reLaunch">
 					<button class="explore-btn">Browse Scooters</button>
 				</navigator>
 			</view>
@@ -46,12 +46,12 @@
 				>
 					<view class="card-header">
 						<text class="booking-id">#{{ booking.id != null ? booking.id : index + 1 }}</text>
-						<text :class="['status-badge', 'status-' + formatStatus(booking.status)]">{{ formatStatus(booking.status) }}</text>
+						<text :class="['status-badge', 'status-' + getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</text>
 					</view>
 					<view class="card-body">
 						<view class="detail-row">
 							<text class="label">Scooter</text>
-							<text class="value">{{ formatBikeId(booking.scooterId) }}</text>
+							<text class="value">{{ formatScooterId(booking.scooterId) }}</text>
 						</view>
 						<view class="detail-row">
 							<text class="label">Duration</text>
@@ -73,6 +73,7 @@
 							<button v-if="hasAction(booking, 'endRide')" class="end-ride-btn" @click="endRide(booking)">End Ride</button>
 							<button v-if="hasAction(booking, 'extendBooking')" class="extend-booking-btn" @click="onExtendBooking(booking)">Extend</button>
 							<button v-if="hasAction(booking, 'cancelOrder')" class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Booking</button>
+							<button v-if="hasAction(booking, 'continuePayment')" class="extend-booking-btn" @click="continuePayment(booking)">Continue Payment</button>
 							<button v-if="hasAction(booking, 'viewRoute')" class="view-route-btn" @click="goToRoute(booking)">View Route</button>
 						</view>
 					</view>
@@ -154,17 +155,29 @@ const fetchBookingsRef = ref<((fromPull: boolean) => void) | null>(null)
 
 const hasMore = computed(() => bookings.value.length < total.value)
 
-const formatStatus = (status: string | null): string => {
+const getStatusLabel = (status: string | null): string => {
 	if (status == null || status.length == 0) return 'Unknown'
 	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED') return 'Confirmed'
+	if (s == 'PENDING_PAYMENT') return 'Awaiting Payment'
 	if (s == 'PENDING') return 'Pending'
 	if (s == 'CANCELLED' || s == 'CANCELED') return 'Cancelled'
 	if (s == 'COMPLETED') return 'Completed'
 	return status
 }
 
-const formatBikeId = (scooterId: string | null): string => {
+const getStatusClass = (status: string | null): string => {
+	if (status == null || status.length == 0) return 'Unknown'
+	const s = ('' + status).trim().toUpperCase()
+	if (s == 'CONFIRMED') return 'Confirmed'
+	if (s == 'PENDING_PAYMENT') return 'AwaitingPayment'
+	if (s == 'PENDING') return 'Pending'
+	if (s == 'CANCELLED' || s == 'CANCELED') return 'Cancelled'
+	if (s == 'COMPLETED') return 'Completed'
+	return 'Unknown'
+}
+
+const formatScooterId = (scooterId: string | null): string => {
 	if (scooterId == null || scooterId.length == 0) return '-'
 	if (scooterId.startsWith('SC')) return scooterId
 	return 'SC' + scooterId.padStart(3, '0')
@@ -240,7 +253,7 @@ const hasActiveBookings = (): boolean => {
 	const list = bookings.value
 	for (let i = 0; i < list.length; i++) {
 		const s = ('' + list[i].status).trim().toUpperCase()
-		if (s == 'CONFIRMED' || s == 'PENDING') return true
+		if (s == 'CONFIRMED' || s == 'PENDING' || s == 'PENDING_PAYMENT') return true
 	}
 	return false
 }
@@ -373,19 +386,21 @@ const onPullRefresh = () => {
 /**
  * Status -> visible actions mapping (single source of truth)
  *   CONFIRMED  => endRide, cancelOrder, extendBooking
- *   PENDING    => endRide, cancelOrder
+ *   PENDING_PAYMENT => continuePayment, cancelOrder
+ *   PENDING    => cancelOrder
  *   COMPLETED  => viewRoute
  *   CANCELLED  => (none)
  *   Unknown/empty => (none)
  */
-type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking'
+type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking' | 'continuePayment'
 
 const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
 	if (status == null || status.length < 1) return []
 	const s = ('' + status).trim().toUpperCase()
 	if (s == 'CONFIRMED') return ['endRide', 'extendBooking', 'cancelOrder']
-	if (s == 'PENDING') return ['endRide', 'cancelOrder']
+	if (s == 'PENDING_PAYMENT') return ['continuePayment', 'cancelOrder']
+	if (s == 'PENDING') return ['cancelOrder']
 	if (s == 'COMPLETED') return ['viewRoute']
 	if (s == 'CANCELLED' || s == 'CANCELED') return []
 	return []
@@ -406,6 +421,17 @@ const goToRoute = (booking: Booking) => {
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
+}
+
+const continuePayment = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length < 1) {
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
+		return
+	}
+	uni.navigateTo({
+		url: '/pages/payment/payment?bookingId=' + bid + '&amount=' + booking.price.toFixed(2)
+	})
 }
 
 const submitExtendBooking = (bid: string, duration: string) => {
@@ -556,7 +582,7 @@ const cancelOrder = (booking: Booking) => {
 		return
 	}
 	const cs = ('' + booking.status).trim().toUpperCase()
-	if (cs != 'CONFIRMED' && cs != 'PENDING') {
+	if (cs != 'CONFIRMED' && cs != 'PENDING' && cs != 'PENDING_PAYMENT') {
 		showInfo(bookingMessage('cannotCancelBooking', 'This booking cannot be cancelled'))
 		return
 	}
@@ -617,7 +643,7 @@ const endRide = (booking: Booking) => {
 		return
 	}
 	const es = ('' + booking.status).trim().toUpperCase()
-	if (es != 'CONFIRMED' && es != 'PENDING') {
+	if (es != 'CONFIRMED') {
 		showInfo(bookingMessage('cannotEndRide', 'This booking cannot be ended'))
 		return
 	}
@@ -928,6 +954,11 @@ onHide(() => {
 .status-Pending {
 	background-color: #FFC107;
 	color: #333;
+}
+
+.status-AwaitingPayment {
+	background-color: #FF9800;
+	color: white;
 }
 
 .status-Cancelled {

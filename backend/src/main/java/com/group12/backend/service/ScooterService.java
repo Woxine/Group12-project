@@ -27,7 +27,7 @@ public interface ScooterService {
     /**
      * 更新指定滑板车的状态、计费和坐标信息。
      */
-    Object updateScooter(Long id, String status, BigDecimal hourRate, Double locationLat, Double locationLng, Boolean visible);
+    Object updateScooter(Long id, String type, String status, BigDecimal hourRate, Double locationLat, Double locationLng, Boolean visible);
 
     /**
      * 管理员新增车辆。

@@ -22,12 +22,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUser_IdAndStatus(Long userId, String status);
     List<Booking> findByScooterId(Long scooterId);
     List<Booking> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
+    List<Booking> findByStatusAndPaymentDeadlineBefore(String status, LocalDateTime paymentDeadline);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Booking b WHERE b.id = :id")
     Optional<Booking> findByIdForUpdate(@Param("id") Long id);
 
-    @Query("SELECT b FROM Booking b WHERE b.scooter.id = :scooterId AND b.status = 'CONFIRMED' " +
+    @Query("SELECT b FROM Booking b WHERE b.scooter.id = :scooterId AND b.status IN ('CONFIRMED', 'PENDING_PAYMENT') " +
            "AND b.endTime > :startTime AND b.startTime < :endTime")
     List<Booking> findOverlappingBookings(@Param("scooterId") Long scooterId,
                                          @Param("startTime") LocalDateTime startTime,

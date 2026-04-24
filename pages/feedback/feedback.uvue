@@ -1,75 +1,80 @@
 <template>
 	<!-- 反馈页：输入滑板车ID、问题描述和位置，提交用户反馈 -->
 	<view class="container">
-		<view class="title-section">
-			<text class="title-text">Submit Feedback</text>
-			<text class="hint-text">Report an issue or suggest an improvement</text>
-			<text class="a11y-hint-text">Fields marked as required must be completed before submission.</text>
-		</view>
-
-		<view class="form-section">
-			<view class="form-row">
-				<text class="label">Scooter ID</text>
-				<text class="field-help">Required. Example: 1 or SC001.</text>
-				<input
-					class="input"
-					v-model="scooterId"
-					placeholder="e.g. 1 or SC001"
-					placeholder-class="input-placeholder"
-				/>
-			</view>
-			<view class="form-row">
-				<text class="label">Description</text>
-				<text class="field-help">Required. Describe the issue clearly so support can help faster.</text>
-				<textarea
-					class="textarea"
-					v-model="description"
-					placeholder="Describe your feedback (required)"
-					placeholder-class="input-placeholder"
-					:maxlength="500"
-				/>
-				<text class="char-count">{{ description.length }}/500</text>
-			</view>
-			<view class="form-row">
-				<text class="label">Location (optional)</text>
-				<input
-					class="input"
-					v-model="location"
-					placeholder="e.g. Street name or area"
-					placeholder-class="input-placeholder"
-				/>
-			</view>
-			<view class="form-row">
-				<text class="label">Priority</text>
-				<text class="field-help">Choose HIGH only for urgent safety or service-impacting issues.</text>
-				<view class="priority-options">
-					<view :class="['priority-btn', 'priority-btn-margin', priority === 'LOW' ? 'priority-btn-active-low' : '']" @click="priority = 'LOW'">
-						<text :class="['priority-text', priority === 'LOW' ? 'priority-text-active' : '']">LOW (General)</text>
-					</view>
-					<view :class="['priority-btn', priority === 'HIGH' ? 'priority-btn-active-high' : '']" @click="priority = 'HIGH'">
-						<text :class="['priority-text', priority === 'HIGH' ? 'priority-text-active' : '']">HIGH (Urgent)</text>
-					</view>
+		<view class="scroll-wrap" :style="{ height: scrollWrapHeight + 'px' }">
+			<scroll-view class="scroll-area" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }">
+				<view class="title-section">
+					<text class="title-text">Submit Feedback</text>
+					<text class="hint-text">Report an issue or suggest an improvement</text>
+					<text class="a11y-hint-text">Fields marked as required must be completed before submission.</text>
 				</view>
-			</view>
 
-			<view v-if="priority === 'HIGH'" class="warning-row">
-				<text class="warning-text">High priority reports are escalated and should include clear details.</text>
-			</view>
+				<view class="form-section">
+					<view class="form-row">
+						<text class="label">Scooter ID</text>
+						<text class="field-help">Required. Example: 1 or SC001.</text>
+						<input
+							class="input"
+							v-model="scooterId"
+							placeholder="e.g. 1 or SC001"
+							placeholder-class="input-placeholder"
+						/>
+					</view>
+					<view class="form-row">
+						<text class="label">Description</text>
+						<text class="field-help">Required. Describe the issue clearly so support can help faster.</text>
+						<textarea
+							class="textarea"
+							v-model="description"
+							placeholder="Describe your feedback (required)"
+							placeholder-class="input-placeholder"
+							:maxlength="500"
+						/>
+						<text class="char-count">{{ description.length }}/500</text>
+					</view>
+					<view class="form-row">
+						<text class="label">Location (optional)</text>
+						<input
+							class="input"
+							v-model="location"
+							placeholder="e.g. Street name or area"
+							placeholder-class="input-placeholder"
+						/>
+					</view>
+					<view class="form-row">
+						<text class="label">Priority</text>
+						<text class="field-help">Choose HIGH only for urgent safety or service-impacting issues.</text>
+						<view class="priority-options">
+							<view :class="['priority-btn', 'priority-btn-margin', priority === 'LOW' ? 'priority-btn-active-low' : '']" @click="priority = 'LOW'">
+								<text :class="['priority-text', priority === 'LOW' ? 'priority-text-active' : '']">LOW (General)</text>
+							</view>
+							<view :class="['priority-btn', priority === 'HIGH' ? 'priority-btn-active-high' : '']" @click="priority = 'HIGH'">
+								<text :class="['priority-text', priority === 'HIGH' ? 'priority-text-active' : '']">HIGH (Urgent)</text>
+							</view>
+						</view>
+					</view>
 
-			<view v-if="submitError.length > 0" class="error-row">
-				<text class="error-text">{{ submitError }}</text>
-			</view>
+					<view v-if="priority === 'HIGH'" class="warning-row">
+						<text class="warning-text">High priority reports are escalated and should include clear details.</text>
+					</view>
 
-			<button :class="['submit-btn', isSubmitting ? 'submit-btn-disabled' : '']" :disabled="isSubmitting" @click="onSubmit">Submit Feedback</button>
+					<view v-if="submitError.length > 0" class="error-row">
+						<text class="error-text">{{ submitError }}</text>
+					</view>
+
+					<button :class="['submit-btn', isSubmitting ? 'submit-btn-disabled' : '']" :disabled="isSubmitting" @click="onSubmit">Submit Feedback</button>
+				</view>
+			</scroll-view>
 		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
 // 反馈提交逻辑：表单校验、调用反馈接口提交数据、成功后重置表单
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
-import { APP_MESSAGES, getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
 
 const scooterId = ref('')
@@ -78,6 +83,20 @@ const location = ref('')
 const priority = ref('LOW')
 const isSubmitting = ref(false)
 const submitError = ref('')
+const scrollWrapHeight = ref(600)
+const scrollViewHeight = ref(560)
+
+const setScrollHeight = () => {
+	try {
+		const sys = uni.getSystemInfoSync()
+		const h = sys.windowHeight != null ? sys.windowHeight : 600
+		scrollWrapHeight.value = h
+		scrollViewHeight.value = h - 24
+	} catch (e) {
+		scrollWrapHeight.value = 600
+		scrollViewHeight.value = 560
+	}
+}
 
 const onSubmit = () => {
 	submitError.value = ''
@@ -148,16 +167,36 @@ const onSubmit = () => {
 		}
 	})
 }
+
+onMounted(() => {
+	setScrollHeight()
+})
+
+onShow(() => {
+	setScrollHeight()
+})
 </script>
 
 <style>
 /* 反馈页样式：表单卡片、输入框、字数计数、错误提示、提交按钮 */
 .container {
+	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
-	padding: 24px;
 	background-color: #f5f5f5;
-	min-height: 750px;
+}
+
+.scroll-wrap {
+	width: 100%;
+}
+
+.scroll-area {
+	width: 100%;
+	padding: 24px;
+	padding-bottom: 40px;
+	box-sizing: border-box;
 }
 
 .title-section {

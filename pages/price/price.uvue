@@ -292,8 +292,7 @@ const stepSendBooking = () => {
 		'start_time': startTime.value,
 		'end_time': endTime.value,
 		'duration': durationCode.value,
-		'total_price': pendingTotalPrice.value,
-		'status': 'CONFIRMED'
+		'total_price': pendingTotalPrice.value
 	};
 	uni.request({
 		url: BASE_URL + '/api/v1/bookings',
@@ -430,7 +429,7 @@ stepCheckActiveBooking = () => {
 					for (let i = 0; i < arr.length; i++) {
 						const rawStatus = arr[i]['status'];
 						const s = rawStatus != null ? ('' + rawStatus).toUpperCase() : '';
-						if (s == 'CONFIRMED' || s == 'PENDING') {
+						if (s == 'CONFIRMED' || s == 'PENDING' || s == 'PENDING_PAYMENT') {
 							hasActivePending.value = true;
 							break;
 						}
@@ -535,7 +534,7 @@ const cancel = () => {
 	startTime.value = '';
 	endTime.value = '';
 	showInfo(commonMessage('cancelled', 'Cancelled'));
-	// 若栈底仍是首页（index → bikelist → price），用 navigateBack 保留首页实例，避免 reLaunch 后地图白屏
+	// 若栈底仍是首页（index → escooters → price），用 navigateBack 保留首页实例，避免 reLaunch 后地图白屏
 	const pages = getCurrentPages()
 	if (pages.length >= 3) {
 		const bottom = pages[0]

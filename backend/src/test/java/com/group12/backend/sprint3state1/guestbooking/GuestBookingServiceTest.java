@@ -75,6 +75,7 @@ class GuestBookingServiceTest {
         when(userRepository.findById(100L)).thenReturn(Optional.of(guest));
         when(paymentCardRepository.existsByUser_Id(100L)).thenReturn(true);
         when(bookingRepository.findByUser_IdAndStatus(100L, "CONFIRMED")).thenReturn(java.util.List.of());
+        when(bookingRepository.findByUser_IdAndStatus(100L, "PENDING_PAYMENT")).thenReturn(java.util.List.of());
         when(scooterRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(scooter));
         when(bookingRepository.findOverlappingBookings(any(), any(), any())).thenReturn(java.util.List.of());
         when(bookingRepository.save(any(Booking.class))).thenReturn(savedBooking);

@@ -4,7 +4,7 @@
 		<view class="container">
 			<view class="hero-card">
 				<text class="hero-title">About Us</text>
-				<text class="hero-subtitle">Built by Group 12 for the Bike Sharing project</text>
+				<text class="hero-subtitle">Built by Group 12 for the e-Scooter Sharing project</text>
 				<text class="hero-text">
 					These profiles were identified from the repository commit history and then cross-checked
 					against public GitHub accounts, so contributors are still shown even when they do not

@@ -8,6 +8,7 @@ import HighPriorityIssuesView from "@/views/admin/HighPriorityIssuesView.vue";
 import AnalyticsView from "@/views/admin/AnalyticsView.vue";
 import DiscountVerificationsView from "@/views/admin/DiscountVerificationsView.vue";
 import BillingSettingsView from "@/views/admin/BillingSettingsView.vue";
+import VehicleContentEditorView from "@/views/admin/VehicleContentEditorView.vue";
 import LoginView from "@/views/LoginView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -30,7 +31,8 @@ const router = createRouter({
         { path: "feedbacks", component: FeedbacksView },
         { path: "high-priority-issues", component: HighPriorityIssuesView },
         { path: "discount-verifications", component: DiscountVerificationsView },
-        { path: "billing", component: BillingSettingsView }
+        { path: "billing", component: BillingSettingsView },
+        { path: "vehicle-content", component: VehicleContentEditorView }
       ]
     }
   ]

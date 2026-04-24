@@ -27,6 +27,7 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BillingRule;
 import com.group12.backend.service.BillingService;
+import com.group12.backend.service.DiscountService;
 import com.group12.backend.service.UserService;
 
 /**
@@ -46,6 +47,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private BillingService billingService;
+
+    @Autowired(required = false)
+    private DiscountService discountService;
 
     @Override
     /**
@@ -128,14 +132,29 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(uId)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
-        return java.util.Map.of(
-            "id", user.getId(),
-            "email", user.getEmail(),
-            "name", user.getName(),
-            "role", user.getRole(),
-            "isStudent", user.getIsStudent() != null ? user.getIsStudent() : false,
-            "age", user.getAge()
-        );
+        String discountType = "NONE";
+        boolean hasFrequentDiscount = false;
+        boolean hasStudentDiscount = false;
+        boolean hasSeniorDiscount = false;
+        if (discountService != null) {
+            discountType = discountService.resolveDiscountType(uId);
+            hasFrequentDiscount = discountService.hasFrequentDiscount(uId);
+            hasStudentDiscount = discountService.hasStudentDiscount(uId);
+            hasSeniorDiscount = discountService.hasSeniorDiscount(uId);
+        }
+
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("id", user.getId());
+        profile.put("email", user.getEmail());
+        profile.put("name", user.getName());
+        profile.put("role", user.getRole());
+        profile.put("isStudent", user.getIsStudent() != null ? user.getIsStudent() : false);
+        profile.put("age", user.getAge());
+        profile.put("discountType", discountType);
+        profile.put("hasFrequentDiscount", hasFrequentDiscount);
+        profile.put("hasStudentDiscount", hasStudentDiscount);
+        profile.put("hasSeniorDiscount", hasSeniorDiscount);
+        return profile;
     }
 
     @Override
@@ -246,6 +265,7 @@ public class UserServiceImpl implements UserService {
     private Map<String, Object> bookingToMap(Booking booking, DateTimeFormatter fmt) {
         String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
         String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
+        String paymentDeadlineStr = booking.getPaymentDeadline() == null ? null : booking.getPaymentDeadline().format(fmt);
         String durationStr = formatDuration(booking.getDurationHours());
         Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
         Double originalPrice = booking.getOriginalPrice() == null ? null : booking.getOriginalPrice().doubleValue();
@@ -265,6 +285,8 @@ public class UserServiceImpl implements UserService {
         m.put("discount_amount", discountAmount);
         m.put("discount_multiplier", booking.getDiscountMultiplier());
         m.put("discount_type", booking.getDiscountType());
+        m.put("paymentDeadline", paymentDeadlineStr);
+        m.put("payment_deadline", paymentDeadlineStr);
         Double hourRate = booking.getScooter().getHourRate() == null ? null : booking.getScooter().getHourRate().doubleValue();
         BillingRule billingRule = billingService.getCurrentRule();
         m.put("hourRate", hourRate);

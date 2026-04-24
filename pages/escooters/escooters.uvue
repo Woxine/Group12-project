@@ -1,0 +1,1353 @@
+<template>
+	<view class="page-wrapper">
+		<scroll-view class="scroll-container" scroll-y="true" refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onPullRefresh">
+			<view class="title-section">
+				<view class="title-row">
+					<text class="title-text">Choose a Scooter</text>
+					<text class="link-text" @click="showVehicleIntro">View Details ></text>
+				</view>
+				<text class="title-hint">Each card groups the same model. Swipe with the arrows to pick a specific scooter.</text>
+			</view>
+
+			<view v-if="preferredType.length > 0" class="filter-hint">
+				<text class="filter-hint-text">Showing {{ getVehicleDisplayName(preferredType) }} first</text>
+			</view>
+
+			<view v-if="isLoading" class="loading-section">
+				<text class="loading-text">Loading scooters...</text>
+			</view>
+
+			<view v-else-if="loadError.length > 0" class="error-section">
+				<text class="error-text">{{ loadError }}</text>
+				<button class="retry-btn" @click="fetchScooters(false)">Retry</button>
+			</view>
+
+			<view v-else-if="scooterGroups.length == 0" class="empty-section">
+				<text class="empty-text">No scooters available</text>
+				<text class="empty-hint">Pull down to refresh and check again</text>
+			</view>
+
+			<template v-else>
+				<view
+					v-for="(group, groupIndex) in scooterGroups"
+					:key="group.type"
+					class="scooter-card"
+					:class="{ 'scooter-card-disabled': group.isPlaceholder || getCurrentScooter(group).status != 'available', 'scooter-card-placeholder': group.isPlaceholder }"
+				>
+					<view v-if="group.isPlaceholder" class="placeholder-corner-badge">
+						<text class="placeholder-corner-badge-text">NO STOCK</text>
+					</view>
+					<view class="card-top">
+						<view class="card-title-block">
+							<text class="group-name">{{ getVehicleDisplayName(group.type) }}</text>
+							<text class="group-subtitle">{{ getVehicleSubtitle(group.type) }}</text>
+						</view>
+						<view class="group-badge">
+							<text class="group-badge-text">{{ getGroupBadgeText(group) }}</text>
+						</view>
+					</view>
+
+					<view class="card-main">
+						<view class="scooter-media" :class="{ 'scooter-media-placeholder': group.isPlaceholder }">
+							<image :src="getScooterImage(group.type)" mode="aspectFit" class="scooter-image"></image>
+						</view>
+						<view class="card-content">
+							<view class="card-info-panel" :class="{ 'card-info-panel-placeholder': group.isPlaceholder }">
+								<text class="scooter-id">{{ getScooterDisplayLabel(group) }}</text>
+								<text class="group-availability">{{ getGroupHintText(group) }}</text>
+								<text
+									class="scooter-status"
+									:class="group.isPlaceholder ? 'status-placeholder' : getStatusClass(getCurrentScooter(group).status)"
+								>
+									{{ group.isPlaceholder ? 'Unavailable' : getStatusLabel(getCurrentScooter(group).status) }}
+								</text>
+							</view>
+						</view>
+					</view>
+
+					<view class="card-footer" :class="{ 'card-footer-placeholder': group.isPlaceholder }">
+						<view class="pager" v-if="!group.isPlaceholder && group.scooters.length > 1">
+							<view class="pager-button" :class="{ disabled: group.currentIndex == 0 }" @click="changeGroupPage(groupIndex, -1)">
+								<text class="pager-button-text">‹</text>
+							</view>
+							<text class="pager-text">{{ group.currentIndex + 1 }} / {{ group.scooters.length }}</text>
+							<view class="pager-button" :class="{ disabled: group.currentIndex >= group.scooters.length - 1 }" @click="changeGroupPage(groupIndex, 1)">
+								<text class="pager-button-text">›</text>
+							</view>
+						</view>
+						<view v-else-if="group.isPlaceholder" class="pager-single">
+							<text class="pager-text">No scooters currently available</text>
+						</view>
+						<view v-else class="pager-single">
+							<text class="pager-text">Only scooter</text>
+						</view>
+
+						<button
+							v-if="!group.isPlaceholder && getCurrentScooter(group).status == 'available'"
+							class="select-button"
+							:class="{
+								selected: selectedScooterId == getCurrentScooter(group).id,
+								disabled: group.isPlaceholder || getCurrentScooter(group).status != 'available'
+							}"
+							:disabled="group.isPlaceholder || getCurrentScooter(group).status != 'available'"
+							@click="toggleSelection(groupIndex)"
+						>
+							{{ group.isPlaceholder ? 'Unavailable' : selectedScooterId == getCurrentScooter(group).id ? 'Selected' : 'Select' }}
+						</button>
+					</view>
+				</view>
+			</template>
+		</scroll-view>
+
+		<view class="booking-fixed-bar">
+			<view class="booking-section">
+				<text v-if="selectedScooterId.length > 0" class="booking-selected-text">Selected: {{ getSelectedScooterSummary() }}</text>
+				<text class="booking-hint-text">{{ getBookingHintText() }}</text>
+				<button
+					class="booking-button"
+					:class="{ disabled: isBookingDisabled() }"
+					:disabled="isBookingDisabled()"
+					@click="bookScooter"
+				>
+					Book Scooter
+				</button>
+			</view>
+		</view>
+
+		<view class="vehicle-intro-overlay" v-if="isVehicleIntroVisible">
+			<view class="vehicle-intro-card">
+				<view class="intro-header">
+					<text class="intro-title">Our Vehicles</text>
+					<text class="close-btn" @click="hideVehicleIntro">✕</text>
+				</view>
+				<scroll-view class="intro-scroll" scroll-y="true">
+					<view class="intro-item">
+						<image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN1</view>
+							<view class="intro-subtitle">Ninebot Fz3</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">115km/92km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">25km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">400W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Best for beginners and short daily trips.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN2</view>
+							<view class="intro-subtitle">Ninebot V70</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">70km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">47km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">800W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Balanced choice for mid-range commuting.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN3</view>
+							<view class="intro-subtitle">Ninebot M95C</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">145km max</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">55km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">1500W/2600W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Long-range flagship for heavy usage scenarios.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN3 PRO</view>
+							<view class="intro-subtitle">Ninebot E300P MK2</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">125km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">135km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">29kW peak</text>
+								</view>
+							</view>
+							<view class="intro-advice">Performance-first choice for advanced riders.</view>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
+		</view>
+
+		<TabBar current="bike" />
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { onShow, onHide, onLoad } from '@dcloudio/uni-app'
+import { BASE_URL } from '../../common/api.uts'
+import { getAppMessage } from '../../common/messages.uts'
+import { showInfo, showThenNavigate } from '../../common/appToast.uts'
+
+const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback)
+
+type ScooterStatus = 'available' | 'reserved' | 'rented' | 'maintenance'
+
+type Scooter = {
+	id: string
+	status: ScooterStatus
+	type: string
+}
+
+type ScooterGroup = {
+	type: string
+	scooters: Scooter[]
+	currentIndex: number
+	isPlaceholder: boolean
+}
+
+const typeOrder = ['GEN1', 'GEN2', 'GEN3', 'GEN3PRO']
+const scooterGroups = ref<ScooterGroup[]>([])
+const isLoading = ref(false)
+const loadError = ref('')
+const isRefreshing = ref(false)
+const preferredType = ref('')
+const selectedScooterId = ref('')
+const isVehicleIntroVisible = ref(false)
+
+const POLL_INTERVAL = 30000
+const preferenceStoragePrefix = 'scooterPreference.'
+let pollTimer: number | null = null
+
+const normalizeType = (rawType: string): string => {
+	const value = ('' + rawType).trim().toUpperCase()
+	if (value == 'GEN3 PRO' || value == 'GEN3_PRO' || value == 'GEN-3-PRO') {
+		return 'GEN3PRO'
+	}
+	return value.length > 0 ? value : 'GEN1'
+}
+
+const getScooterImage = (type: string): string => {
+	switch (normalizeType(type)) {
+		case 'GEN1':
+			return '/static/gen1_escooter_Fz3_liangziyin.png'
+		case 'GEN2':
+			return '/static/gen2_eScooter_V70_GardeniaGreen_005.png'
+		case 'GEN3':
+			return '/static/gen3_eScooter-M95C_MK2-jingyahui.png'
+		case 'GEN3PRO':
+			return '/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
+		default:
+			return '/static/gen1_escooter_Fz3_liangziyin.png'
+	}
+}
+
+const getVehicleDisplayName = (type: string): string => {
+	switch (normalizeType(type)) {
+		case 'GEN1':
+			return 'GEN1'
+		case 'GEN2':
+			return 'GEN2'
+		case 'GEN3':
+			return 'GEN3'
+		case 'GEN3PRO':
+			return 'GEN3 PRO'
+		default:
+			return normalizeType(type)
+	}
+}
+
+const getVehicleSubtitle = (type: string): string => {
+	switch (normalizeType(type)) {
+		case 'GEN1':
+			return 'Ninebot Fz3'
+		case 'GEN2':
+			return 'Ninebot V70'
+		case 'GEN3':
+			return 'Ninebot M95C'
+		case 'GEN3PRO':
+			return 'Ninebot E300P MK2'
+		default:
+			return 'Scooter'
+	}
+}
+
+const formatScooterId = (rawId: string): string => {
+	const source = ('' + rawId).trim()
+	let digits = ''
+	for (let i = 0; i < source.length; i++) {
+		const ch = source.charAt(i)
+		if (ch >= '0' && ch <= '9') {
+			digits += ch
+		}
+	}
+	if (digits.length > 0) {
+		return 'SC' + digits.padStart(3, '0')
+	}
+	return source
+}
+
+const getStatusLabel = (status: ScooterStatus): string => {
+	if (status == 'reserved') return 'Reserved'
+	if (status == 'rented') return 'Rented'
+	if (status == 'maintenance') return 'Under Maintenance'
+	return 'Available'
+}
+
+const getStatusClass = (status: ScooterStatus): string => {
+	if (status == 'reserved' || status == 'rented') return 'status-rented'
+	if (status == 'maintenance') return 'status-maintenance'
+	return 'status-available'
+}
+
+const showVehicleIntro = () => {
+	isVehicleIntroVisible.value = true
+}
+
+const hideVehicleIntro = () => {
+	isVehicleIntroVisible.value = false
+}
+
+const findFirstAvailableIndex = (scooters: Scooter[]): number => {
+	for (let i = 0; i < scooters.length; i++) {
+		if (scooters[i].status == 'available') {
+			return i
+		}
+	}
+	return scooters.length > 0 ? 0 : -1
+}
+
+const getPreviousIndex = (type: string, previousGroups: ScooterGroup[]): number => {
+	for (let i = 0; i < previousGroups.length; i++) {
+		if (previousGroups[i].type == type) {
+			return previousGroups[i].currentIndex
+		}
+	}
+	return -1
+}
+
+const getTypeOrderIndex = (type: string): number => {
+	for (let i = 0; i < typeOrder.length; i++) {
+		if (typeOrder[i] == type) {
+			return i
+		}
+	}
+	return typeOrder.length + 1
+}
+
+const getPreferenceCount = (type: string): number => {
+	const raw = uni.getStorageSync(preferenceStoragePrefix + normalizeType(type))
+	if (raw == null) {
+		return 0
+	}
+	const parsed = parseInt('' + raw)
+	return isNaN(parsed) ? 0 : parsed
+}
+
+const recordTypePreference = (type: string) => {
+	const normalized = normalizeType(type)
+	const current = getPreferenceCount(normalized)
+	uni.setStorageSync(preferenceStoragePrefix + normalized, current + 1)
+}
+
+const getAvailableCount = (group: ScooterGroup): number => {
+	if (group.isPlaceholder) {
+		return 0
+	}
+	let availableCount = 0
+	for (let i = 0; i < group.scooters.length; i++) {
+		if (group.scooters[i].status == 'available') {
+			availableCount++
+		}
+	}
+	return availableCount
+}
+
+const sortScooterGroups = (groups: ScooterGroup[]): ScooterGroup[] => {
+	const nextGroups = groups.slice()
+	nextGroups.sort((a: ScooterGroup, b: ScooterGroup): number => {
+		const aAvailable = getAvailableCount(a)
+		const bAvailable = getAvailableCount(b)
+		if (aAvailable > 0 && bAvailable == 0) return -1
+		if (aAvailable == 0 && bAvailable > 0) return 1
+
+		const aPreference = getPreferenceCount(a.type)
+		const bPreference = getPreferenceCount(b.type)
+		if (aPreference != bPreference) {
+			return bPreference - aPreference
+		}
+
+		if (aAvailable != bAvailable) {
+			return bAvailable - aAvailable
+		}
+
+		return getTypeOrderIndex(a.type) - getTypeOrderIndex(b.type)
+	})
+	return nextGroups
+}
+
+const buildScooterGroups = (list: Scooter[], previousGroups: ScooterGroup[]): ScooterGroup[] => {
+	const groups: ScooterGroup[] = []
+	for (let orderIndex = 0; orderIndex < typeOrder.length; orderIndex++) {
+		const type = typeOrder[orderIndex]
+		const groupScooters: Scooter[] = []
+		for (let i = 0; i < list.length; i++) {
+			if (list[i].type == type) {
+				groupScooters.push(list[i])
+			}
+		}
+		if (groupScooters.length > 0) {
+			let currentIndex = getPreviousIndex(type, previousGroups)
+			if (currentIndex < 0 || currentIndex >= groupScooters.length) {
+				currentIndex = findFirstAvailableIndex(groupScooters)
+			}
+			groups.push({ type, scooters: groupScooters, currentIndex, isPlaceholder: false } as ScooterGroup)
+		} else {
+			groups.push({
+				type,
+				scooters: [{ id: '', status: 'maintenance', type } as Scooter],
+				currentIndex: 0,
+				isPlaceholder: true
+			} as ScooterGroup)
+		}
+	}
+
+	for (let i = 0; i < list.length; i++) {
+		const type = list[i].type
+		let isKnown = false
+		for (let j = 0; j < typeOrder.length; j++) {
+			if (typeOrder[j] == type) {
+				isKnown = true
+				break
+			}
+		}
+		if (isKnown) {
+			continue
+		}
+		let targetGroupIndex = -1
+		for (let j = 0; j < groups.length; j++) {
+			if (groups[j].type == type) {
+				targetGroupIndex = j
+				break
+			}
+		}
+		if (targetGroupIndex == -1) {
+			groups.push({ type, scooters: [list[i]], currentIndex: 0, isPlaceholder: false } as ScooterGroup)
+		} else {
+			groups[targetGroupIndex].scooters.push(list[i])
+			groups[targetGroupIndex].isPlaceholder = false
+		}
+	}
+
+	return sortScooterGroups(groups)
+}
+
+const syncSelectedScooter = (groups: ScooterGroup[]) => {
+	if (selectedScooterId.value.length < 1) {
+		return
+	}
+	for (let i = 0; i < groups.length; i++) {
+		for (let j = 0; j < groups[i].scooters.length; j++) {
+			const scooter = groups[i].scooters[j]
+			if (scooter.id == selectedScooterId.value) {
+				if (scooter.status != 'available') {
+					selectedScooterId.value = ''
+				}
+				return
+			}
+		}
+	}
+	selectedScooterId.value = ''
+}
+
+const parseScooterStatus = (item: UTSJSONObject): ScooterStatus => {
+	let status: ScooterStatus = 'available'
+	const rawRented = item['rented']
+	const rawStatus = item['status']
+	const rawIsRented = item['is_rented']
+	const rawIsAvailable = item['is_available']
+	const rawAvailable = item['available']
+	const rawScooterStatus = item['scooter_status']
+	const rawAvailability = item['availability']
+	if (rawRented != null) {
+		const v = rawRented
+		status = (v == true || v == 1 || ('' + v).toLowerCase() == 'true') ? 'rented' : 'available'
+	} else if (rawIsRented != null) {
+		const v = rawIsRented
+		status = (v == true || v == 1 || ('' + v).toLowerCase() == 'true') ? 'rented' : 'available'
+	} else if (rawStatus != null) {
+		const s = ('' + rawStatus).trim().toLowerCase()
+		if (s == 'maintenance' || s == 'maintainence' || s == 'under_maintenance' || s == 'under-maintenance') {
+			status = 'maintenance'
+		} else if (s == 'reserved' || s == 'locked' || s == 'hold') {
+			status = 'reserved'
+		} else if (s == 'rented' || s == 'in_use' || s == 'in-use' || s == 'booked' || s == 'occupied') {
+			status = 'rented'
+		}
+	} else if (rawScooterStatus != null) {
+		const s = ('' + rawScooterStatus).trim().toLowerCase()
+		if (s == 'maintenance' || s == 'maintainence' || s == 'under_maintenance' || s == 'under-maintenance') {
+			status = 'maintenance'
+		} else if (s == 'reserved' || s == 'locked' || s == 'hold') {
+			status = 'reserved'
+		} else if (s == 'rented' || s == 'in_use' || s == 'in-use' || s == 'booked' || s == 'occupied') {
+			status = 'rented'
+		}
+	} else if (rawAvailability != null) {
+		const s = ('' + rawAvailability).trim().toLowerCase()
+		if (s == 'maintenance' || s == 'maintainence' || s == 'under_maintenance' || s == 'under-maintenance') {
+			status = 'maintenance'
+		} else if (s == 'reserved' || s == 'locked' || s == 'hold') {
+			status = 'reserved'
+		} else if (s == 'unavailable' || s == 'rented' || s == 'in_use' || s == 'in-use') {
+			status = 'rented'
+		}
+	} else if (rawIsAvailable != null) {
+		const v = rawIsAvailable
+		status = (v == false || v == 0 || ('' + v).toLowerCase() == 'false') ? 'rented' : 'available'
+	} else if (rawAvailable != null) {
+		const v = rawAvailable
+		status = (v == false || v == 0 || ('' + v).toLowerCase() == 'false') ? 'rented' : 'available'
+	}
+	return status
+}
+
+const fetchScooters = (fromPullRefresh: boolean) => {
+	if (!fromPullRefresh) {
+		isLoading.value = true
+	}
+	loadError.value = ''
+	uni.request({
+		url: BASE_URL + '/api/v1/scooters?_t=' + Date.now(),
+		method: 'GET',
+		header: { 'Cache-Control': 'no-cache' },
+		success: (res) => {
+			const ok = (res.statusCode == 200) && (res.data != null)
+			if (ok) {
+				const raw = res.data as UTSJSONObject
+				let arr: UTSJSONObject[] = []
+				const dataArr = raw.getArray<UTSJSONObject>('data')
+				const scootersArr = raw.getArray<UTSJSONObject>('scooters')
+				const listArr = raw.getArray<UTSJSONObject>('list')
+				if (dataArr != null) {
+					arr = dataArr
+				} else if (scootersArr != null) {
+					arr = scootersArr
+				} else if (Array.isArray(raw)) {
+					arr = raw as UTSJSONObject[]
+				} else if (listArr != null) {
+					arr = listArr
+				}
+
+				const list: Scooter[] = []
+				for (let i = 0; i < arr.length; i++) {
+					const item = arr[i]
+					const rawId = item['id']
+					const rawType = item['type']
+					const id = rawId != null ? ('' + rawId) : ''
+					const type = rawType != null ? normalizeType('' + rawType) : 'GEN1'
+					list.push({ id, status: parseScooterStatus(item), type } as Scooter)
+				}
+
+				const nextGroups = buildScooterGroups(list, scooterGroups.value)
+				scooterGroups.value = nextGroups
+				syncSelectedScooter(nextGroups)
+			} else {
+				const hasSc: boolean = (res.statusCode != null)
+				const sc = hasSc ? ('' + res.statusCode) : ''
+				loadError.value = 'Failed to load scooters (status ' + sc + ')'
+			}
+		},
+		fail: (err) => {
+			loadError.value = 'Network error. Please check server.'
+			console.error('Fetch scooters failed:', err)
+		},
+		complete: () => {
+			isLoading.value = false
+			isRefreshing.value = false
+		}
+	})
+}
+
+const getCurrentScooter = (group: ScooterGroup): Scooter => {
+	return group.scooters[group.currentIndex]
+}
+
+const getGroupAvailabilityText = (group: ScooterGroup): string => {
+	if (group.isPlaceholder) {
+		return 'No scooters available right now'
+	}
+	const availableCount = getAvailableCount(group)
+	return availableCount + '/' + group.scooters.length + ' available'
+}
+
+const getGroupBadgeText = (group: ScooterGroup): string => {
+	if (group.isPlaceholder) {
+		return '0 in fleet'
+	}
+	return group.scooters.length + ' in fleet'
+}
+
+const getScooterDisplayLabel = (group: ScooterGroup): string => {
+	if (group.isPlaceholder) {
+		return 'Currently unavailable'
+	}
+	return 'Scooter ' + formatScooterId(getCurrentScooter(group).id)
+}
+
+const getGroupHintText = (group: ScooterGroup): string => {
+	if (group.isPlaceholder) {
+		return 'This model is temporarily unavailable. Please choose another model or check again later.'
+	}
+	return getGroupAvailabilityText(group)
+}
+
+const changeGroupPage = (groupIndex: number, step: number) => {
+	const group = scooterGroups.value[groupIndex]
+	if (group == null || group.scooters.length <= 1) {
+		return
+	}
+	const targetIndex = group.currentIndex + step
+	if (targetIndex < 0 || targetIndex >= group.scooters.length) {
+		return
+	}
+	const nextGroups: ScooterGroup[] = []
+	for (let i = 0; i < scooterGroups.value.length; i++) {
+		if (i == groupIndex) {
+			nextGroups.push({
+				type: group.type,
+				scooters: group.scooters,
+				currentIndex: targetIndex
+			} as ScooterGroup)
+		} else {
+			nextGroups.push(scooterGroups.value[i])
+		}
+	}
+	scooterGroups.value = nextGroups
+}
+
+const toggleSelection = (groupIndex: number) => {
+	const group = scooterGroups.value[groupIndex]
+	if (group == null) {
+		return
+	}
+	if (group.isPlaceholder) {
+		showInfo('This model is temporarily unavailable')
+		return
+	}
+	const scooter = getCurrentScooter(group)
+	if (scooter.status != 'available') {
+		const isMaintenance = scooter.status == 'maintenance'
+		const isReserved = scooter.status == 'reserved'
+		showInfo(isMaintenance ? 'This scooter is under maintenance' : isReserved ? 'This scooter is reserved' : 'This scooter is rented')
+		return
+	}
+	if (selectedScooterId.value == scooter.id) {
+		selectedScooterId.value = ''
+	} else {
+		selectedScooterId.value = scooter.id
+		recordTypePreference(scooter.type)
+		scooterGroups.value = sortScooterGroups(scooterGroups.value)
+	}
+}
+
+const findSelectedScooter = (): Scooter | null => {
+	for (let i = 0; i < scooterGroups.value.length; i++) {
+		for (let j = 0; j < scooterGroups.value[i].scooters.length; j++) {
+			const scooter = scooterGroups.value[i].scooters[j]
+			if (scooter.id == selectedScooterId.value) {
+				return scooter
+			}
+		}
+	}
+	return null
+}
+
+const getSelectedScooterSummary = (): string => {
+	const scooter = findSelectedScooter()
+	if (scooter == null) {
+		return 'No scooter selected'
+	}
+	return getVehicleDisplayName(scooter.type) + ' / ' + formatScooterId(scooter.id)
+}
+
+const getBookingHintText = (): string => {
+	if (selectedScooterId.value.length < 1) {
+		return 'Select a scooter to book. Browsing with the arrows will not auto-select one.'
+	}
+	for (let i = 0; i < scooterGroups.value.length; i++) {
+		const group = scooterGroups.value[i]
+		for (let j = 0; j < group.scooters.length; j++) {
+			const scooter = group.scooters[j]
+			if (scooter.id == selectedScooterId.value) {
+				if (group.currentIndex == j) {
+					return 'Your selection stays active until you tap Selected again or choose another scooter.'
+				}
+				return 'You are browsing another scooter now. The selected scooter above stays locked until you tap Select on a different one.'
+			}
+		}
+	}
+	return 'Your selected scooter stays active until you tap Select again.'
+}
+
+const isBookingDisabled = (): boolean => {
+	if (selectedScooterId.value.length < 1) {
+		return true
+	}
+	const scooter = findSelectedScooter()
+	if (scooter == null) {
+		return true
+	}
+	return scooter.status != 'available'
+}
+
+const onPullRefresh = () => {
+	isRefreshing.value = true
+	fetchScooters(true)
+}
+
+const stopPolling = () => {
+	if (pollTimer != null) {
+		clearInterval(pollTimer!)
+		pollTimer = null
+	}
+}
+
+const startPolling = () => {
+	stopPolling()
+	pollTimer = setInterval(() => {
+		fetchScooters(true)
+	}, POLL_INTERVAL)
+}
+
+onLoad((options: UTSJSONObject) => {
+	const rawType = options['type']
+	if (rawType != null) {
+		preferredType.value = normalizeType('' + rawType)
+	}
+})
+
+onMounted(() => {
+	fetchScooters(false)
+})
+
+onShow(() => {
+	fetchScooters(false)
+	startPolling()
+})
+
+onHide(() => {
+	stopPolling()
+})
+
+const bookScooter = () => {
+	if (isBookingDisabled()) {
+		return
+	}
+
+	const tokenRaw = uni.getStorageSync('token')
+	const token = tokenRaw != null ? ('' + tokenRaw).trim() : ''
+	const userIdStorage = uni.getStorageSync('userId')
+	let userId: string = ''
+	if (userIdStorage != null) {
+		userId = '' + userIdStorage
+	}
+
+	if (token.length == 0) {
+		showThenNavigate(authMessage('loginRequired', 'Please login first'), '/pages/login/login', false, 800, 'navigateTo')
+		return
+	}
+	if (userId.length == 0) {
+		showThenNavigate(authMessage('userInfoMissing', 'User information missing'), '/pages/login/login', false, 800, 'navigateTo')
+		return
+	}
+
+	const selectedScooter = findSelectedScooter()
+	if (selectedScooter == null) {
+		showInfo('Please select a scooter first')
+		return
+	}
+
+	try {
+		uni.setStorageSync('selectedScooterId', selectedScooter.id)
+	} catch (e) {
+		console.error('Failed to save selected scooter ID:', e)
+	}
+
+	showThenNavigate('Scooter ' + formatScooterId(selectedScooter.id) + ' selected', '/pages/price/price', true, 800, 'navigateTo')
+}
+</script>
+
+<style lang="scss">
+	.page-wrapper {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		background-color: #f5f5f5;
+	}
+
+	.scroll-container {
+		flex: 1;
+		width: 100%;
+		padding: 20px;
+		padding-bottom: 180px;
+		box-sizing: border-box;
+	}
+
+	.title-section {
+		margin-bottom: 16px;
+	}
+
+	.title-row {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 6px;
+	}
+
+	.title-text {
+		font-size: 22px;
+		font-weight: bold;
+		color: #333;
+		display: block;
+	}
+
+	.title-hint {
+		font-size: 13px;
+		color: #666;
+		line-height: 18px;
+	}
+
+	.link-text {
+		font-size: 13px;
+		color: #4CAF50;
+		font-weight: 500;
+		flex-shrink: 0;
+		margin-left: 12px;
+	}
+
+	.filter-hint {
+		margin-bottom: 14px;
+		padding: 10px 14px;
+		background-color: #edf7ed;
+		border-radius: 12px;
+	}
+
+	.filter-hint-text {
+		font-size: 13px;
+		color: #2e7d32;
+		font-weight: 600;
+	}
+
+	.loading-section,
+	.error-section {
+		padding: 40px 20px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.loading-text {
+		font-size: 14px;
+		color: #999;
+		text-align: center;
+	}
+
+	.error-text {
+		font-size: 14px;
+		color: #f44336;
+		text-align: center;
+		margin-bottom: 16px;
+	}
+
+	.retry-btn {
+		padding: 10px 24px;
+		background-color: #4CAF50;
+		color: white;
+		border: none;
+		border-radius: 8px;
+		font-size: 14px;
+	}
+
+	.empty-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 60px 24px;
+		background-color: white;
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	}
+
+	.empty-text {
+		font-size: 18px;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 8px;
+	}
+
+	.empty-hint {
+		font-size: 14px;
+		color: #999;
+		text-align: center;
+	}
+
+	.scooter-card {
+		margin-bottom: 16px;
+		padding: 16px;
+		background-color: #fff;
+		border-radius: 18px;
+		box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+		position: relative;
+		overflow: visible;
+	}
+
+	.scooter-card-disabled {
+		opacity: 0.82;
+	}
+
+	.scooter-card-placeholder {
+		background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+		border: 2px dashed #cbd5e1;
+		box-shadow: none;
+	}
+
+	.placeholder-corner-badge {
+		position: absolute;
+		top: 10px;
+		right: -28px;
+		width: 110px;
+		height: 24px;
+		background-color: #94a3b8;
+		transform: rotate(35deg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 3;
+	}
+
+	.placeholder-corner-badge-text {
+		font-size: 10px;
+		font-weight: 700;
+		color: #ffffff;
+		letter-spacing: 0.8px;
+	}
+
+	.card-top {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: 14px;
+	}
+
+	.card-title-block {
+		flex: 1;
+		padding-right: 10px;
+	}
+
+	.group-name {
+		display: block;
+		font-size: 20px;
+		font-weight: 700;
+		color: #111827;
+		margin-bottom: 4px;
+	}
+
+	.group-subtitle {
+		font-size: 13px;
+		color: #6b7280;
+	}
+
+	.group-badge {
+		padding: 6px 10px;
+		background-color: #f3f4f6;
+		border-radius: 999px;
+	}
+
+	.scooter-card-placeholder .group-badge {
+		background-color: #e2e8f0;
+		border: 1px solid #cbd5e1;
+	}
+
+	.group-badge-text {
+		font-size: 12px;
+		font-weight: 600;
+		color: #4b5563;
+	}
+
+	.card-main {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.scooter-media {
+		width: 108px;
+		height: 108px;
+		margin-right: 14px;
+		background-color: #f8fafc;
+		border-radius: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.scooter-media-placeholder {
+		background-color: #e5e7eb;
+		border: 1px dashed #cbd5e1;
+	}
+
+	.scooter-image {
+		width: 88px;
+		height: 88px;
+	}
+
+	.scooter-card-placeholder .scooter-image {
+		opacity: 0.45;
+	}
+
+	.card-content {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.card-info-panel {
+		padding: 12px 14px;
+		background-color: #ffffff;
+		border-radius: 14px;
+		border: 1px solid #e5e7eb;
+	}
+
+	.card-info-panel-placeholder {
+		background-color: #f1f5f9;
+		border: 1px dashed #cbd5e1;
+	}
+
+	.scooter-id {
+		display: block;
+		font-size: 17px;
+		font-weight: 700;
+		color: #111827;
+		margin-bottom: 8px;
+	}
+
+	.group-availability {
+		display: block;
+		font-size: 13px;
+		color: #6b7280;
+		margin-bottom: 8px;
+	}
+
+	.scooter-status {
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.status-available {
+		color: #2e7d32;
+	}
+
+	.status-rented {
+		color: #c62828;
+	}
+
+	.status-maintenance {
+		color: #ef6c00;
+	}
+
+	.status-placeholder {
+		color: #475569;
+		background-color: #e2e8f0;
+		padding: 3px 8px;
+		border-radius: 999px;
+		align-self: flex-start;
+	}
+
+	.card-footer {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.card-footer-placeholder {
+		justify-content: flex-start;
+	}
+
+	.pager,
+	.pager-single {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.pager-button {
+		width: 32px;
+		height: 32px;
+		border-radius: 16px;
+		background-color: #eef2f7;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pager-button.disabled {
+		opacity: 0.45;
+	}
+
+	.pager-button-text {
+		font-size: 18px;
+		font-weight: 700;
+		color: #334155;
+	}
+
+	.pager-text {
+		margin: 0 10px;
+		font-size: 13px;
+		color: #475569;
+		font-weight: 600;
+	}
+
+	.select-button {
+		min-width: 110px;
+		height: 40px;
+		padding: 0 18px;
+		background-color: #111827;
+		color: white;
+		border: none;
+		border-radius: 999px;
+		font-size: 14px;
+		font-weight: 700;
+	}
+
+	.select-button.selected {
+		background-color: #2e7d32;
+	}
+
+	.select-button.disabled {
+		background-color: #d1d5db;
+		color: #6b7280;
+	}
+
+	.scooter-card-placeholder .select-button.disabled {
+		background-color: #cbd5e1;
+		color: #475569;
+		border: 1px dashed #94a3b8;
+	}
+
+	.booking-fixed-bar {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 72px;
+		padding: 8px 0;
+		background-color: #f5f5f5;
+		z-index: 90;
+	}
+
+	.booking-section {
+		width: 90%;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.booking-selected-text {
+		margin-bottom: 2px;
+		font-size: 12px;
+		color: #334155;
+		font-weight: 600;
+	}
+
+	.booking-hint-text {
+		margin-bottom: 6px;
+		font-size: 11px;
+		line-height: 15px;
+		color: #64748b;
+	}
+
+	.booking-button {
+		width: 100%;
+		height: 40px;
+		background-color: #4CAF50;
+		color: white;
+		border: none;
+		border-radius: 10px;
+		font-size: 15px;
+		font-weight: bold;
+	}
+
+	.booking-button.disabled {
+		background-color: #cccccc;
+		color: #666666;
+	}
+
+	.vehicle-intro-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.vehicle-intro-card {
+		width: 86%;
+		height: 68%;
+		background-color: #f6f7fb;
+		border-radius: 24px;
+		padding: 18px;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
+	}
+
+	.intro-header {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.intro-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	.close-btn {
+		font-size: 20px;
+		color: #999;
+		padding: 4px;
+	}
+
+	.intro-scroll {
+		flex: 1;
+		width: 100%;
+	}
+
+	.intro-item {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 12px;
+		background-color: #ffffff;
+		border-radius: 16px;
+		overflow: hidden;
+		border: 1px solid #e8ebf2;
+		box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+	}
+
+	.intro-img {
+		width: 100%;
+		height: 118px;
+	}
+
+	.intro-text-box {
+		padding: 10px 12px 12px;
+	}
+
+	.intro-name {
+		font-size: 11px;
+		font-weight: 700;
+		color: #64748b;
+		letter-spacing: 0.8px;
+		margin-bottom: 2px;
+	}
+
+	.intro-subtitle {
+		font-size: 17px;
+		font-weight: 700;
+		color: #0f172a;
+		margin-bottom: 8px;
+	}
+
+	.intro-meta-row {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 8px;
+	}
+
+	.meta-chip {
+		flex: 1;
+		background-color: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 10px;
+		padding: 7px 6px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.meta-label {
+		font-size: 10px;
+		font-weight: bold;
+		color: #64748b;
+		margin-bottom: 3px;
+	}
+
+	.meta-value {
+		font-size: 10px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	.intro-advice {
+		font-size: 11px;
+		color: #334155;
+		line-height: 1.3;
+		padding: 7px 9px;
+		background: #f8fafc;
+		border-radius: 8px;
+	}
+</style>

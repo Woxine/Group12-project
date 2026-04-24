@@ -14,18 +14,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.group12.backend.config.BillingProperties;
 import com.group12.backend.dto.BookingConfirmationEmailPayload;
 import com.group12.backend.dto.CreateGuestBookingRequest;
 import com.group12.backend.dto.DiscountBreakdownResponse;
 import com.group12.backend.dto.BookingResponse;
 import com.group12.backend.dto.CreateBookingRequest;
+import com.group12.backend.dto.PayBookingRequest;
 import com.group12.backend.entity.Booking;
+import com.group12.backend.entity.Payment;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.PaymentCardRepository;
+import com.group12.backend.repository.PaymentRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BillingRule;
@@ -59,8 +63,14 @@ public class BookingServiceImpl implements BookingService {
     @Autowired
     private BillingService billingService;
 
+    @Autowired
+    private BillingProperties billingProperties;
+
     @Autowired(required = false)
     private PaymentCardRepository paymentCardRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -75,8 +85,7 @@ public class BookingServiceImpl implements BookingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
 
-        java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(userId, "CONFIRMED");
-        if (activeBookings != null && !activeBookings.isEmpty()) {
+        if (hasActiveBooking(userId)) {
             throw new BusinessException(ErrorMessages.ACTIVE_BOOKING_EXISTS);
         }
 
@@ -128,36 +137,21 @@ public class BookingServiceImpl implements BookingService {
         booking.setDiscountAmount(discountAmount);
         booking.setDiscountMultiplier(discountMultiplier);
         booking.setDiscountType(discountType);
-        booking.setStatus("CONFIRMED");
+        booking.setStatus("PENDING_PAYMENT");
+        booking.setPaymentDeadline(startTime.plusMinutes(resolvePendingPaymentLockMinutes()));
         if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
         if (request.getStartLng() != null) booking.setStartLng(request.getStartLng());
 
         Booking savedBooking;
         try {
             savedBooking = bookingRepository.save(booking);
-            scooter.setStatus("RENTED");
+            scooter.setStatus("RESERVED");
             scooterRepository.save(scooter);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(ErrorMessages.BOOKING_CONCURRENT_CONFLICT, HttpStatus.CONFLICT);
         }
 
-        sendBookingConfirmationSafely(user, scooter, savedBooking, durationRequest);
-
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-        String createdAtStr = savedBooking.getStartTime() == null ? "" : savedBooking.getStartTime().format(fmt);
-        BookingResponse response = new BookingResponse(
-            String.valueOf(savedBooking.getId()),
-            String.valueOf(scooter.getId()),
-            String.valueOf(user.getId()),
-            savedBooking.getStatus(),
-            createdAtStr
-        );
-        response.setTotalPrice(savedBooking.getTotalPrice() != null ? savedBooking.getTotalPrice().doubleValue() : null);
-        response.setOriginalPrice(savedBooking.getOriginalPrice() != null ? savedBooking.getOriginalPrice().doubleValue() : null);
-        response.setDiscountAmount(savedBooking.getDiscountAmount() != null ? savedBooking.getDiscountAmount().doubleValue() : null);
-        response.setDiscountMultiplier(savedBooking.getDiscountMultiplier() != null ? savedBooking.getDiscountMultiplier().doubleValue() : null);
-        response.setDiscountType(savedBooking.getDiscountType());
-        return response;
+        return toBookingResponse(savedBooking);
     }
 
     /**
@@ -185,8 +179,7 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException(ErrorMessages.PAYMENT_CARD_REQUIRED_FOR_BOOKING, HttpStatus.BAD_REQUEST);
         }
 
-        java.util.List<Booking> activeBookings = bookingRepository.findByUser_IdAndStatus(effectiveGuestUserId, "CONFIRMED");
-        if (activeBookings != null && !activeBookings.isEmpty()) {
+        if (hasActiveBooking(effectiveGuestUserId)) {
             throw new BusinessException(ErrorMessages.ACTIVE_BOOKING_EXISTS);
         }
 
@@ -263,6 +256,53 @@ public class BookingServiceImpl implements BookingService {
         return discountService.calculateDiscount(parsedUserId, parsedScooterId, duration);
     }
 
+    @Override
+    @Transactional
+    public Object payBooking(String bookingId, Long authUserId, PayBookingRequest request) {
+        Long id = Long.parseLong(bookingId);
+        Booking booking = bookingRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        if (booking.getUser() == null || !booking.getUser().getId().equals(authUserId)) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+
+        if (!"PENDING_PAYMENT".equalsIgnoreCase(booking.getStatus())) {
+            throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
+        }
+
+        if (booking.getPaymentDeadline() != null && LocalDateTime.now().isAfter(booking.getPaymentDeadline())) {
+            throw new BusinessException(ErrorMessages.BOOKING_PAYMENT_EXPIRED, HttpStatus.CONFLICT);
+        }
+
+        if (paymentRepository.findByBookingId(id).isPresent()) {
+            throw new BusinessException(ErrorMessages.BOOKING_ALREADY_PAID, HttpStatus.CONFLICT);
+        }
+
+        validatePaymentCardSelection(authUserId, request.getPaymentCardId());
+
+        Payment payment = new Payment();
+        payment.setBooking(booking);
+        payment.setAmount(booking.getTotalPrice() == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : booking.getTotalPrice());
+        payment.setPaymentMethod(normalizePaymentMethod(request.getPaymentMethod()));
+        payment.setTimestamp(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        booking.setStatus("CONFIRMED");
+        booking.setPaymentDeadline(null);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        Scooter scooter = savedBooking.getScooter();
+        if (scooter != null && !"RENTED".equalsIgnoreCase(scooter.getStatus())) {
+            scooter.setStatus("RENTED");
+            scooterRepository.save(scooter);
+        }
+
+        sendBookingConfirmationSafely(savedBooking.getUser(), savedBooking.getScooter(), savedBooking,
+                resolveDurationLabel(savedBooking.getDurationHours()));
+        return toBookingResponse(savedBooking);
+    }
+
     private void sendBookingConfirmationSafely(User user, Scooter scooter, Booking booking, String durationRequest) {
         try {
             BookingConfirmationEmailPayload payload = new BookingConfirmationEmailPayload();
@@ -287,12 +327,13 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
 
-        if (!"CONFIRMED".equals(booking.getStatus())) {
+        if (!"CONFIRMED".equals(booking.getStatus()) && !"PENDING_PAYMENT".equals(booking.getStatus())) {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
 
         booking.setStatus("CANCELLED");
         booking.setEndTime(LocalDateTime.now());
+        booking.setPaymentDeadline(null);
         if (endLat != null) booking.setEndLat(endLat);
         if (endLng != null) booking.setEndLng(endLng);
         bookingRepository.save(booking);
@@ -362,6 +403,90 @@ public class BookingServiceImpl implements BookingService {
             return BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
         }
         return resolveDiscountMultiplier(discountBreakdown.getOriginalPrice(), discountBreakdown.getFinalPrice());
+    }
+
+    private boolean hasActiveBooking(Long userId) {
+        java.util.List<Booking> confirmedBookings = bookingRepository.findByUser_IdAndStatus(userId, "CONFIRMED");
+        if (confirmedBookings != null && !confirmedBookings.isEmpty()) {
+            return true;
+        }
+        java.util.List<Booking> pendingBookings = bookingRepository.findByUser_IdAndStatus(userId, "PENDING_PAYMENT");
+        return pendingBookings != null && !pendingBookings.isEmpty();
+    }
+
+    private int resolvePendingPaymentLockMinutes() {
+        Integer configured = billingProperties == null ? null : billingProperties.getPendingPaymentLockMinutes();
+        return configured == null || configured < 1 ? 5 : configured;
+    }
+
+    private BookingResponse toBookingResponse(Booking booking) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        String createdAtStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
+        BookingResponse response = new BookingResponse(
+                String.valueOf(booking.getId()),
+                booking.getScooter() == null ? null : String.valueOf(booking.getScooter().getId()),
+                booking.getUser() == null ? null : String.valueOf(booking.getUser().getId()),
+                booking.getStatus(),
+                createdAtStr);
+        response.setStartTime(booking.getStartTime() == null ? null : booking.getStartTime().format(fmt));
+        response.setEndTime(booking.getEndTime() == null ? null : booking.getEndTime().format(fmt));
+        response.setDuration(resolveDurationLabel(booking.getDurationHours()));
+        response.setTotalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice().doubleValue() : null);
+        response.setOriginalPrice(booking.getOriginalPrice() != null ? booking.getOriginalPrice().doubleValue() : null);
+        response.setDiscountAmount(booking.getDiscountAmount() != null ? booking.getDiscountAmount().doubleValue() : null);
+        response.setDiscountMultiplier(booking.getDiscountMultiplier() != null ? booking.getDiscountMultiplier().doubleValue() : null);
+        response.setDiscountType(booking.getDiscountType());
+        response.setPaymentDeadline(booking.getPaymentDeadline() == null ? null : booking.getPaymentDeadline().format(fmt));
+        response.setStartLat(booking.getStartLat());
+        response.setStartLng(booking.getStartLng());
+        response.setEndLat(booking.getEndLat());
+        response.setEndLng(booking.getEndLng());
+        return response;
+    }
+
+    private String resolveDurationLabel(Double durationHours) {
+        if (durationHours == null) {
+            return null;
+        }
+        if (Math.abs(durationHours - (10.0 / 60.0)) < 0.0001) {
+            return "10M";
+        }
+        if (Math.abs(durationHours - 1.0) < 0.0001) {
+            return "1H";
+        }
+        if (Math.abs(durationHours - 4.0) < 0.0001) {
+            return "4H";
+        }
+        if (Math.abs(durationHours - 24.0) < 0.0001) {
+            return "1D";
+        }
+        if (Math.abs(durationHours - 168.0) < 0.0001) {
+            return "1W";
+        }
+        return durationHours + " hours";
+    }
+
+    private void validatePaymentCardSelection(Long userId, String paymentCardId) {
+        if (paymentCardRepository == null || paymentCardId == null || paymentCardId.isBlank()) {
+            return;
+        }
+        Long cardId = parseId(paymentCardId, "paymentCardId");
+        if (paymentCardRepository.findByIdAndUser_Id(cardId, userId).isEmpty()) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+    }
+
+    private String normalizePaymentMethod(String rawPaymentMethod) {
+        if (rawPaymentMethod == null) {
+            return "UNKNOWN";
+        }
+        String normalized = rawPaymentMethod.trim().toUpperCase().replace(' ', '_');
+        return switch (normalized) {
+            case "BANK_CARD", "CARD", "CREDIT_CARD" -> "CREDIT_CARD";
+            case "ALIPAY" -> "ALIPAY";
+            case "WECHAT_PAY", "WECHAT" -> "WECHAT_PAY";
+            default -> normalized;
+        };
     }
 
     private Long parseId(String raw, String fieldName) {

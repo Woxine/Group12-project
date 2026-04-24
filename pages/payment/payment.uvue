@@ -13,6 +13,27 @@
 			<view class="order_header">
 				<text class="order_label">Order Summary</text>
 			</view>
+			
+			<!-- 如果有折扣信息，提供点击展开详情 -->
+			<view v-if="discountLoaded && discountAmount > 0" class="discount_container" @click="showDiscountPanel = !showDiscountPanel">
+				<view class="discount_summary">
+					<text class="discount_summary_text">Includes £{{ discountAmount.toFixed(2) }} discount</text>
+					<text class="discount_arrow">{{ showDiscountPanel ? '▲' : '▼' }}</text>
+				</view>
+				
+				<view v-if="showDiscountPanel" class="discount_details">
+					<view class="discount_detail_row">
+						<text class="detail_label">Original Price:</text>
+						<text class="detail_value">£{{ originalPrice.toFixed(2) }}</text>
+					</view>
+					<view class="discount_detail_row">
+						<text class="detail_label">Discount ({{ getDiscountTypeLabel(discountType) }}):</text>
+						<text class="detail_value discount_negative">-£{{ discountAmount.toFixed(2) }}</text>
+					</view>
+				</view>
+				<view class="order_divider"></view>
+			</view>
+			
 			<view class="order_item">
 				<text class="label">Order Total:</text>
 				<text class="amount">£{{ orderAmount.toFixed(2) }}</text>
@@ -26,7 +47,10 @@
 				<view class="form_group">
 					<text class="label">Payment Method</text>
 					<view class="picker_view" @click="showPaymentMethodPicker">
-						<text class="picker_text">{{ paymentMethods[paymentMethodIndex] }}</text>
+						<view class="payment_method_display">
+							<image v-if="getPaymentMethodLogo(paymentMethodIndex) != ''" :src="getPaymentMethodLogo(paymentMethodIndex)" mode="aspectFit" class="payment_method_logo"></image>
+							<text class="picker_text">{{ paymentMethods[paymentMethodIndex] }}</text>
+						</view>
 						<text class="arrow_text">▼</text>
 					</view>
 				</view>
@@ -100,7 +124,10 @@
 				<!-- 支付宝支付表单 -->
 				<view v-else-if="paymentMethodIndex == 1" class="payment_form">
 					<view class="form_section_title">
-						<text class="section_title_text">Alipay Account</text>
+						<view class="payment_method_heading">
+							<image src="/static/alipay-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
+							<text class="section_title_text">Alipay Account</text>
+						</view>
 					</view>
 					
 					<view class="form_group">
@@ -129,11 +156,28 @@
 				<!-- 微信支付表单 -->
 				<view v-else-if="paymentMethodIndex == 2" class="payment_form">
 					<view class="info_box">
-						<text class="info_text">WeChat Pay</text>
+						<view class="payment_method_heading">
+							<image src="/static/wechat-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
+							<text class="info_text">WeChat Pay</text>
+						</view>
 						<view class="qr_code_placeholder">
 							<text class="qr_hint">QR Code</text>
 						</view>
 						<text class="info_desc">Scan the QR code with WeChat to complete payment</text>
+					</view>
+				</view>
+
+				<!-- 云闪付支付表单 -->
+				<view v-else-if="paymentMethodIndex == 3" class="payment_form">
+					<view class="info_box">
+						<view class="payment_method_heading">
+							<image src="/static/yunshanfu_02.png" mode="aspectFit" class="payment_section_logo"></image>
+							<text class="info_text">Cloud QuickPass</text>
+						</view>
+						<view class="qr_code_placeholder">
+							<text class="qr_hint">QR Code</text>
+						</view>
+						<text class="info_desc">Scan the QR code with Cloud QuickPass to complete payment</text>
 					</view>
 				</view>
 				
@@ -174,7 +218,8 @@ import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
 
 // 支付方式列表
-const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay'];
+const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay', 'Cloud QuickPass'];
+const paymentMethodLogos = ['', '/static/alipay-logo.svg', '/static/wechat-logo.svg', '/static/yunshanfu_02.png'];
 const paymentMethodIndex = ref(0);
 
 // 银行列表
@@ -186,6 +231,58 @@ const orderAmount = ref<number>(1.0);
 const savedCards = ref<UTSJSONObject[]>([]);
 const selectedCardId = ref<string>('');
 const pendingBookingId = ref<string>('');
+
+// 折扣信息
+const originalPrice = ref<number>(0.0);
+const discountAmount = ref<number>(0.0);
+const discountType = ref<string>('NONE');
+const discountLoaded = ref<boolean>(false);
+const showDiscountPanel = ref<boolean>(false);
+
+function readStorageStringOrNull(key: string): string | null {
+	const raw = uni.getStorageSync(key);
+	if (raw == null) return null;
+	const value = ('' + raw).trim();
+	return value.length < 1 ? null : value;
+}
+
+function loadBookingDetails() {
+	const userId = readStorageStringOrNull('userId');
+	const token = readStorageStringOrNull('token');
+	if (userId == null || token == null || pendingBookingId.value.length == 0) {
+		return;
+	}
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/bookings/' + pendingBookingId.value,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null) {
+				const obj = res.data as UTSJSONObject;
+				const data = obj['data'] != null ? (obj['data'] as UTSJSONObject) : obj;
+				
+				const oPrice = data['original_price'];
+				const dAmount = data['discount_amount'];
+				const dType = data['discount_type'];
+				
+				if (oPrice != null && typeof oPrice == 'number') {
+					originalPrice.value = oPrice as number;
+				}
+				if (dAmount != null && typeof dAmount == 'number') {
+					discountAmount.value = dAmount as number;
+				}
+				if (dType != null && typeof dType == 'string') {
+					discountType.value = dType as string;
+				}
+				
+				discountLoaded.value = true;
+			}
+		}
+	});
+}
 
 onLoad((options) => {
 	const params = options as UTSJSONObject | null;
@@ -221,13 +318,19 @@ onLoad((options) => {
 			pendingBookingId.value = storedBookingId;
 		}
 	}
+	if (pendingBookingId.value.length > 0) {
+		loadBookingDetails();
+	}
 });
 
-const readStorageStringOrNull = (key: string): string | null => {
-	const raw = uni.getStorageSync(key);
-	if (raw == null) return null;
-	const value = ('' + raw).trim();
-	return value.length < 1 ? null : value;
+const getDiscountTypeLabel = (type: string): string => {
+	switch (type.toUpperCase()) {
+		case 'STUDENT': return 'Student';
+		case 'SENIOR': return 'Senior';
+		case 'FREQUENT': return 'Frequent User';
+		case 'NONE': return 'None';
+		default: return type;
+	}
 };
 
 const loadSavedCards = () => {
@@ -306,6 +409,13 @@ const paymentInfo = reactive<PaymentInfo>({
 // 支付处理状态
 const isPaymentProcessing = ref(false);
 
+const getPaymentMethodLogo = (index: number): string => {
+	if (index < 0 || index >= paymentMethodLogos.length) {
+		return '';
+	}
+	return paymentMethodLogos[index];
+}
+
 // 显示支付方式选择器
 const showPaymentMethodPicker = () => {
 	uni.showActionSheet({
@@ -378,6 +488,9 @@ const validatePaymentInfo = (): boolean => {
 	} else if (method == 2) {
 		// 微信支付不需要验证，直接可以支付
 		return true;
+	} else if (method == 3) {
+		// 云闪付不需要验证，直接可以支付
+		return true;
 	}
 	
 	return true;
@@ -412,28 +525,59 @@ const onPayment = () => {
 	if (isPaymentProcessing.value) return;
 	
 	if (!validatePaymentInfo()) return;
+
+	if (pendingBookingId.value.length == 0) {
+		showInfo(getAppMessage('booking', 'invalidBooking', 'Invalid booking'));
+		return;
+	}
+
+	const token = readStorageStringOrNull('token');
+	if (token == null || token.length == 0) {
+		showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'));
+		return;
+	}
 	
 	isPaymentProcessing.value = true;
-	
-	// 模拟支付请求
-	setTimeout(() => {
-		const method = paymentMethods[paymentMethodIndex.value];
-		const cardMessage = selectedCardId.value.length > 0 ? ' (saved card)' : '';
-		
-		showSuccess(`Payment successful via ${method}${cardMessage}!`, 2000);
-		
-		isPaymentProcessing.value = false;
-		uni.removeStorageSync('totalPrice');
-		uni.removeStorageSync('pendingBookingId');
-		
-		// 支付成功后回到首页（优先 navigateBack 保留首页地图实例）
-		setTimeout(() => {
-			goHomeAfterPayment()
-		}, 2000);
-	}, 2000);
+
+	const method = paymentMethods[paymentMethodIndex.value];
+	const payload: UTSJSONObject = {
+		paymentMethod: method
+	};
+	if (selectedCardId.value.length > 0) {
+		payload['paymentCardId'] = selectedCardId.value;
+	}
+
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings/' + pendingBookingId.value + '/pay',
+		method: 'POST',
+		data: payload,
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const cardMessage = selectedCardId.value.length > 0 ? ' (saved card)' : '';
+				showSuccess(`Payment successful via ${method}${cardMessage}!`, 2000);
+				uni.removeStorageSync('totalPrice');
+				uni.removeStorageSync('pendingBookingId');
+				setTimeout(() => {
+					goHomeAfterPayment()
+				}, 2000);
+				return;
+			}
+			showError(getResponseMessage(res.data, getAppMessage('payment', 'payFailed', 'Payment failed')), 3000);
+		},
+		fail: () => {
+			showError(getAppMessage('network', 'requestFailed', 'Network error'), 3000);
+		},
+		complete: () => {
+			isPaymentProcessing.value = false;
+		}
+	});
 };
 
-// 取消支付，返回 bikelist 页面
+// 取消支付，返回 escooters 页面
 const onCancel = () => {
 	if (isPaymentProcessing.value) return;
 	let bookingId = '';
@@ -446,7 +590,7 @@ const onCancel = () => {
 	if (bookingId.length == 0) {
 		uni.removeStorageSync('totalPrice');
 		uni.reLaunch({
-			url: '/pages/bikelist/bikelist'
+			url: '/pages/escooters/escooters'
 		});
 		return;
 	}
@@ -469,7 +613,7 @@ const onCancel = () => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				uni.removeStorageSync('pendingBookingId');
 				uni.removeStorageSync('totalPrice');
-				showThenNavigate(getAppMessage('booking', 'cancelBookingSuccess', 'Booking cancelled'), '/pages/bikelist/bikelist', true, 2000, 'reLaunch');
+				showThenNavigate(getAppMessage('booking', 'cancelBookingSuccess', 'Booking cancelled'), '/pages/escooters/escooters', true, 2000, 'reLaunch');
 				return;
 			}
 			showError(getResponseMessage(res.data, getAppMessage('booking', 'cancelBookingFailed', 'Failed to cancel')));
@@ -576,6 +720,66 @@ onShow(() => {
 	letter-spacing: 0.3px;
 }
 
+.discount_container {
+	margin-bottom: 10px;
+}
+
+.discount_summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 8px;
+	background-color: #eef8ef;
+	border-radius: 6px;
+	border: 1px solid #c8e6c9;
+}
+
+.discount_summary_text {
+	font-size: 13px;
+	color: #4CAF50;
+	font-weight: bold;
+}
+
+.discount_arrow {
+	font-size: 10px;
+	color: #4CAF50;
+}
+
+.discount_details {
+	margin-top: 8px;
+	padding: 8px;
+	background-color: #fafafa;
+	border-radius: 6px;
+	border: 1px solid #eee;
+}
+
+.discount_detail_row {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
+.detail_label {
+	font-size: 12px;
+	color: #666;
+}
+
+.detail_value {
+	font-size: 12px;
+	color: #333;
+	font-weight: bold;
+}
+
+.discount_negative {
+	color: #f44336 !important;
+}
+
+.order_divider {
+	height: 1px;
+	background-color: #f0f0f0;
+	margin: 10px 0;
+}
+
 .payment_scroll {
 	position: relative;
 	z-index: 1;
@@ -614,6 +818,19 @@ onShow(() => {
 	margin-bottom: 15px;
 	padding-bottom: 10px;
 	border-bottom: 1px solid #e8e8e8;
+}
+
+.payment_method_heading {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+
+.payment_section_logo {
+	width: 28px;
+	height: 28px;
+	margin-right: 10px;
 }
 
 .section_title_text {
@@ -674,6 +891,18 @@ onShow(() => {
 .picker_view:active {
 	background-color: #f0f0f0;
 	border-color: #4CAF50;
+}
+
+.payment_method_display {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.payment_method_logo {
+	width: 24px;
+	height: 24px;
+	margin-right: 8px;
 }
 
 .picker_text {
@@ -746,8 +975,11 @@ onShow(() => {
 	font-size: 20px;
 	color: #4CAF50;
 	font-weight: bold;
-	margin-bottom: 20px;
 	letter-spacing: 0.5px;
+}
+
+.info_box .payment_method_heading {
+	margin-bottom: 20px;
 }
 
 .qr_code_placeholder {

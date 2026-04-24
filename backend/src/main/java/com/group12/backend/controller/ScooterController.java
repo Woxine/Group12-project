@@ -66,13 +66,14 @@ public class ScooterController {
             @RequestBody Map<String, Object> body,
             HttpServletRequest request) {
         adminAccessGuard.requireAdmin(request);
+        String type = body.containsKey("type") ? (String) body.get("type") : null;
         String status = body.containsKey("status") ? (String) body.get("status") : null;
         BigDecimal hourRate = body.containsKey("hour_rate") ? new BigDecimal(body.get("hour_rate").toString()) : null;
         Double locationLat = body.containsKey("location_lat") ? Double.valueOf(body.get("location_lat").toString()) : null;
         Double locationLng = body.containsKey("location_lng") ? Double.valueOf(body.get("location_lng").toString()) : null;
         Boolean visible = body.containsKey("visible") ? Boolean.valueOf(body.get("visible").toString()) : null;
 
-        Object updated = scooterService.updateScooter(scooterId, status, hourRate, locationLat, locationLng, visible);
+        Object updated = scooterService.updateScooter(scooterId, type, status, hourRate, locationLat, locationLng, visible);
         return ResponseEntity.ok(Map.of("data", updated));
     }
 }

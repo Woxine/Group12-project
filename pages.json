@@ -7,9 +7,9 @@
 			}
 		},
 		{
-			"path": "pages/bikelist/bikelist",
+			"path": "pages/escooters/escooters",
 			"style": {
-				"navigationBarTitleText": "Bike List"
+				"navigationBarTitleText": "e-Scooter List"
 			}
 		},
 		{
@@ -81,25 +81,31 @@
 		{
 			"path": "pages/portrait/portrait",
 			"style": {
-				"navigationBarTitleText": "portrait"
+				"navigationBarTitleText": "Change Avatar"
+			}
+		},
+		{
+			"path": "pages/account/account",
+			"style": {
+				"navigationBarTitleText": "Account Management"
 			}
 		},
 		{
 			"path": "pages/password/password",
 			"style": {
-				"navigationBarTitleText": "password"
+				"navigationBarTitleText": "Change Password"
 			}
 		},
 		{
 			"path": "pages/email/email",
 			"style": {
-				"navigationBarTitleText": "email"
+				"navigationBarTitleText": "Change Email"
 			}
 		},
 		{
 			"path": "pages/username/username",
 			"style": {
-				"navigationBarTitleText": "username"
+				"navigationBarTitleText": "Change Username"
 			}
 		},
 		{
@@ -116,12 +122,6 @@
 		},
 		{
 			"path": "pages/discount-verification/discount-verification",
-			"style": {
-				"navigationBarTitleText": "Discount Verification"
-			}
-		},
-		{
-			"path": "pages/discount_verify/discount_verify",
 			"style": {
 				"navigationBarTitleText": "Discount Verification"
 			}

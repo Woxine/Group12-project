@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 public class CreateScooterRequest {
 
     private String status;
+    private String type;
 
     @NotNull
     private BigDecimal hour_rate;
@@ -25,6 +26,14 @@ public class CreateScooterRequest {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public BigDecimal getHour_rate() {

@@ -5,7 +5,7 @@
 		<view v-if="!isLoggedIn" class="login-prompt-section">
 			<view class="not-logged-wrapper">
 				<image src="/static/me.png" mode="aspectFill" class="large-icon"></image>
-				<text class="welcome-text">Welcome to Bike Sharing</text>
+				<text class="welcome-text">Welcome to e-Scooter Sharing</text>
 				<text class="login-hint-text">Please log in to view your profile and bookings</text>
 				
 				<navigator url="/pages/login/login" open-type="navigate">
@@ -27,12 +27,29 @@
 		<!-- Logged In State -->
 		<scroll-view v-else class="logged-in-container" scroll-y="true">
 			<!-- User Profile Section -->
-			<view class="profile-section">
-				<view class="profile-header" @click="goToPortrait">
+			<view class="profile-section" :class="getDiscountCardClass()">
+				<view v-if="hasDiscountBadge()" class="profile-discount-logo" :class="getDiscountToneClass()">
+					<text class="discount-logo-text">{{ getDiscountLogoText() }}</text>
+				</view>
+				<view class="profile-header" @click="goToAccountManagement">
 					<image :src="avatarUrl" mode="scaleToFill" class="avatar"></image>
 					<view class="user-info">
 						<text class="user-name">{{ userName }}</text>
 						<text class="user-email">{{ userEmail }}</text>
+						<view v-if="hasAnyDiscountNotice()" class="discount-notice-list">
+							<view v-if="hasFrequentDiscount" class="discount-pill frequent-tone">
+								<text class="discount-pill-text frequent-pill-text">Frequent Rider Discount</text>
+							</view>
+							<view v-if="hasStudentDiscount" class="discount-pill student-tone">
+								<text class="discount-pill-text">Student Discount</text>
+							</view>
+							<view v-if="hasSeniorDiscount" class="discount-pill senior-tone">
+								<text class="discount-pill-text">Senior Discount</text>
+							</view>
+						</view>
+						<view v-if="hasDiscountBadge()" class="discount-status-line">
+							<text class="discount-status-text">{{ getDiscountStatusText() }}</text>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -119,16 +136,8 @@
 					<text class="menu-text">My Orders</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
-				<navigator url="/pages/password/password" open-type="navigate" class="menu-item">
-					<text class="menu-text">Change Password</text>
-					<text class="menu-arrow">›</text>
-				</navigator>
-				<navigator url="/pages/email/email" open-type="navigate" class="menu-item">
-					<text class="menu-text">Change Email</text>
-					<text class="menu-arrow">›</text>
-				</navigator>
-				<navigator url="/pages/username/username" open-type="navigate" class="menu-item">
-					<text class="menu-text">Change Username</text>
+				<navigator url="/pages/account/account" open-type="navigate" class="menu-item">
+					<text class="menu-text">Account Management</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
 				<navigator url="/pages/feedback/feedback" open-type="navigate" class="menu-item">
@@ -141,10 +150,6 @@
 				</navigator>
 				<navigator v-if="isStaffRole" url="/pages/guest-profile/guest-profile" open-type="navigate" class="menu-item">
 					<text class="menu-text">Guest Profile</text>
-					<text class="menu-arrow">›</text>
-				</navigator>
-				<navigator url="/pages/discount_verify/discount_verify" open-type="navigate" class="menu-item">
-					<text class="menu-text">Discount Verification</text>
 					<text class="menu-arrow">›</text>
 				</navigator>
 				<navigator url="/pages/about/about" open-type="navigate" class="menu-item">
@@ -189,6 +194,9 @@ const DEFAULT_AVATAR = '/static/me.png'
 const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
 const LEGACY_AVATAR_STORAGE_KEY = 'userAvatar'
 const avatarUrl = ref(DEFAULT_AVATAR)
+const hasFrequentDiscount = ref(false)
+const hasStudentDiscount = ref(false)
+const hasSeniorDiscount = ref(false)
 const heatmapLoading = ref(false)
 const totalRides = ref(0)
 const totalSpent = ref('0.00')
@@ -227,6 +235,73 @@ const loadAvatar = () => {
 	avatarUrl.value = DEFAULT_AVATAR
 }
 
+const normalizeDiscountType = (rawType: any): string => {
+	const value = rawType != null ? ('' + rawType).trim().toUpperCase() : 'NONE'
+	if (value == 'STUDENT' || value == 'SENIOR' || value == 'FREQUENT') {
+		return value
+	}
+	return 'NONE'
+}
+
+const parseBooleanFlag = (rawFlag: any): boolean => {
+	if (rawFlag == null) return false
+	const value = ('' + rawFlag).trim().toLowerCase()
+	return value == 'true' || value == '1'
+}
+
+const resetDiscountState = () => {
+	hasFrequentDiscount.value = false
+	hasStudentDiscount.value = false
+	hasSeniorDiscount.value = false
+}
+
+const getVisualDiscountType = (): string => {
+	if (hasFrequentDiscount.value) return 'FREQUENT'
+	if (hasStudentDiscount.value) return 'STUDENT'
+	if (hasSeniorDiscount.value) return 'SENIOR'
+	return 'NONE'
+}
+
+const hasDiscountBadge = (): boolean => {
+	return getVisualDiscountType() != 'NONE'
+}
+
+const hasAnyDiscountNotice = (): boolean => {
+	return hasFrequentDiscount.value || hasStudentDiscount.value || hasSeniorDiscount.value
+}
+
+const getDiscountCardClass = (): string => {
+	const activeType = getVisualDiscountType()
+	if (activeType == 'STUDENT') return 'student-card'
+	if (activeType == 'SENIOR') return 'senior-card'
+	if (activeType == 'FREQUENT') return 'frequent-card'
+	return ''
+}
+
+const getDiscountToneClass = (): string => {
+	const activeType = getVisualDiscountType()
+	if (activeType == 'STUDENT') return 'student-tone'
+	if (activeType == 'SENIOR') return 'senior-tone'
+	if (activeType == 'FREQUENT') return 'frequent-tone'
+	return ''
+}
+
+const getDiscountLogoText = (): string => {
+	const activeType = getVisualDiscountType()
+	if (activeType == 'STUDENT') return '🎓'
+	if (activeType == 'SENIOR') return '🦯'
+	if (activeType == 'FREQUENT') return 'RIDE'
+	return ''
+}
+
+const getDiscountStatusText = (): string => {
+	const activeType = getVisualDiscountType()
+	if (activeType == 'STUDENT') return 'Student benefit active'
+	if (activeType == 'SENIOR') return 'Senior benefit active'
+	if (activeType == 'FREQUENT') return 'Frequent rider benefit active'
+	return ''
+}
+
 const getUserInfo = () => {
 	userName.value = ''
 	userEmail.value = ''
@@ -252,6 +327,55 @@ const getUserInfo = () => {
 			console.error('Failed to parse user info:', e)
 		}
 	}
+}
+
+const fetchUserProfile = () => {
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
+	if (userId == null || userId.length == 0 || token == null || token.length == 0) {
+		resetDiscountState()
+		return
+	}
+
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/profile',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (!(res.statusCode >= 200 && res.statusCode < 300)) {
+				if (res.statusCode == 401) {
+					resetDiscountState()
+				}
+				return
+			}
+			if (res.data == null || typeof res.data != 'object') {
+				resetDiscountState()
+				return
+			}
+
+			const response = res.data as UTSJSONObject
+			let profile = response
+			if (response['data'] != null && typeof response['data'] == 'object') {
+				profile = response['data'] as UTSJSONObject
+			}
+
+			const rawHasFrequentDiscount = profile['hasFrequentDiscount']
+			const rawHasStudentDiscount = profile['hasStudentDiscount']
+			const rawHasSeniorDiscount = profile['hasSeniorDiscount']
+			const rawDiscountType = profile['discountType']
+			const fallbackDiscountType = rawDiscountType != null ? normalizeDiscountType(rawDiscountType) : 'NONE'
+
+			hasFrequentDiscount.value = rawHasFrequentDiscount != null ? parseBooleanFlag(rawHasFrequentDiscount) : fallbackDiscountType == 'FREQUENT'
+			hasStudentDiscount.value = rawHasStudentDiscount != null ? parseBooleanFlag(rawHasStudentDiscount) : fallbackDiscountType == 'STUDENT'
+			hasSeniorDiscount.value = rawHasSeniorDiscount != null ? parseBooleanFlag(rawHasSeniorDiscount) : fallbackDiscountType == 'SENIOR'
+		},
+		fail: () => {
+			resetDiscountState()
+		}
+	})
 }
 
 const padZero = (n: number): string => {
@@ -449,6 +573,7 @@ const handleLogout = () => {
 				userName.value = ''
 				userEmail.value = ''
 				avatarUrl.value = DEFAULT_AVATAR
+				resetDiscountState()
 				heatmapWeeks.value = []
 				totalRides.value = 0
 				totalSpent.value = '0.00'
@@ -461,23 +586,31 @@ const handleLogout = () => {
 	})
 }
 
-const goToPortrait = () => {
+const goToAccountManagement = () => {
 	uni.navigateTo({
-		url: '/pages/portrait/portrait'
+		url: '/pages/account/account'
 	})
 }
 
 onMounted(() => {
 	loadAvatar()
 	getUserInfo()
-	fetchBookingsForHeatmap()
+	if (isLoggedIn.value) {
+		fetchUserProfile()
+		fetchBookingsForHeatmap()
+	} else {
+		resetDiscountState()
+	}
 })
 
 onShow(() => {
 	loadAvatar()
 	getUserInfo()
 	if (isLoggedIn.value) {
+		fetchUserProfile()
 		fetchBookingsForHeatmap()
+	} else {
+		resetDiscountState()
 	}
 })
 </script>
@@ -597,6 +730,10 @@ onShow(() => {
 	box-sizing: border-box;
 	border-top-left-radius: 12px;
 	border-top-right-radius: 12px;
+	border-width: 3px;
+	border-style: solid;
+	border-color: transparent;
+	position: relative;
 }
 
 .profile-header {
@@ -613,6 +750,41 @@ onShow(() => {
 	background-color: #e0e0e0;
 	margin-right: 0;
 	margin-bottom: 12px;
+}
+
+.student-card {
+	border-color: #409EFF;
+}
+
+.senior-card {
+	border-color: #E6A23C;
+}
+
+.frequent-card {
+	border-color: #67C23A;
+}
+
+.profile-discount-logo {
+	min-width: 34px;
+	height: 34px;
+	padding: 0 8px;
+	border-radius: 17px;
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #ffffff;
+}
+
+.discount-logo-text {
+	font-size: 13px;
+	font-weight: bold;
+	color: #ffffff;
 }
 
 .user-info {
@@ -633,6 +805,54 @@ onShow(() => {
 	font-size: 13px;
 	color: #999;
 	text-align: center;
+}
+
+.discount-notice-list {
+	margin-top: 10px;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.discount-pill {
+	margin: 4px 4px 0 4px;
+	padding: 6px 12px;
+	border-radius: 999px;
+}
+
+.discount-pill-text {
+	font-size: 12px;
+	font-weight: bold;
+	color: #ffffff;
+}
+
+.frequent-pill-text {
+	font-weight: 800;
+	font-size: 13px;
+	letter-spacing: 0.4px;
+}
+
+.discount-status-line {
+	margin-top: 10px;
+}
+
+.discount-status-text {
+	font-size: 12px;
+	color: #666;
+	text-align: center;
+}
+
+.student-tone {
+	background-color: #409EFF;
+}
+
+.senior-tone {
+	background-color: #E6A23C;
+}
+
+.frequent-tone {
+	background-color: #67C23A;
 }
 
 /* ── Heatmap Section (continues card group) ── */

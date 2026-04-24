@@ -54,7 +54,10 @@ public class Booking implements Serializable {
     private String discountType;
 
     @Column(nullable = false)
-    private String status; // CONFIRMED, COMPLETED, CANCELLED
+    private String status; // PENDING_PAYMENT, CONFIRMED, COMPLETED, CANCELLED
+
+    @Column(name = "payment_deadline")
+    private LocalDateTime paymentDeadline;
 
     @Column(name = "start_lat")
     private Double startLat;
@@ -105,6 +108,8 @@ public class Booking implements Serializable {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getPaymentDeadline() { return paymentDeadline; }
+    public void setPaymentDeadline(LocalDateTime paymentDeadline) { this.paymentDeadline = paymentDeadline; }
 
     public Double getStartLat() { return startLat; }
     public void setStartLat(Double startLat) { this.startLat = startLat; }

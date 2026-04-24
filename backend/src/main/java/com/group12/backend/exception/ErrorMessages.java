@@ -29,6 +29,8 @@ public final class ErrorMessages {
     public static final String PAYMENT_CARD_EXPIRED = "Payment card is expired";
     public static final String INVALID_CARD_NUMBER = "Invalid card number";
     public static final String PAYMENT_CARD_REQUIRED_FOR_BOOKING = "Please bind a payment card before booking.";
+    public static final String BOOKING_PAYMENT_EXPIRED = "Payment window expired. Please place a new booking.";
+    public static final String BOOKING_ALREADY_PAID = "Booking has already been paid.";
     public static final String INVALID_FEEDBACK_ID = "Invalid feedback id";
     public static final String INVALID_FEEDBACK_PROCESS_ACTION = "Invalid process action";
     public static final String ESCALATE_TARGET_REQUIRED = "Escalate target is required for ESCALATE action";

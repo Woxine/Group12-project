@@ -26,17 +26,31 @@ public class BookingScheduler {
     @Scheduled(fixedRate = 60000)
     public void checkAndCompleteExpiredBookings() {
         LocalDateTime now = LocalDateTime.now();
+        List<Booking> expiredPendingPayments =
+                bookingRepository.findByStatusAndPaymentDeadlineBefore("PENDING_PAYMENT", now);
         List<Booking> expiredBookings =
                 bookingRepository.findByStatusAndEndTimeBefore("CONFIRMED", now);
 
-        if (expiredBookings.isEmpty()) {
+        if (expiredPendingPayments.isEmpty() && expiredBookings.isEmpty()) {
             return;
         }
 
-        log.info("BookingScheduler: Found {} expired booking(s). Processing...", expiredBookings.size());
+        log.info("BookingScheduler: Found {} expired pending payment booking(s) and {} expired confirmed booking(s). Processing...",
+                expiredPendingPayments.size(), expiredBookings.size());
 
         int successCount = 0;
         int failCount = 0;
+
+        for (Booking booking : expiredPendingPayments) {
+            try {
+                bookingCompletionService.expirePendingPaymentBooking(booking.getId());
+                successCount++;
+            } catch (Exception e) {
+                failCount++;
+                log.error("BookingScheduler: Failed to expire pending payment Booking ID: {}. Error: {}",
+                        booking.getId(), e.getMessage(), e);
+            }
+        }
 
         for (Booking booking : expiredBookings) {
             try {

@@ -30,7 +30,10 @@
 			<text v-if="isLoading" class="status-text">Loading...</text>
 			<view v-else-if="submissions.length > 0">
 				<view v-for="item in submissions" :key="item.id" class="status-item">
-					<text class="status-main">{{ item.type }} · {{ item.status }}</text>
+					<view class="status-top-row">
+						<text class="type-badge">{{ getTypeLabel(item.type) }}</text>
+						<text :class="['status-badge', getStatusClass(item.status)]">{{ getStatusLabel(item.status) }}</text>
+					</view>
 					<text class="status-sub">Submitted: {{ item.submittedAt }}</text>
 					<text v-if="item.rejectReason.length > 0" class="reject-reason">Reason: {{ item.rejectReason }}</text>
 				</view>
@@ -69,6 +72,33 @@ const readStorageStringOrNull = (key: string): string | null => {
 	if (raw == null) return null
 	const value = ('' + raw).trim()
 	return value.length < 1 ? null : value
+}
+
+const normalizeStatus = (status: string): string => {
+	return status == null ? '' : status.trim().toUpperCase()
+}
+
+const getStatusLabel = (status: string): string => {
+	const normalized = normalizeStatus(status)
+	if (normalized == 'APPROVED') return 'Approved'
+	if (normalized == 'REJECTED') return 'Rejected'
+	if (normalized == 'PENDING') return 'Pending Review'
+	return normalized.length > 0 ? normalized : 'Unknown'
+}
+
+const getStatusClass = (status: string): string => {
+	const normalized = normalizeStatus(status)
+	if (normalized == 'APPROVED') return 'status-approved'
+	if (normalized == 'REJECTED') return 'status-rejected'
+	if (normalized == 'PENDING') return 'status-pending'
+	return 'status-unknown'
+}
+
+const getTypeLabel = (type: string): string => {
+	const normalized = type == null ? '' : type.trim().toUpperCase()
+	if (normalized == 'STUDENT') return 'Student'
+	if (normalized == 'SENIOR') return 'Senior'
+	return normalized.length > 0 ? normalized : 'Unknown Type'
 }
 
 const getAuth = (): UTSJSONObject | null => {
@@ -317,19 +347,61 @@ onShow(() => {
 }
 
 .status-item {
-	padding: 10px 0;
+	padding: 14px 12px;
 	border-top: 1px solid #f0f0f0;
+	border-radius: 12px;
+	background-color: #f8fbff;
+	border-left: 4px solid #cbd5e1;
+	margin-top: 10px;
 }
 
 .status-item:first-child {
 	border-top-width: 0;
+	margin-top: 0;
 }
 
-.status-main {
-	font-size: 14px;
+.status-top-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.type-badge {
+	font-size: 12px;
 	font-weight: bold;
-	color: #333;
-	margin-bottom: 4px;
+	color: #1d4ed8;
+	background-color: #dbeafe;
+	padding: 5px 10px;
+	border-radius: 999px;
+}
+
+.status-badge {
+	font-size: 12px;
+	font-weight: bold;
+	padding: 5px 10px;
+	border-radius: 999px;
+}
+
+.status-pending {
+	color: #92400e;
+	background-color: #fef3c7;
+}
+
+.status-approved {
+	color: #166534;
+	background-color: #dcfce7;
+}
+
+.status-rejected {
+	color: #991b1b;
+	background-color: #fee2e2;
+}
+
+.status-unknown {
+	color: #374151;
+	background-color: #e5e7eb;
 }
 
 .status-sub {

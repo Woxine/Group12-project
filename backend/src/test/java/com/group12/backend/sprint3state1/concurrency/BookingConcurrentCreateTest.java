@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import com.group12.backend.config.BillingProperties;
 import com.group12.backend.dto.CreateBookingRequest;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
@@ -61,6 +62,8 @@ class BookingConcurrentCreateTest {
     private DiscountService discountService;
     @Mock
     private BillingService billingService;
+    @Mock
+    private BillingProperties billingProperties;
 
     @InjectMocks
     private BookingServiceImpl bookingService;
@@ -77,9 +80,11 @@ class BookingConcurrentCreateTest {
         when(userRepository.findById(11L)).thenReturn(Optional.of(user));
         when(paymentCardRepository.existsByUser_Id(11L)).thenReturn(true);
         when(bookingRepository.findByUser_IdAndStatus(11L, "CONFIRMED")).thenReturn(List.of());
+        when(bookingRepository.findByUser_IdAndStatus(11L, "PENDING_PAYMENT")).thenReturn(List.of());
         when(scooterRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(scooter));
         when(bookingRepository.findOverlappingBookings(anyLong(), any(), any())).thenReturn(List.of());
         when(billingService.getCurrentRule()).thenReturn(defaultRule());
+        when(billingProperties.getPendingPaymentLockMinutes()).thenReturn(5);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
             Booking booking = invocation.getArgument(0);
             if (!alreadyBooked.compareAndSet(false, true)) {
@@ -96,11 +101,11 @@ class BookingConcurrentCreateTest {
 
         long successCount = results.stream().filter(result -> !(result instanceof Throwable)).count();
         long failureCount = results.stream().filter(result -> result instanceof Throwable).count();
-        long confirmedCount = persisted.stream().filter(b -> "CONFIRMED".equals(b.getStatus())).count();
+        long pendingCount = persisted.stream().filter(b -> "PENDING_PAYMENT".equals(b.getStatus())).count();
 
         assertThat(successCount).isEqualTo(1);
         assertThat(failureCount).isEqualTo(parallel - 1L);
-        assertThat(confirmedCount).isEqualTo(1);
+        assertThat(pendingCount).isEqualTo(1);
     }
 
     @Test
@@ -110,8 +115,10 @@ class BookingConcurrentCreateTest {
         when(userRepository.findById(21L)).thenReturn(Optional.of(user));
         when(paymentCardRepository.existsByUser_Id(21L)).thenReturn(true);
         when(bookingRepository.findByUser_IdAndStatus(21L, "CONFIRMED")).thenReturn(List.of());
+        when(bookingRepository.findByUser_IdAndStatus(21L, "PENDING_PAYMENT")).thenReturn(List.of());
         when(bookingRepository.findOverlappingBookings(anyLong(), any(), any())).thenReturn(List.of());
         when(billingService.getCurrentRule()).thenReturn(defaultRule());
+        when(billingProperties.getPendingPaymentLockMinutes()).thenReturn(5);
 
         ConcurrentHashMap<Long, Scooter> scooterMap = new ConcurrentHashMap<>();
         for (long scooterId = 1; scooterId <= 8; scooterId++) {
@@ -160,9 +167,11 @@ class BookingConcurrentCreateTest {
         when(userRepository.findById(31L)).thenReturn(Optional.of(user));
         when(paymentCardRepository.existsByUser_Id(31L)).thenReturn(true);
         when(bookingRepository.findByUser_IdAndStatus(31L, "CONFIRMED")).thenReturn(List.of());
+        when(bookingRepository.findByUser_IdAndStatus(31L, "PENDING_PAYMENT")).thenReturn(List.of());
         when(scooterRepository.findByIdForUpdate(3L)).thenReturn(Optional.of(scooter));
         when(bookingRepository.findOverlappingBookings(anyLong(), any(), any())).thenReturn(List.of());
         when(billingService.getCurrentRule()).thenReturn(defaultRule());
+        when(billingProperties.getPendingPaymentLockMinutes()).thenReturn(5);
 
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
             Booking booking = invocation.getArgument(0);
@@ -180,7 +189,7 @@ class BookingConcurrentCreateTest {
 
         long confirmedCount = persisted.stream()
                 .filter(booking -> booking.getScooter() != null && Long.valueOf(3L).equals(booking.getScooter().getId()))
-                .filter(booking -> "CONFIRMED".equals(booking.getStatus()))
+                .filter(booking -> "PENDING_PAYMENT".equals(booking.getStatus()))
                 .count();
 
         assertThat(confirmedCount).isEqualTo(1);

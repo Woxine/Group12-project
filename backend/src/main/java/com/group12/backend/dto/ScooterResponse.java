@@ -7,6 +7,7 @@ import java.math.BigDecimal;
  */
 public class ScooterResponse {
     private Long id;
+    private String type;
     private String status;
     private Double locationLat;
     private Double locationLng;
@@ -18,11 +19,12 @@ public class ScooterResponse {
     private BigDecimal extraLongRentHourRateMultiplier;
     private Boolean visible;
 
-    public ScooterResponse(Long id, String status, Double locationLat, Double locationLng, BigDecimal hourRate, String locationName,
+    public ScooterResponse(Long id, String type, String status, Double locationLat, Double locationLng, BigDecimal hourRate, String locationName,
             BigDecimal longRentThresholdHours, BigDecimal extraLongRentThresholdHours,
             BigDecimal longRentHourRateMultiplier, BigDecimal extraLongRentHourRateMultiplier,
             Boolean visible) {
         this.id = id;
+        this.type = type;
         this.status = status;
         this.locationLat = locationLat;
         this.locationLng = locationLng;
@@ -37,6 +39,7 @@ public class ScooterResponse {
 
     // Getters
     public Long getId() { return id; }
+    public String getType() { return type; }
     public String getStatus() { return status; }
     public Double getLocationLat() { return locationLat; }
     public Double getLocationLng() { return locationLng; }

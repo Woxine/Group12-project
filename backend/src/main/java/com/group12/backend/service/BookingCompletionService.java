@@ -4,6 +4,7 @@ import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
+import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,5 +51,35 @@ public class BookingCompletionService {
         }
 
         log.info("BookingScheduler: Auto-completed Booking ID: {}", fresh.getId());
+    }
+
+    /**
+     * 释放超时未支付的待支付订单，避免车辆长时间被锁住。
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void expirePendingPaymentBooking(Long bookingId) {
+        Booking fresh = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new IllegalStateException("Booking not found: " + bookingId));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!"PENDING_PAYMENT".equals(fresh.getStatus())
+                || fresh.getPaymentDeadline() == null
+                || !fresh.getPaymentDeadline().isBefore(now)) {
+            return;
+        }
+
+        fresh.setStatus("CANCELLED");
+        fresh.setPaymentDeadline(null);
+        fresh.setEndTime(now);
+        bookingRepository.save(fresh);
+
+        Scooter scooter = fresh.getScooter();
+        if (scooter != null && "RESERVED".equalsIgnoreCase(scooter.getStatus())) {
+            scooter.setStatus("AVAILABLE");
+            scooterRepository.save(scooter);
+            log.info("BookingScheduler: Released expired reserved scooter ID: {}", scooter.getId());
+        }
+
+        log.info("BookingScheduler: Cancelled expired pending booking ID: {}", fresh.getId());
     }
 }

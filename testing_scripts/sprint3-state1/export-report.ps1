@@ -21,6 +21,9 @@ if (-not (Test-Path $surefireDir)) {
 }
 
 New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
-Copy-Item -Path (Join-Path $surefireDir "*") -Destination $bundleDir -Recurse -Force
+robocopy $surefireDir $bundleDir /E /IS /IT | Out-Null
+if ($LASTEXITCODE -ge 8) {
+    throw "Robocopy failed with exit code $LASTEXITCODE"
+}
 
 Write-Host "[Sprint3-State1] Surefire reports exported to: $bundleDir" -ForegroundColor Green

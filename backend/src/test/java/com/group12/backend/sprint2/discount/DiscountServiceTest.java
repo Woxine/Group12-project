@@ -3,6 +3,7 @@ package com.group12.backend.sprint2.discount;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -59,28 +60,28 @@ class DiscountServiceTest {
         user.setId(userId);
         user.setIsStudent(isStudent);
         user.setAge(age);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(bookingRepository.sumCompletedDurationHours(eq(userId), any(LocalDateTime.class), any(LocalDateTime.class)))
+        lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        lenient().when(bookingRepository.sumCompletedDurationHours(eq(userId), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(usedHoursInWeek);
 
         Scooter scooter = new Scooter();
         scooter.setId(1L);
         scooter.setHourRate(new BigDecimal("10.00"));
-        when(scooterRepository.findById(1L)).thenReturn(Optional.of(scooter));
+        lenient().when(scooterRepository.findById(1L)).thenReturn(Optional.of(scooter));
 
         if (isStudent) {
             DiscountVerificationSubmission approved = new DiscountVerificationSubmission();
             approved.setType(DiscountVerificationConstants.TYPE_STUDENT);
             approved.setStatus(DiscountVerificationConstants.STATUS_APPROVED);
-            when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
+            lenient().when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
                     userId, DiscountVerificationConstants.TYPE_STUDENT, DiscountVerificationConstants.STATUS_APPROVED
             )).thenReturn(Optional.of(approved));
         } else {
-            when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
+            lenient().when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
                     userId, DiscountVerificationConstants.TYPE_STUDENT, DiscountVerificationConstants.STATUS_APPROVED
             )).thenReturn(Optional.empty());
         }
-        when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
+        lenient().when(discountVerificationSubmissionRepository.findTopByUser_IdAndTypeAndStatusOrderByVersionDesc(
                 userId, DiscountVerificationConstants.TYPE_SENIOR, DiscountVerificationConstants.STATUS_APPROVED
         )).thenReturn(Optional.empty());
     }

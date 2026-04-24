@@ -10,4 +10,10 @@ public interface DiscountService {
     DiscountBreakdownResponse calculateDiscount(Long userId, Long scooterId, String duration);
 
     String resolveDiscountType(Long userId);
+
+    boolean hasFrequentDiscount(Long userId);
+
+    boolean hasStudentDiscount(Long userId);
+
+    boolean hasSeniorDiscount(Long userId);
 }

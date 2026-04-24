@@ -41,6 +41,7 @@ CREATE TABLE location_points (
 
 CREATE TABLE scooters (
   id BIGINT NOT NULL AUTO_INCREMENT,
+  type VARCHAR(20) DEFAULT 'GEN1',
   status VARCHAR(255) NOT NULL,
   location_lat DOUBLE DEFAULT NULL,
   location_lng DOUBLE DEFAULT NULL,
@@ -66,6 +67,7 @@ CREATE TABLE bookings (
   discount_multiplier DECIMAL(10,4) DEFAULT NULL,
   discount_type VARCHAR(32) DEFAULT NULL,
   status VARCHAR(255) NOT NULL,
+  payment_deadline DATETIME(6) DEFAULT NULL,
   start_lat DOUBLE DEFAULT NULL,
   start_lng DOUBLE DEFAULT NULL,
   end_lat DOUBLE DEFAULT NULL,
@@ -180,12 +182,12 @@ INSERT INTO location_points (id, name, lat, lng) VALUES
   (2, 'Engineering Building', 53.808300, -1.553000),
   (3, 'Student Union', 53.807200, -1.557300);
 
-INSERT INTO scooters (id, status, location_lat, location_lng, hour_rate, visible, location_point_id) VALUES
-  (1, 'AVAILABLE', 53.806700, -1.555000, 3.50, 1, 1),
-  (2, 'AVAILABLE', 53.808300, -1.553000, 3.50, 1, 2),
-  (3, 'MAINTENANCE', 53.807200, -1.557300, 3.50, 1, 3),
-  (4, 'AVAILABLE', 53.806900, -1.554800, 4.00, 1, 1),
-  (5, 'RENTED', 53.808100, -1.553200, 4.00, 1, 2);
+INSERT INTO scooters (id, type, status, location_lat, location_lng, hour_rate, visible, location_point_id) VALUES
+  (1, 'GEN1', 'AVAILABLE', 53.806700, -1.555000, 3.50, 1, 1),
+  (2, 'GEN2', 'AVAILABLE', 53.808300, -1.553000, 3.50, 1, 2),
+  (3, 'GEN3', 'MAINTENANCE', 53.807200, -1.557300, 3.50, 1, 3),
+  (4, 'GEN3PRO', 'AVAILABLE', 53.806900, -1.554800, 4.00, 1, 1),
+  (5, 'GEN1', 'RENTED', 53.808100, -1.553200, 4.00, 1, 2);
 
 INSERT INTO billing_settings (
   id,

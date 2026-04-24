@@ -21,7 +21,10 @@ public class Scooter implements Serializable {
     private Long id;
 
     @Column(nullable = false)
-    private String status; // AVAILABLE, RENTED, MAINTENANCE
+    private String status; // AVAILABLE, RESERVED, RENTED, MAINTENANCE
+
+    @Column(nullable = false)
+    private String type = "GEN1";
 
     @Column(name = "location_lat")
     private Double locationLat;
@@ -49,6 +52,9 @@ public class Scooter implements Serializable {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
     public Double getLocationLat() { return locationLat; }
     public void setLocationLat(Double locationLat) { this.locationLat = locationLat; }

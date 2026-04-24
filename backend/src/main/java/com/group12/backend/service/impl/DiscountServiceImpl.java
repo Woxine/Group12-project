@@ -95,6 +95,21 @@ public class DiscountServiceImpl implements DiscountService {
         return DISCOUNT_NONE;
     }
 
+    @Override
+    public boolean hasFrequentDiscount(Long userId) {
+        return isDiscountEnabled() && isFrequentUser(userId);
+    }
+
+    @Override
+    public boolean hasStudentDiscount(Long userId) {
+        return isDiscountEnabled() && isStudent(userId);
+    }
+
+    @Override
+    public boolean hasSeniorDiscount(Long userId) {
+        return isDiscountEnabled() && isSenior(userId);
+    }
+
     public boolean isFrequentUser(Long userId) {
         if (userId == null || bookingRepository == null) {
             return false;

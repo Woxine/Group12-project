@@ -1,39 +1,138 @@
 <template>
 	<view class="page-container">
-		<!-- 首页：滚动公告、图片轮播、地图及预约入口按钮 -->
-		<view class="slogan1">
-			<text class="text1">We offer you a variety of options.</text>
-		</view>
-		
-		<view class="span1">
-			<view class="span1_left"><image src="/static/broadcast.png" mode="aspectFill" class="icon1"></image></view>
-			<swiper class="swiper1" vertical="true" autoplay="true" circular interval="2000" duration="1000">
-				<swiper-item><text class="text2">Before cycling, please check the brakes, seat, pedals and other components.</text></swiper-item>
-				<swiper-item><text class="text2">Remember to return the bike when the ride is over.</text></swiper-item>
+		<!-- 1. 全局沉浸式地图 -->
+		<map id="mainMap" class="full-map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
+
+		<!-- 2. 顶部悬浮栏 (包含公告) -->
+		<view class="top-notice-pill">
+			<image src="/static/broadcast.png" mode="aspectFit" class="notice-icon"></image>
+			<swiper class="notice-swiper" vertical="true" autoplay="true" circular :interval="3000" :duration="1000">
+				<swiper-item><text class="notice-text">Before cycling, check the brakes, seat, and pedals.</text></swiper-item>
+				<swiper-item><text class="notice-text">Remember to return the e-Scooter when the ride is over.</text></swiper-item>
 			</swiper>
 		</view>
-		
-		<swiper class="swiper2" :indicator-dots="true" :autoplay="true" :interval="2000" :duration="1000"
-		indicator-color="rgba(255,255,255,0.3)" indicator-active-color="#c0c0c0" circular>
-			<swiper-item><image src="/static/MeiTuanbike.jpg" class="swipic1"></image></swiper-item>
-			<swiper-item><image src="/static/HelloBike.jpg" class="swipic2"></image></swiper-item>
-			<swiper-item><image src="/static/Scooter.jpg" class="swipic3"></image></swiper-item>
-			<swiper-item><image src="/static/EleBike.jpg" class="swipic4"></image></swiper-item>
-		</swiper>
-		
-		<!--
-		<view class="span2">------</view>
-		-->
 
-		<view class="map_container">
-			<map id="mainMap" class="map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
+		<!-- 3. 底部操作卡片 -->
+		<view class="bottom-action-card">
+			<view class="card-header">
+				<text class="card-title">We offer you a variety of options.</text>
+				<text class="link-text" @click="showVehicleIntro">View Details ></text>
+			</view>
+			
+			<!-- 
+			<swiper class="modern-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="1000"
+			indicator-color="rgba(255,255,255,0.5)" indicator-active-color="#4CAF50" circular>
+				<swiper-item><image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="card-img"></image></swiper-item>
+			</swiper>
+			-->
+			
+			<view class="booking-button" @click="goToBikeList">
+				<text class="btn-text-normal">BOOK A&nbsp;</text>
+				<text class="btn-text-gradient">RIDE</text>
+			</view>
 		</view>
-		
-		<!-- 预约按钮 -->
-		<view class="booking-section">
-			<button class="booking-button" @click="goToBikeList">
-				appoint
-			</button>
+
+		<!-- 4. 车辆介绍全屏悬浮卡片 -->
+		<view class="vehicle-intro-overlay" v-if="isVehicleIntroVisible">
+			<view class="vehicle-intro-card">
+				<view class="intro-header">
+					<text class="intro-title">Our Vehicles</text>
+					<text class="close-btn" @click="hideVehicleIntro">✕</text>
+				</view>
+				<scroll-view class="intro-scroll" scroll-y="true">
+					<view class="intro-item">
+						<image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN1</view>
+							<view class="intro-subtitle">Ninebot Fz3</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">115km/92km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">25km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">400W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Best for beginners and short daily trips.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN2</view>
+							<view class="intro-subtitle">Ninebot V70</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">70km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">47km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">800W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Balanced choice for mid-range commuting.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN3</view>
+							<view class="intro-subtitle">Ninebot M95C</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">145km max</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">55km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">1500W/2600W</text>
+								</view>
+							</view>
+							<view class="intro-advice">Long-range flagship for heavy usage scenarios.</view>
+						</view>
+					</view>
+					<view class="intro-item">
+						<image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="intro-img"></image>
+						<view class="intro-text-box">
+							<view class="intro-name">GEN3 PRO</view>
+							<view class="intro-subtitle">Ninebot E300P MK2</view>
+							<view class="intro-meta-row">
+								<view class="meta-chip">
+									<text class="meta-label">Range</text>
+									<text class="meta-value">125km</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Top Speed</text>
+									<text class="meta-value">135km/h</text>
+								</view>
+								<view class="meta-chip">
+									<text class="meta-label">Motor</text>
+									<text class="meta-value">29kW peak</text>
+								</view>
+							</view>
+							<view class="intro-advice">Performance-first choice for advanced riders.</view>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
 		</view>
 	</view>
 	
@@ -55,6 +154,16 @@
 	const markers = ref([] as Marker[])
 	const mapContext = ref(null as MapContext | null)
 	
+	const isVehicleIntroVisible = ref(false)
+	
+	const showVehicleIntro = () => {
+		isVehicleIntroVisible.value = true
+	}
+	
+	const hideVehicleIntro = () => {
+		isVehicleIntroVisible.value = false
+	}
+	
 	const buildNearbyMarkers = (lat: number, lng: number): Marker[] => {
 	  return JSON.parse<Marker[]>(JSON.stringify([
 	    { id: 1, longitude: lng - 0.0006, latitude: lat - 0.0007, title: '附近1', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
@@ -63,6 +172,22 @@
 	  ]))!
 	}
 	
+	const getMarkerIcon = (type: string | null): string => {
+	  if (type == null || type.length == 0) return '/static/loc.png'
+	  switch (type) {
+	    case 'GEN1':
+	      return '/static/gen1_escooter_Fz3_liangziyin.png'
+	    case 'GEN2':
+	      return '/static/gen2_eScooter_V70_GardeniaGreen_005.png'
+	    case 'GEN3':
+	      return '/static/gen3_eScooter-M95C_MK2-jingyahui.png'
+	    case 'GEN3PRO':
+	      return '/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
+	    default:
+	      return '/static/loc.png'
+	  }
+	}
+
 	const fetchScooterMarkers = (nearby: Marker[], lat: number, lng: number) => {
 	  uni.request({
 	    url: BASE_URL + '/api/v1/scooters',
@@ -92,14 +217,15 @@
 	        if (numLat != null && numLng != null && !isNaN(numLat) && !isNaN(numLng)) {
 	          const rawId = item['id']
 	          const sid = rawId != null ? ('SC' + ('' + rawId)) : ('SC' + (count + 1))
+	          const type = item['type'] != null ? ('' + item['type']) : 'GEN1'
 	          scooterMarkers.push({
 	            id: 10 + count,
 	            latitude: numLat,
 	            longitude: numLng,
 	            title: sid,
-	            iconPath: '/static/loc.png',
-	            width: 32,
-	            height: 32,
+	            iconPath: getMarkerIcon(type),
+	            width: 48,
+	            height: 48,
 	            anchor: { x: 0.5, y: 1 }
 	          } as Marker)
 	          count++
@@ -167,102 +293,266 @@
 			return
 		}
 		uni.navigateTo({
-			url: '/pages/bikelist/bikelist'
+			url: '/pages/escooters/escooters'
 		})
 	}
 </script>
 
 <style lang="scss">
-/* 首页样式：公告栏、轮播图、地图容器、预约按钮 */
+/* 首页样式：沉浸式地图、悬浮卡片、现代化UI */
 	.page-container {
-		min-height: 100%;
-		padding-bottom: 88px;
-		box-sizing: border-box;
+		position: relative;
+		flex: 1;
 		background-color: #F8F8F8;
+		overflow: hidden;
 	}
 
-	.slogan1{
+	.full-map {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 1;
+	}
+
+	.top-notice-pill {
+		position: absolute;
+		top: 16px;
+		left: 5%;
+		width: 90%;
+		height: 44px;
+		background-color: rgba(255, 255, 255, 0.9);
+		border-radius: 22px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 16px;
+		box-sizing: border-box;
+		z-index: 10;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+	}
+
+	.notice-icon {
+		width: 20px;
+		height: 20px;
+		margin-right: 12px;
+	}
+
+	.notice-swiper {
+		flex: 1;
+		height: 100%;
+	}
+
+	.notice-text {
+		line-height: 44px;
+		font-size: 12px;
+		color: #444;
+		lines: 1;
+		text-overflow: ellipsis;
+	}
+
+	.bottom-action-card {
+		position: absolute;
+		bottom: 80px; /* 留出底部TabBar的高度，因为TabBar自带悬浮/固定效果 */
+		left: 4%;
+		width: 92%;
+		background-color: #FFFFFF;
+		border-radius: 24px;
+		padding: 24px 20px;
+		box-sizing: border-box;
+		z-index: 10;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+		display: flex;
+		flex-direction: column;
+	}
+
+	.card-header {
+		margin-bottom: 16px;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.card-title {
+		font-size: 15px;
+		font-weight: bold;
+		color: #1A1A1A;
+	}
+
+	.link-text {
+		font-size: 13px;
+		color: #4CAF50;
+		font-weight: 500;
+	}
+
+	.modern-swiper {
+		width: 100%;
+		height: 160px;
+		border-radius: 16px;
+		overflow: hidden;
+		margin-bottom: 24px;
+		background-color: #F0F0F0;
+	}
+
+	.card-img {
+		width: 100%;
+		height: 100%;
+	}
+
+	.booking-button {
+		width: 100%;
+		height: 56px;
+		background-color: #FFFFFF;
+		border: 2px solid #1A1A1A;
+		border-radius: 28px;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		box-sizing: border-box;
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+	}
+
+	.btn-text-normal {
+		font-size: 22px;
+		font-weight: bold;
+		color: #1A1A1A;
+		letter-spacing: 1px;
+	}
+
+	.btn-text-gradient {
+		font-size: 22px;
+		font-weight: bold;
+		color: #009688;
+		letter-spacing: 1px;
+	}
+
+	/* 车辆介绍全屏悬浮卡片样式 */
+	.vehicle-intro-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 100;
 		display: flex;
 		align-items: center;
-		height: 20px;
-		//border: 1px solid red;
-	}
-	
-	.span1{
-		width: 100%;
-		height: 20px;
-		//background-color: beige;
-		.span1_left{
-			position: absolute;
-			left: 1%;
-			height: 100%;
-			width: 5%;
-			background-color: aliceblue;
-			.icon1{
-				width: 100%;
-				height: 100%;
-			}
-		}
-		.swiper1{
-			position: absolute;
-			left: 6%;
-			height: 100%;
-			width: 94%;
-			//background-color: aquamarine;
-			.text2{
-				margin: auto;
-				font-size: 9px;
-			}
-		}
-	}
-	
-	.swiper2{
-		width: 100%;
-		height: 200px;
-		//border: 1px solid blue;
-		.swipic1{
-			width: 100%;
-		}
-		.swipic2{
-			width: 100%;
-		}
-		.swipic3{
-			width: 100%;
-		}
-		.swipic4{
-			width: 100%;
-		}
-	}
-	
-	.span2{
-		//border: 1px solid red;
-	}
-	
-	.map{
-		width: 100%;
-		height: 300px;
-		//border: 1px solid red;
-	}
-	
-	.booking-section {
-		width: 90%;
-		margin: 20px auto;
-		margin-bottom: 12px;
-		display: flex;
 		justify-content: center;
-		
-		.booking-button {
-			width: 100%;
-			height: 46px;
-			background-color: rgba(76, 175, 80, 0.88);
-			color: white;
-			border: 1px solid rgba(255, 255, 255, 0.22);
-			border-radius: 12px;
-			box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(76, 175, 80, 0.16);
-			box-sizing: border-box;
-			font-size: 16px;
-			font-weight: bold;
-		}
 	}
-	
+
+	.vehicle-intro-card {
+		width: 86%;
+		height: 68%;
+		background-color: #f6f7fb;
+		border-radius: 24px;
+		padding: 18px;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
+	}
+
+	.intro-header {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.intro-title {
+		font-size: 18px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	.close-btn {
+		font-size: 20px;
+		color: #999;
+		padding: 4px;
+	}
+
+	.intro-scroll {
+		flex: 1;
+		width: 100%;
+	}
+
+	.intro-item {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 12px;
+		background-color: #ffffff;
+		border-radius: 16px;
+		overflow: hidden;
+		border: 1px solid #e8ebf2;
+		box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+	}
+
+	.intro-img {
+		width: 100%;
+		height: 118px;
+	}
+
+	.intro-text-box {
+		padding: 10px 12px 12px;
+	}
+
+	.intro-name {
+		font-size: 11px;
+		font-weight: 700;
+		color: #64748b;
+		letter-spacing: 0.8px;
+		margin-bottom: 2px;
+	}
+
+	.intro-subtitle {
+		font-size: 17px;
+		font-weight: 700;
+		color: #0f172a;
+		margin-bottom: 8px;
+	}
+
+	.intro-meta-row {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		gap: 10px;
+		margin-bottom: 8px;
+	}
+
+	.meta-chip {
+		flex: 1;
+		background-color: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 10px;
+		padding: 7px 6px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.meta-label {
+		font-size: 10px;
+		font-weight: bold;
+		color: #64748b;
+		margin-bottom: 3px;
+	}
+
+	.meta-value {
+		font-size: 10px;
+		font-weight: 700;
+		color: #0f172a;
+	}
+
+	.intro-advice {
+		font-size: 11px;
+		color: #334155;
+		line-height: 1.3;
+		padding: 7px 9px;
+		background: #f8fafc;
+		border-radius: 8px;
+	}
 </style>

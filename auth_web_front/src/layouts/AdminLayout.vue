@@ -35,6 +35,10 @@
             <el-icon><Setting /></el-icon>
             <span>Billing</span>
           </el-menu-item>
+          <el-menu-item index="/admin/vehicle-content">
+            <el-icon><EditPen /></el-icon>
+            <span>Vehicle Content</span>
+          </el-menu-item>
         </el-menu>
       </nav>
     </el-aside>
@@ -77,6 +81,7 @@ import {
   WarningFilled,
   DocumentChecked,
   Setting,
+  EditPen,
   Platform,
   SwitchButton
 } from '@element-plus/icons-vue';

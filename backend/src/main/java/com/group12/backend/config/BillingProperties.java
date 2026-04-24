@@ -12,6 +12,7 @@ public class BillingProperties {
     private BigDecimal extraLongRentThresholdHours = new BigDecimal("72");
     private BigDecimal longRentHourRateMultiplier = new BigDecimal("0.85");
     private BigDecimal extraLongRentHourRateMultiplier = new BigDecimal("0.75");
+    private Integer pendingPaymentLockMinutes = 5;
 
     public BigDecimal getLongRentThresholdHours() {
         return longRentThresholdHours;
@@ -43,5 +44,13 @@ public class BillingProperties {
 
     public void setExtraLongRentHourRateMultiplier(BigDecimal extraLongRentHourRateMultiplier) {
         this.extraLongRentHourRateMultiplier = extraLongRentHourRateMultiplier;
+    }
+
+    public Integer getPendingPaymentLockMinutes() {
+        return pendingPaymentLockMinutes;
+    }
+
+    public void setPendingPaymentLockMinutes(Integer pendingPaymentLockMinutes) {
+        this.pendingPaymentLockMinutes = pendingPaymentLockMinutes;
     }
 }

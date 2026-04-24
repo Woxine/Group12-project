@@ -50,6 +50,7 @@ billing:
   extra-long-rent-threshold-hours: ${BILLING_EXTRA_LONG_RENT_THRESHOLD_HOURS:72}
   long-rent-hour-rate-multiplier: ${BILLING_LONG_RENT_HOUR_RATE_MULTIPLIER:0.85}
   extra-long-rent-hour-rate-multiplier: ${BILLING_EXTRA_LONG_RENT_HOUR_RATE_MULTIPLIER:0.75}
+  pending-payment-lock-minutes: ${BILLING_PENDING_PAYMENT_LOCK_MINUTES:5}
 
 discount:
   enabled: ${DISCOUNT_ENABLED:true}

@@ -57,7 +57,6 @@ class DiscountServiceTest {
         User user = new User();
         user.setId(1L);
         user.setAge(20);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(bookingRepository.sumCompletedDurationHours(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(2.0);
         DiscountVerificationSubmission approved = new DiscountVerificationSubmission();
         approved.setType(DiscountVerificationConstants.TYPE_STUDENT);
@@ -89,7 +88,6 @@ class DiscountServiceTest {
         User user = new User();
         user.setId(999L);
         user.setAge(70);
-        when(userRepository.findById(999L)).thenReturn(Optional.of(user));
         when(bookingRepository.sumCompletedDurationHours(eq(999L), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(9.0);
 
         String type = discountService.resolveDiscountType(999L);

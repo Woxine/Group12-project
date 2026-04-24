@@ -60,7 +60,8 @@
 | `end_time` | `LocalDateTime` | `DATETIME(6)` | Nullable | 结束时间 |
 | `duration_hours` | `Double` | `DOUBLE` | | 时长 |
 | `total_price` | `BigDecimal` | `DECIMAL(38,2)` | | 总价 |
-| `status` | `String` | `VARCHAR(255)` | Not Null | `CONFIRMED`, `COMPLETED`, `CANCELLED` |
+| `status` | `String` | `VARCHAR(255)` | Not Null | `PENDING_PAYMENT`, `CONFIRMED`, `COMPLETED`, `CANCELLED` |
+| `payment_deadline` | `LocalDateTime` | `DATETIME(6)` | Nullable | 待支付订单的锁车截止时间，默认创建后 5 分钟 |
 | `start_lat` | `Double` | `DOUBLE` | Nullable | 开始用车时手机纬度（路线展示） |
 | `start_lng` | `Double` | `DOUBLE` | Nullable | 开始用车时手机经度 |
 | `end_lat` | `Double` | `DOUBLE` | Nullable | 结束还车时手机纬度 |

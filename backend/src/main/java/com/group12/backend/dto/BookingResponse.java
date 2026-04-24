@@ -17,6 +17,7 @@ public class BookingResponse {
     private Double discountAmount;
     private Double discountMultiplier;
     private String discountType;
+    private String paymentDeadline;
     private Double startLat;
     private Double startLng;
     private Double endLat;
@@ -59,6 +60,8 @@ public class BookingResponse {
     public void setDiscountMultiplier(Double discountMultiplier) { this.discountMultiplier = discountMultiplier; }
     public String getDiscountType() { return discountType; }
     public void setDiscountType(String discountType) { this.discountType = discountType; }
+    public String getPaymentDeadline() { return paymentDeadline; }
+    public void setPaymentDeadline(String paymentDeadline) { this.paymentDeadline = paymentDeadline; }
     public Double getStartLat() { return startLat; }
     public void setStartLat(Double startLat) { this.startLat = startLat; }
     public Double getStartLng() { return startLng; }

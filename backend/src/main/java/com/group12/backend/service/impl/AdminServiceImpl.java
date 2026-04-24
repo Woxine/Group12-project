@@ -232,7 +232,9 @@ public class AdminServiceImpl implements AdminService {
         return bookings.stream()
                 .filter(booking -> {
                     String status = booking.getStatus();
-                    return status != null && !"CANCELLED".equalsIgnoreCase(status);
+                    return status != null
+                            && !"CANCELLED".equalsIgnoreCase(status)
+                            && !"PENDING_PAYMENT".equalsIgnoreCase(status);
                 })
                 .collect(Collectors.toList());
     }

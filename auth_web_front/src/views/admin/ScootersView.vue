@@ -24,6 +24,13 @@
 
     <el-table :data="rows" stripe v-loading="loading" class="data-table">
       <el-table-column prop="id" label="ID" width="100" align="center" />
+      <el-table-column prop="type" label="Type" width="120" align="center">
+        <template #default="{ row }">
+          <el-tag :type="getTypeTagColor(row.type)" effect="plain" round>
+            {{ row.type }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="Status" width="160" align="center">
         <template #default="{ row }">
           <el-tag
@@ -89,6 +96,14 @@
 
   <el-dialog v-model="dialogVisible" title="Edit Scooter" width="500px" destroy-on-close>
     <el-form label-position="top" :model="editForm" class="edit-form">
+      <el-form-item label="Vehicle Type">
+        <el-select v-model="editForm.type" placeholder="Select type" class="full-width">
+          <el-option label="GEN1 (Fz3)" value="GEN1" />
+          <el-option label="GEN2 (V70)" value="GEN2" />
+          <el-option label="GEN3 (M95C)" value="GEN3" />
+          <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="Visible on client map">
         <el-switch v-model="editForm.visible" active-text="Shown" inactive-text="Hidden" />
       </el-form-item>
@@ -125,6 +140,14 @@
 
   <el-dialog v-model="addDialogVisible" title="Add Scooter" width="500px" destroy-on-close @closed="resetAddForm">
     <el-form label-position="top" :model="addForm" class="edit-form">
+      <el-form-item label="Vehicle Type">
+        <el-select v-model="addForm.type" placeholder="Select type" class="full-width">
+          <el-option label="GEN1 (Fz3)" value="GEN1" />
+          <el-option label="GEN2 (V70)" value="GEN2" />
+          <el-option label="GEN3 (M95C)" value="GEN3" />
+          <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="Status">
         <el-select v-model="addForm.status" placeholder="Select status" class="full-width">
           <el-option label="AVAILABLE" value="AVAILABLE" />
@@ -180,6 +203,7 @@ const addDialogVisible = ref(false);
 const currentId = ref<number | null>(null);
 const editForm = reactive<{
   status?: string;
+  type?: string;
   hour_rate?: number;
   location_lat?: number;
   location_lng?: number;
@@ -188,6 +212,7 @@ const editForm = reactive<{
 
 const addForm = reactive({
   status: "AVAILABLE",
+  type: "GEN1",
   hour_rate: 3.5 as number,
   location_lat: undefined as number | undefined,
   location_lng: undefined as number | undefined,
@@ -203,6 +228,16 @@ function getStatusType(status: string) {
     case 'AVAILABLE': return 'success';
     case 'RENTED': return 'warning';
     case 'MAINTENANCE': return 'danger';
+    default: return 'info';
+  }
+}
+
+function getTypeTagColor(type: string) {
+  switch (type) {
+    case 'GEN1': return '';
+    case 'GEN2': return 'success';
+    case 'GEN3': return 'warning';
+    case 'GEN3PRO': return 'danger';
     default: return 'info';
   }
 }
@@ -238,6 +273,7 @@ function onSizeChange(size: number) {
 function openEdit(row: Scooter) {
   currentId.value = row.id;
   editForm.status = row.status;
+  editForm.type = row.type;
   editForm.hour_rate = Number(row.hourRate);
   editForm.location_lat = row.locationLat ?? undefined;
   editForm.location_lng = row.locationLng ?? undefined;
@@ -252,6 +288,7 @@ function openAdd() {
 
 function resetAddForm() {
   addForm.status = "AVAILABLE";
+  addForm.type = "GEN1";
   addForm.hour_rate = 3.5;
   addForm.location_lat = undefined;
   addForm.location_lng = undefined;
@@ -266,6 +303,7 @@ async function save() {
   try {
     await updateScooter(currentId.value, {
       status: editForm.status,
+      type: editForm.type,
       hour_rate: editForm.hour_rate,
       location_lat: editForm.location_lat,
       location_lng: editForm.location_lng,
@@ -319,6 +357,7 @@ async function submitAdd() {
     const name = addForm.location_name?.trim();
     await createScooter({
       status: addForm.status,
+      type: addForm.type,
       hour_rate: Number(addForm.hour_rate),
       location_lat: addForm.location_lat,
       location_lng: addForm.location_lng,

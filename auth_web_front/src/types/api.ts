@@ -25,6 +25,7 @@ export interface DurationRevenue {
 export interface Scooter {
   id: number;
   status: string;
+  type: 'GEN1' | 'GEN2' | 'GEN3' | 'GEN3PRO';
   locationLat: number | null;
   locationLng: number | null;
   hourRate: number;

@@ -1,0 +1,323 @@
+<template>
+	<view class="container">
+		<view class="scroll-wrap" :style="{ height: scrollWrapHeight + 'px' }">
+			<scroll-view class="scroll-area" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }">
+				<view class="hero-card">
+					<image :src="avatarUrl" mode="aspectFill" class="avatar"></image>
+					<view class="hero-copy">
+						<text class="title">Account Management</text>
+						<text class="hero-name">{{ userName }}</text>
+						<text class="hero-email">{{ userEmail }}</text>
+						<text class="hint">Manage your avatar and sign-in details in one place.</text>
+					</view>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">Profile</text>
+
+					<navigator url="/pages/portrait/portrait" open-type="navigate" class="menu-item">
+						<view class="menu-leading avatar-item-icon">
+							<text class="menu-leading-text">📷</text>
+						</view>
+						<view class="menu-copy">
+							<text class="menu-title">Change Avatar</text>
+							<text class="menu-hint">Update your profile picture.</text>
+						</view>
+						<text class="menu-arrow">›</text>
+					</navigator>
+
+					<navigator url="/pages/username/username" open-type="navigate" class="menu-item">
+						<view class="menu-leading username-item-icon">
+							<text class="menu-leading-text">👤</text>
+						</view>
+						<view class="menu-copy">
+							<text class="menu-title">Change Username</text>
+							<text class="menu-hint">Set a new display name for your account.</text>
+						</view>
+						<text class="menu-arrow">›</text>
+					</navigator>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">Security</text>
+
+					<navigator url="/pages/email/email" open-type="navigate" class="menu-item">
+						<view class="menu-leading email-item-icon">
+							<text class="menu-leading-text">✉</text>
+						</view>
+						<view class="menu-copy">
+							<text class="menu-title">Change Email</text>
+							<text class="menu-hint">Update the email address linked to your account.</text>
+						</view>
+						<text class="menu-arrow">›</text>
+					</navigator>
+
+					<navigator url="/pages/password/password" open-type="navigate" class="menu-item">
+						<view class="menu-leading password-item-icon">
+							<text class="menu-leading-text">🔑</text>
+						</view>
+						<view class="menu-copy">
+							<text class="menu-title">Change Password</text>
+							<text class="menu-hint">Keep your account secure with a new password.</text>
+						</view>
+						<text class="menu-arrow">›</text>
+					</navigator>
+				</view>
+
+				<view class="section-card">
+					<text class="section-title">Benefits</text>
+
+					<navigator url="/pages/discount-verification/discount-verification" open-type="navigate" class="menu-item">
+						<view class="menu-leading discount-item-icon">
+							<text class="menu-leading-text">🎓</text>
+						</view>
+						<view class="menu-copy">
+							<text class="menu-title">Discount Verification</text>
+							<text class="menu-hint">Upload proof to apply for student or senior discounts.</text>
+						</view>
+						<text class="menu-arrow">›</text>
+					</navigator>
+				</view>
+
+			</scroll-view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+
+const DEFAULT_AVATAR = '/static/me.png'
+const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
+const LEGACY_AVATAR_STORAGE_KEY = 'userAvatar'
+
+const avatarUrl = ref(DEFAULT_AVATAR)
+const userName = ref('Your Account')
+const userEmail = ref('No email available')
+const scrollWrapHeight = ref(600)
+const scrollViewHeight = ref(560)
+
+const setScrollHeight = () => {
+	try {
+		const sys = uni.getSystemInfoSync()
+		const h = sys.windowHeight != null ? sys.windowHeight : 600
+		scrollWrapHeight.value = h
+		scrollViewHeight.value = h - 24
+	} catch (e) {
+		scrollWrapHeight.value = 600
+		scrollViewHeight.value = 560
+	}
+}
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const getAvatarStorageKey = (): string => {
+	const userId = readStorageStringOrNull('userId')
+	if (userId != null) {
+		return AVATAR_STORAGE_KEY_PREFIX + userId
+	}
+	return LEGACY_AVATAR_STORAGE_KEY
+}
+
+const loadAvatar = () => {
+	const avatarKey = getAvatarStorageKey()
+	const savedAvatar = readStorageStringOrNull(avatarKey)
+	if (savedAvatar != null) {
+		avatarUrl.value = savedAvatar
+		return
+	}
+	const legacyAvatar = readStorageStringOrNull(LEGACY_AVATAR_STORAGE_KEY)
+	if (legacyAvatar != null) {
+		avatarUrl.value = legacyAvatar
+		uni.setStorageSync(avatarKey, legacyAvatar)
+		return
+	}
+	avatarUrl.value = DEFAULT_AVATAR
+}
+
+const loadUserInfo = () => {
+	userName.value = 'Your Account'
+	userEmail.value = 'No email available'
+
+	const userInfoRaw = uni.getStorageSync('userInfo')
+	if (userInfoRaw == null || typeof userInfoRaw != 'string' || userInfoRaw.length == 0) return
+
+	try {
+		const userInfo = JSON.parse<UTSJSONObject>(userInfoRaw)!!
+		const rawName = userInfo['name']
+		const rawEmail = userInfo['email']
+		if (rawName != null && ('' + rawName).trim().length > 0) {
+			userName.value = ('' + rawName).trim()
+		}
+		if (rawEmail != null && ('' + rawEmail).trim().length > 0) {
+			userEmail.value = ('' + rawEmail).trim()
+		}
+	} catch (e) {
+		console.error('Failed to parse userInfo in account page:', e)
+	}
+}
+
+onMounted(() => {
+	setScrollHeight()
+})
+
+onShow(() => {
+	setScrollHeight()
+	loadAvatar()
+	loadUserInfo()
+})
+</script>
+
+<style lang="scss">
+.container {
+	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
+	background-color: #eef5ff;
+}
+
+.scroll-wrap {
+	width: 100%;
+}
+
+.scroll-area {
+	width: 100%;
+	padding: 24px 16px 40px;
+	box-sizing: border-box;
+}
+
+.hero-card {
+	width: 100%;
+	padding: 20px 18px;
+	box-sizing: border-box;
+	background-color: #4b7fd6;
+	border-radius: 18px;
+	box-shadow: 0 12px 30px rgba(76, 175, 80, 0.18);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	overflow: hidden;
+}
+
+.avatar {
+	width: 72px;
+	height: 72px;
+	border-radius: 36px;
+	border: 3px solid rgba(255, 255, 255, 0.92);
+	background-color: rgba(255, 255, 255, 0.65);
+	flex-shrink: 0;
+}
+
+.hero-copy {
+	flex: 1;
+	min-width: 0;
+	margin-left: 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.section-card {
+	width: 100%;
+	margin-top: 16px;
+	background-color: rgba(255, 255, 255, 0.92);
+	border-radius: 18px;
+	padding: 22px 18px;
+	box-sizing: border-box;
+	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.title {
+	font-size: 22px;
+	font-weight: 700;
+	color: #ffffff;
+}
+
+.hero-name {
+	font-size: 16px;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.98);
+	margin-top: 6px;
+}
+
+.hero-email {
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.9);
+	margin-top: 2px;
+}
+
+.hint {
+	font-size: 13px;
+	line-height: 20px;
+	color: rgba(255, 255, 255, 0.92);
+	margin-top: 8px;
+}
+
+.section-title {
+	font-size: 13px;
+	font-weight: 700;
+	color: #6b7280;
+	letter-spacing: 0.5px;
+	margin-bottom: 8px;
+}
+
+.menu-item {
+	width: 100%;
+	padding: 16px 0;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	border-top: 1px solid #e5e7eb;
+}
+
+.section-title + .menu-item {
+	border-top-width: 0;
+}
+
+.menu-leading {
+	width: 38px;
+	height: 38px;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-right: 12px;
+	font-size: 17px;
+	line-height: 17px;
+}
+
+.menu-copy {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.menu-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: #111827;
+}
+
+.menu-hint {
+	font-size: 12px;
+	line-height: 18px;
+	color: #6b7280;
+	margin-top: 4px;
+}
+
+.menu-arrow {
+	font-size: 22px;
+	color: #9ca3af;
+	margin-left: 12px;
+}
+</style>

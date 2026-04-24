@@ -26,7 +26,7 @@ const props = defineProps<{
 
 const tabRoutes: Map<string, string> = new Map([
 	['home', '/pages/index/index'],
-	['bike', '/pages/bikelist/bikelist'],
+	['bike', '/pages/escooters/escooters'],
 	['me', '/pages/me/me']
 ])
 
