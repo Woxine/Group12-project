@@ -1,0 +1,13 @@
+{
+  "name": "group12-sys-test-sprint3",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test:sprint3": "node ./scripts/run.mjs",
+    "test:sprint3:state1": "node ./scripts/run.mjs --suite state1",
+    "test:sprint3:state2": "node ./scripts/run.mjs --suite state2"
+  }
+}
