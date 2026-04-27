@@ -21,45 +21,45 @@
       </div>
     </template>
 
-    <el-row :gutter="24" class="stats-row">
+    <el-row :gutter="24" v-loading="loading" class="stats-row admin-loading-section" :aria-busy="loading">
       <el-col :xs="24" :md="8">
-        <el-card shadow="hover" class="stat-card admin-kpi-card">
-          <div class="stat-icon admin-kpi-icon admin-kpi-icon--success"><el-icon><Money /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Total Revenue</div>
-            <div class="stat-value">£{{ (stats.totalRevenue || 0).toFixed(2) }}</div>
+        <el-card shadow="never" class="stat-card admin-kpi-card">
+          <div class="admin-kpi-icon admin-kpi-icon--success"><el-icon><Money /></el-icon></div>
+          <div class="admin-kpi-content">
+            <div class="admin-kpi-title">Total Revenue</div>
+            <div class="admin-kpi-value">£{{ (stats.totalRevenue || 0).toFixed(2) }}</div>
           </div>
         </el-card>
       </el-col>
       <el-col :xs="24" :md="8">
-        <el-card shadow="hover" class="stat-card admin-kpi-card">
-          <div class="stat-icon admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Total Orders</div>
-            <div class="stat-value">{{ stats.totalOrders || 0 }}</div>
+        <el-card shadow="never" class="stat-card admin-kpi-card">
+          <div class="admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
+          <div class="admin-kpi-content">
+            <div class="admin-kpi-title">Total Orders</div>
+            <div class="admin-kpi-value">{{ stats.totalOrders || 0 }}</div>
           </div>
         </el-card>
       </el-col>
       <el-col :xs="24" :md="8">
-        <el-card shadow="hover" class="stat-card admin-kpi-card">
-          <div class="stat-icon admin-kpi-icon admin-kpi-icon--neutral"><el-icon><DataAnalysis /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Average Order Value</div>
-            <div class="stat-value">£{{ (stats.averageOrderValue || 0).toFixed(2) }}</div>
+        <el-card shadow="never" class="stat-card admin-kpi-card">
+          <div class="admin-kpi-icon admin-kpi-icon--neutral"><el-icon><DataAnalysis /></el-icon></div>
+          <div class="admin-kpi-content">
+            <div class="admin-kpi-title">Average Order Value</div>
+            <div class="admin-kpi-value">£{{ (stats.averageOrderValue || 0).toFixed(2) }}</div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
     <div class="tables">
-      <el-card shadow="hover" class="table-card">
+      <el-card shadow="never" class="table-card admin-panel">
         <template #header>
           <div class="admin-card-title">
             <el-icon><Calendar /></el-icon> Duration Breakdown (Selected Range)
           </div>
         </template>
         <p id="duration-selected-range-desc" class="sr-only">Revenue by rental duration in the selected date range.</p>
-        <el-table :data="durationData" stripe v-loading="loading" class="admin-data-table" aria-label="Duration breakdown for selected range" aria-describedby="duration-selected-range-desc">
+        <el-table :data="durationData" stripe v-loading="loading" class="admin-data-table admin-loading-section" :aria-busy="loading" aria-label="Duration breakdown for selected range" aria-describedby="duration-selected-range-desc">
           <el-table-column prop="durationType" label="Duration Type" />
           <el-table-column prop="totalOrders" label="Orders" align="right" />
           <el-table-column label="Revenue" align="right">
@@ -70,14 +70,14 @@
         </el-table>
       </el-card>
 
-      <el-card shadow="hover" class="table-card">
+      <el-card shadow="never" class="table-card admin-panel">
         <template #header>
           <div class="admin-card-title">
             <el-icon><Calendar /></el-icon> Duration Breakdown (This Week)
           </div>
         </template>
         <p id="duration-weekly-desc" class="sr-only">Revenue by rental duration for the current week.</p>
-        <el-table :data="weeklyDurationData" stripe v-loading="loading" class="admin-data-table" aria-label="Duration breakdown this week" aria-describedby="duration-weekly-desc">
+        <el-table :data="weeklyDurationData" stripe v-loading="loading" class="admin-data-table admin-loading-section" :aria-busy="loading" aria-label="Duration breakdown this week" aria-describedby="duration-weekly-desc">
           <el-table-column prop="durationType" label="Duration Type" />
           <el-table-column prop="totalOrders" label="Orders" align="right" />
           <el-table-column label="Revenue" align="right">
@@ -88,14 +88,14 @@
         </el-table>
       </el-card>
 
-      <el-card shadow="hover" class="table-card">
+      <el-card shadow="never" class="table-card admin-panel">
         <template #header>
           <div class="admin-card-title">
             <el-icon><Calendar /></el-icon> Popular Rental Dates (This Week)
           </div>
         </template>
         <p id="popular-dates-desc" class="sr-only">Ranked list of popular rental dates this week.</p>
-        <el-table :data="popularDatesData" stripe v-loading="loading" class="admin-data-table" aria-label="Popular rental dates this week" aria-describedby="popular-dates-desc">
+        <el-table :data="popularDatesData" stripe v-loading="loading" class="admin-data-table admin-loading-section" :aria-busy="loading" aria-label="Popular rental dates this week" aria-describedby="popular-dates-desc">
           <el-table-column prop="rank" label="Rank" width="80" align="right" />
           <el-table-column prop="date" label="Date" />
           <el-table-column prop="orderCount" label="Orders" align="right" />
@@ -205,49 +205,14 @@ function formatDate(date: Date) {
   min-height: 132px;
 }
 
-.stat-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  padding: var(--ui-space-6);
-}
-
-.stat-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--ui-radius-lg);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 32px;
-  margin-right: var(--ui-space-5);
-}
-
-.stat-info {
-  flex: 1;
-}
-
-.stat-title {
-  font-size: 14px;
-  color: var(--ui-text-muted);
-  margin-bottom: var(--ui-space-2);
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: var(--ui-text-strong);
-  line-height: 1;
-}
-
 .tables {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--ui-space-6);
+  gap: var(--ui-space-5);
 }
 
 .table-card {
-  border-radius: var(--ui-radius-md);
-  border: 1px solid var(--ui-border-soft);
+  overflow: hidden;
 }
 
 .table-card :deep(.el-table) {

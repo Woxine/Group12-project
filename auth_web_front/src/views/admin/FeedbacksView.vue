@@ -54,7 +54,8 @@
       :data="rows"
       stripe
       v-loading="loading"
-      class="data-table admin-data-table"
+      class="data-table admin-data-table admin-loading-section"
+      :aria-busy="loading"
       aria-label="Feedback records"
       aria-describedby="feedback-table-help"
       :row-class-name="() => 'clickable-row'"

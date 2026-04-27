@@ -3,7 +3,7 @@
     <template #header>
       <div class="admin-page-header">
         <div>
-          <span class="admin-page-title">Discount Verification Review</span>
+          <h1 class="admin-page-title">Discount Verification Review</h1>
           <div class="admin-page-subtitle">Review student and senior submissions with approval traceability.</div>
         </div>
         <el-space class="admin-page-toolbar">
@@ -25,7 +25,8 @@
       :data="rows"
       stripe
       v-loading="loading"
-      class="admin-data-table"
+      class="admin-data-table admin-loading-section"
+      :aria-busy="loading"
       :row-class-name="() => 'clickable-row'"
       @row-click="openDetailDialog"
     >

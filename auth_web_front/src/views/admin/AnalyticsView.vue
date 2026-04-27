@@ -21,53 +21,53 @@
       </div>
     </el-card>
 
-    <div class="kpi-grid">
-      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
-        <div class="stat-icon admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
-        <div class="stat-info">
-          <div class="stat-title">Total Orders</div>
-          <div class="stat-value">{{ overview.orderStats.totalOrders }}</div>
-          <div class="stat-desc">Valid: {{ overview.orderStats.validOrders }}</div>
+    <div v-loading="loading" class="kpi-grid admin-loading-section" :aria-busy="loading">
+      <el-card shadow="never" class="kpi-card admin-kpi-card">
+        <div class="admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
+        <div class="admin-kpi-content">
+          <div class="admin-kpi-title">Total Orders</div>
+          <div class="admin-kpi-value">{{ overview.orderStats.totalOrders }}</div>
+          <div class="admin-kpi-desc">Valid: {{ overview.orderStats.validOrders }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
-        <div class="stat-icon admin-kpi-icon admin-kpi-icon--success"><el-icon><Money /></el-icon></div>
-        <div class="stat-info">
-          <div class="stat-title">Total Revenue</div>
-          <div class="stat-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
-          <div class="stat-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
+      <el-card shadow="never" class="kpi-card admin-kpi-card">
+        <div class="admin-kpi-icon admin-kpi-icon--success"><el-icon><Money /></el-icon></div>
+        <div class="admin-kpi-content">
+          <div class="admin-kpi-title">Total Revenue</div>
+          <div class="admin-kpi-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
+          <div class="admin-kpi-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
-        <div class="stat-icon admin-kpi-icon admin-kpi-icon--neutral"><el-icon><Bicycle /></el-icon></div>
-        <div class="stat-info">
-          <div class="stat-title">Scooter Usage</div>
-          <div class="stat-value">{{ usageRatePercent }}%</div>
-          <div class="stat-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
+      <el-card shadow="never" class="kpi-card admin-kpi-card">
+        <div class="admin-kpi-icon admin-kpi-icon--neutral"><el-icon><Bicycle /></el-icon></div>
+        <div class="admin-kpi-content">
+          <div class="admin-kpi-title">Scooter Usage</div>
+          <div class="admin-kpi-value">{{ usageRatePercent }}%</div>
+          <div class="admin-kpi-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
-        <div class="stat-icon admin-kpi-icon admin-kpi-icon--warning"><el-icon><Warning /></el-icon></div>
-        <div class="stat-info">
-          <div class="stat-title">Fault Reports</div>
-          <div class="stat-value">{{ overview.faultStats.totalFeedbacks }}</div>
-          <div class="stat-desc">Resolved: {{ overview.faultStats.resolvedFeedbacks }}</div>
+      <el-card shadow="never" class="kpi-card admin-kpi-card">
+        <div class="admin-kpi-icon admin-kpi-icon--warning"><el-icon><Warning /></el-icon></div>
+        <div class="admin-kpi-content">
+          <div class="admin-kpi-title">Fault Reports</div>
+          <div class="admin-kpi-value">{{ overview.faultStats.totalFeedbacks }}</div>
+          <div class="admin-kpi-desc">Resolved: {{ overview.faultStats.resolvedFeedbacks }}</div>
         </div>
       </el-card>
     </div>
 
-    <div class="analytics-grid">
-      <el-card shadow="hover" class="big-card">
+    <div v-loading="loading" class="analytics-grid admin-loading-section" :aria-busy="loading">
+      <el-card shadow="never" class="big-card admin-chart-card">
         <template #header>
           <div class="admin-card-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
         </template>
-        <p id="trend-chart-desc" class="chart-a11y-desc">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
-        <div class="chart-accessible" role="img" aria-labelledby="trend-chart-desc">
+        <p id="trend-chart-desc" class="admin-chart-description">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
+        <div class="chart-accessible admin-chart-frame" role="img" aria-labelledby="trend-chart-desc">
           <v-chart class="chart" :option="trendChartOption" autoresize aria-hidden="true" />
         </div>
       </el-card>
 
-      <el-card shadow="hover" class="medium-card hot-dates-card">
+      <el-card shadow="never" class="medium-card hot-dates-card admin-chart-card">
         <template #header>
           <div class="hot-header">
             <div class="admin-card-title"><el-icon><Calendar /></el-icon> Popular Rental Dates</div>
@@ -84,7 +84,7 @@
           </div>
         </template>
 
-        <el-skeleton :loading="hotDatesLoading" animated :rows="5">
+        <el-skeleton :loading="hotDatesLoading" animated :rows="5" class="admin-skeleton-card">
           <template #default>
             <div class="hot-summary">
               <el-statistic title="Top Date" :value="topHotDateLabel" />
@@ -104,12 +104,12 @@
         </el-skeleton>
       </el-card>
 
-      <el-card shadow="hover" class="big-card">
+      <el-card shadow="never" class="big-card admin-chart-card">
         <template #header>
           <div class="admin-card-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
         </template>
-        <p id="heatmap-desc" class="chart-a11y-desc">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
-        <div class="chart-accessible" role="img" aria-labelledby="heatmap-desc">
+        <p id="heatmap-desc" class="admin-chart-description">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
+        <div class="chart-accessible admin-chart-frame" role="img" aria-labelledby="heatmap-desc">
           <v-chart class="chart" :option="heatmapOption" autoresize aria-hidden="true" />
         </div>
         <div class="heatmap-stats">
@@ -118,39 +118,39 @@
         </div>
       </el-card>
 
-      <el-card shadow="hover" class="medium-card">
+      <el-card shadow="never" class="medium-card admin-chart-card">
         <template #header>
           <div class="admin-card-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
         </template>
-        <p id="vehicle-chart-desc" class="chart-a11y-desc">Donut chart showing available, rented, and maintenance scooter counts.</p>
-        <div class="chart-accessible" role="img" aria-labelledby="vehicle-chart-desc">
+        <p id="vehicle-chart-desc" class="admin-chart-description">Donut chart showing available, rented, and maintenance scooter counts.</p>
+        <div class="chart-accessible admin-chart-frame" role="img" aria-labelledby="vehicle-chart-desc">
           <v-chart class="chart compact-chart" :option="vehicleStatusOption" autoresize aria-hidden="true" />
         </div>
       </el-card>
 
-      <el-card shadow="hover" class="medium-card">
+      <el-card shadow="never" class="medium-card admin-chart-card">
         <template #header>
           <div class="admin-card-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
         </template>
-        <p id="fault-resolution-desc" class="chart-a11y-desc">Pie chart comparing resolved and unresolved fault reports.</p>
-        <div class="chart-accessible" role="img" aria-labelledby="fault-resolution-desc">
+        <p id="fault-resolution-desc" class="admin-chart-description">Pie chart comparing resolved and unresolved fault reports.</p>
+        <div class="chart-accessible admin-chart-frame" role="img" aria-labelledby="fault-resolution-desc">
           <v-chart class="chart compact-chart" :option="faultResolutionOption" autoresize aria-hidden="true" />
         </div>
       </el-card>
 
-      <el-card shadow="hover" class="medium-card">
+      <el-card shadow="never" class="medium-card admin-chart-card">
         <template #header>
           <div class="admin-card-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
         </template>
-        <p id="fault-priority-desc" class="chart-a11y-desc">Horizontal bar chart of fault counts by priority level.</p>
-        <div class="chart-accessible" role="img" aria-labelledby="fault-priority-desc">
+        <p id="fault-priority-desc" class="admin-chart-description">Horizontal bar chart of fault counts by priority level.</p>
+        <div class="chart-accessible admin-chart-frame" role="img" aria-labelledby="fault-priority-desc">
           <v-chart class="chart compact-chart" :option="faultPriorityOption" autoresize aria-hidden="true" />
         </div>
       </el-card>
     </div>
 
     <el-card shadow="never" class="chart-summary-card" aria-labelledby="chart-summary-heading">
-      <h2 id="chart-summary-heading">Text summary of key analytics</h2>
+      <h2 id="chart-summary-heading" class="admin-section-title">Text summary of key analytics</h2>
       <ul>
         <li>{{ chartSummary.totalOrders }}</li>
         <li>{{ chartSummary.totalRevenue }}</li>
@@ -253,6 +253,42 @@ function chartColor(key: AdminChartColorKey) {
   return uiColor(color.token, color.fallback);
 }
 
+function uiNumberToken(tokenName: string, fallback: number) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const rawValue = getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim();
+  const parsed = Number.parseFloat(rawValue);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function chartTooltip(trigger: "axis" | "item", options: Record<string, unknown> = {}) {
+  return {
+    trigger,
+    confine: true,
+    padding: uiNumberToken("--ui-space-2", 8),
+    ...options
+  };
+}
+
+function chartLegend(options: Record<string, unknown> = {}) {
+  return {
+    top: uiNumberToken("--ui-space-2", 8),
+    itemGap: uiNumberToken("--ui-space-3", 12),
+    ...options
+  };
+}
+
+function chartGrid(options: Record<string, unknown> = {}) {
+  return {
+    left: "3%",
+    right: "4%",
+    bottom: "3%",
+    containLabel: true,
+    ...options
+  };
+}
+
 const averageDailyRides = computed(() => {
   if (overview.dailyTrend.length === 0) return 0;
   const sum = overview.dailyTrend.reduce((acc, curr) => acc + curr.orderCount, 0);
@@ -292,12 +328,11 @@ const trendChartOption = computed(() => {
   const success = chartColor("success");
 
   return {
-    tooltip: { trigger: 'axis' },
-    legend: {
+    tooltip: chartTooltip("axis"),
+    legend: chartLegend({
       data: ['Orders', 'Revenue'],
-      top: 8
-    },
-    grid: { left: '3%', right: '4%', top: 56, bottom: '3%', containLabel: true },
+    }),
+    grid: chartGrid({ top: uiNumberToken("--ui-space-6", 24) + uiNumberToken("--ui-space-5", 20) }),
     xAxis: { type: 'category', data: dates },
     yAxis: [
       { type: 'value', name: 'Orders', position: 'left' },
@@ -331,8 +366,8 @@ const vehicleStatusOption = computed(() => {
   const surface = uiColor("--ui-bg-surface", "#ffffff");
 
   return {
-    tooltip: { trigger: 'item' },
-    legend: { top: '5%', left: 'center' },
+    tooltip: chartTooltip("item"),
+    legend: chartLegend({ left: 'center' }),
     series: [
       {
         name: 'Vehicle Status',
@@ -366,8 +401,8 @@ const faultResolutionOption = computed(() => {
   const shadow = uiColor("--ui-text-strong", "#0f172a");
 
   return {
-    tooltip: { trigger: 'item' },
-    legend: { top: '5%', left: 'center' },
+    tooltip: chartTooltip("item"),
+    legend: chartLegend({ left: 'center' }),
     series: [
       {
         name: 'Fault Resolution',
@@ -402,8 +437,8 @@ const faultPriorityOption = computed(() => {
   }
 
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    tooltip: chartTooltip("axis", { axisPointer: { type: 'shadow' } }),
+    grid: chartGrid(),
     xAxis: { type: 'value', minInterval: 1 },
     yAxis: { type: 'category', data: priorities },
     series: [
@@ -436,7 +471,10 @@ const heatmapOption = computed(() => {
 
   return {
     tooltip: {
+      trigger: 'item',
       position: 'top',
+      confine: true,
+      padding: uiNumberToken("--ui-space-2", 8),
       formatter: function (p: any) {
         return p.data[0] + ': ' + p.data[1] + ' orders';
       }
@@ -447,17 +485,17 @@ const heatmapOption = computed(() => {
       calculable: true,
       orient: 'horizontal',
       left: 'center',
-      bottom: '5%',
-      itemWidth: 15,
+      bottom: uiNumberToken("--ui-space-3", 12),
+      itemWidth: uiNumberToken("--ui-space-4", 16),
       inRange: {
         color: heatmapRange
       }
     },
     calendar: {
-      top: 40,
-      left: 20,
-      right: 20,
-      cellSize: ['auto', 20],
+      top: uiNumberToken("--ui-space-6", 24) + uiNumberToken("--ui-space-4", 16),
+      left: uiNumberToken("--ui-space-5", 20),
+      right: uiNumberToken("--ui-space-5", 20),
+      cellSize: ['auto', uiNumberToken("--ui-space-5", 20)],
       range: [start, end],
       itemStyle: {
         borderWidth: 1,
@@ -563,46 +601,6 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   min-height: 120px;
 }
 
-.small-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  padding: var(--ui-space-5);
-}
-
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--ui-radius-md);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 28px;
-  margin-right: var(--ui-space-4);
-}
-
-.stat-info {
-  flex: 1;
-}
-
-.stat-title {
-  font-size: 14px;
-  color: var(--ui-text-muted);
-  margin-bottom: var(--ui-space-2);
-}
-
-.stat-value {
-  font-size: 26px;
-  font-weight: bold;
-  color: var(--ui-text-strong);
-  margin-bottom: var(--ui-space-2);
-  line-height: 1;
-}
-
-.stat-desc {
-  font-size: 13px;
-  color: var(--ui-text-muted);
-}
-
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -611,14 +609,10 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 
 .big-card {
   grid-column: span 2;
-  border-radius: var(--ui-radius-md);
-  border: 1px solid var(--ui-border-soft);
 }
 
 .medium-card {
   grid-column: span 1;
-  border-radius: var(--ui-radius-md);
-  border: 1px solid var(--ui-border-soft);
 }
 
 .hot-header {
@@ -642,12 +636,6 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 
 .compact-chart {
   height: 250px;
-}
-
-.chart-a11y-desc {
-  margin: 0 0 var(--ui-space-2);
-  color: var(--ui-text-muted);
-  font-size: 14px;
 }
 
 .chart-accessible {
@@ -685,11 +673,6 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
     grid-column: span 1;
   }
 
-}
-
-.chart-summary-card h2 {
-  margin: 0 0 var(--ui-space-2);
-  font-size: 16px;
 }
 
 .chart-summary-card ul {

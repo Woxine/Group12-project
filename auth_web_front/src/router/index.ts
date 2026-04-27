@@ -1,17 +1,18 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
-import RevenueView from "@/views/admin/RevenueView.vue";
-import ScootersView from "@/views/admin/ScootersView.vue";
-import FeedbacksView from "@/views/admin/FeedbacksView.vue";
-import HighPriorityIssuesView from "@/views/admin/HighPriorityIssuesView.vue";
-import AnalyticsView from "@/views/admin/AnalyticsView.vue";
-import DiscountVerificationsView from "@/views/admin/DiscountVerificationsView.vue";
-import BillingSettingsView from "@/views/admin/BillingSettingsView.vue";
-import VehicleContentEditorView from "@/views/admin/VehicleContentEditorView.vue";
 import LoginView from "@/views/LoginView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 import { useAuthStore } from "@/stores/auth";
+
+const AnalyticsView = () => import("@/views/admin/AnalyticsView.vue");
+const RevenueView = () => import("@/views/admin/RevenueView.vue");
+const ScootersView = () => import("@/views/admin/ScootersView.vue");
+const FeedbacksView = () => import("@/views/admin/FeedbacksView.vue");
+const HighPriorityIssuesView = () => import("@/views/admin/HighPriorityIssuesView.vue");
+const DiscountVerificationsView = () => import("@/views/admin/DiscountVerificationsView.vue");
+const BillingSettingsView = () => import("@/views/admin/BillingSettingsView.vue");
+const VehicleContentEditorView = () => import("@/views/admin/VehicleContentEditorView.vue");
 
 const router = createRouter({
   history: createWebHistory(),

@@ -3,7 +3,7 @@
     <template #header>
       <div class="admin-page-header">
         <div>
-          <span class="admin-page-title">High Priority Issues</span>
+          <h1 class="admin-page-title">High Priority Issues</h1>
           <div class="admin-page-subtitle">Focus on unresolved urgent feedback and escalation progress.</div>
         </div>
         <el-space class="admin-page-toolbar">
@@ -11,12 +11,12 @@
             <el-option label="Escalated" :value="true" />
             <el-option label="Not Escalated" :value="false" />
           </el-select>
-          <el-button type="primary" :loading="loading" @click="load">Search</el-button>
+          <el-button type="primary" :loading="loading" aria-label="Search high priority issues" @click="load">Search</el-button>
         </el-space>
       </div>
     </template>
 
-    <el-table :data="rows" stripe v-loading="loading" class="admin-data-table">
+    <el-table :data="rows" stripe v-loading="loading" class="admin-data-table admin-loading-section" :aria-busy="loading">
       <el-table-column prop="feedbackId" label="Feedback ID" width="120" />
       <el-table-column prop="priority" label="Priority" width="120">
         <template #default="{ row }">

@@ -223,6 +223,20 @@ body {
   color: var(--ui-text-muted);
 }
 
+.admin-section-title {
+  margin: 0 0 var(--ui-space-2);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ui-text-strong);
+}
+
+.admin-section-subtitle {
+  margin: -4px 0 var(--ui-space-3);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+}
+
 .admin-page-toolbar {
   display: flex;
   align-items: center;
@@ -236,6 +250,20 @@ body {
   border-radius: var(--ui-radius-md);
   background: var(--ui-bg-surface);
   box-shadow: var(--ui-shadow-sm);
+}
+
+.admin-loading-section {
+  position: relative;
+  min-height: 120px;
+  border-radius: var(--ui-radius-md);
+}
+
+.admin-skeleton-card {
+  width: 100%;
+}
+
+.admin-skeleton-card :where(.el-skeleton__item) {
+  border-radius: var(--ui-radius-sm);
 }
 
 .admin-data-table {
@@ -363,13 +391,50 @@ body {
   box-shadow: var(--ui-shadow-sm);
 }
 
+.admin-kpi-card > .el-card__body {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  height: 100%;
+  padding: var(--ui-space-5);
+}
+
 .admin-kpi-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ui-radius-md);
+  font-size: 28px;
   color: var(--ui-color-primary-600);
   background: var(--ui-color-primary-50);
+}
+
+.admin-kpi-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-kpi-title {
+  margin-bottom: var(--ui-space-2);
+  color: var(--ui-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-kpi-value {
+  margin-bottom: var(--ui-space-2);
+  color: var(--ui-text-strong);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-kpi-desc {
+  color: var(--ui-text-muted);
+  font-size: 13px;
 }
 
 .admin-kpi-icon--primary {
@@ -420,6 +485,36 @@ body {
 
 .admin-clickable-card:active {
   transform: translateY(0);
+}
+
+.admin-chart-card {
+  border: 1px solid var(--ui-border-soft);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-bg-surface);
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.admin-chart-card > .el-card__header {
+  border-bottom: 1px solid var(--ui-border-soft);
+  padding: 18px 20px 14px;
+}
+
+.admin-chart-card > .el-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-3);
+  padding: 16px 20px 20px;
+}
+
+.admin-chart-description {
+  margin: 0;
+  color: var(--ui-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-chart-frame {
+  width: 100%;
 }
 
 .admin-table-empty-state {

@@ -53,10 +53,10 @@
 
     <el-divider />
     <div class="log-header">
-      <span class="log-title">Multiplier Adjustment Logs</span>
-      <el-button size="small" @click="emit('refresh-logs')">Refresh Logs</el-button>
+      <span class="log-title admin-section-title">Multiplier Adjustment Logs</span>
+      <el-button size="small" @click="emit('refresh-logs')">Refresh logs</el-button>
     </div>
-    <el-table :data="logs" stripe class="log-table admin-data-table" v-loading="logsLoading">
+    <el-table :data="logs" stripe class="log-table admin-data-table admin-loading-section" v-loading="logsLoading" :aria-busy="logsLoading">
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column label="m1" width="220">
         <template #default="{ row }">
@@ -527,8 +527,7 @@ onUnmounted(() => {
 }
 
 .log-title {
-  font-weight: 700;
-  color: var(--ui-text-strong);
+  margin-bottom: 0;
 }
 
 .log-table {

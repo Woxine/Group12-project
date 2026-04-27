@@ -3,7 +3,7 @@
     <template #header>
       <div class="admin-page-header">
         <div>
-          <span class="page-title admin-page-title">Scooter Management</span>
+          <h1 class="page-title admin-page-title">Scooter Management</h1>
           <div class="admin-page-subtitle">Manage fleet status, visibility, and bulk updates by vehicle type.</div>
         </div>
         <div class="admin-page-toolbar">
@@ -19,7 +19,7 @@
               <el-option label="RENTED" value="RENTED" />
               <el-option label="MAINTENANCE" value="MAINTENANCE" />
             </el-select>
-            <el-button type="primary" :icon="Search" :loading="loading" @click="load">Refresh</el-button>
+            <el-button type="primary" :icon="Search" :loading="loading" aria-label="Search scooters" @click="load">Search</el-button>
             <el-button type="success" :icon="Plus" @click="openAdd">Add scooter</el-button>
           </el-space>
         </div>
@@ -34,39 +34,44 @@
       title="Bulk controls apply to all scooters in the selected vehicle type."
     />
 
-    <div v-loading="loading" class="type-card-list">
+    <div v-loading="loading" class="type-card-list admin-loading-section" :aria-busy="loading">
       <el-card
         v-for="section in sections"
         :key="section.type"
-        shadow="hover"
+        shadow="never"
         class="type-card admin-panel"
       >
         <template #header>
           <div class="type-header">
             <div class="type-title-wrap">
-              <el-tag :type="getTypeTagColor(section.type)" effect="plain" round>
+              <el-tag :type="getTypeTagColor(section.type)" effect="plain" round class="type-main-tag">
                 {{ section.type }}
               </el-tag>
               <span class="type-subtitle">{{ getTypeSubtitle(section.type) }}</span>
             </div>
-            <el-space>
-              <el-tag size="small">Total {{ section.total }}</el-tag>
-              <el-tag size="small" type="success">Available {{ section.availableCount }}</el-tag>
-              <el-tag size="small" type="info">Hidden {{ section.hiddenCount }}</el-tag>
+            <div class="type-meta-actions">
+              <div class="type-metrics" role="group" :aria-label="`${section.type} scooter summary`">
+                <el-tag size="small" effect="plain" type="info" class="type-metric-tag">Total {{ section.total }}</el-tag>
+                <el-tag size="small" effect="plain" type="success" class="type-metric-tag">Available {{ section.availableCount }}</el-tag>
+                <el-tag size="small" effect="plain" type="info" class="type-metric-tag">Hidden {{ section.hiddenCount }}</el-tag>
+              </div>
               <el-button
                 text
+                class="type-toggle-button"
                 :icon="expandedTypes[section.type] ? ArrowDown : ArrowRight"
+                :aria-expanded="expandedTypes[section.type]"
+                :aria-label="`${expandedTypes[section.type] ? 'Collapse' : 'Expand'} ${section.type} scooter type`"
                 @click="toggleSection(section.type)"
               >
                 {{ expandedTypes[section.type] ? "Collapse" : "Expand" }}
               </el-button>
-            </el-space>
+            </div>
           </div>
         </template>
 
         <div v-show="expandedTypes[section.type]">
           <div class="bulk-panel admin-panel">
-            <div class="bulk-title">Unified Controller</div>
+            <div class="admin-section-title">Unified Controller</div>
             <el-row :gutter="12" class="bulk-row">
               <el-col :md="6" :sm="12" :xs="24">
                 <el-input-number
@@ -644,17 +649,35 @@ onMounted(load);
   height: 100%;
 }
 
+.type-card :deep(.el-card__header) {
+  padding: var(--ui-space-4) var(--ui-space-5);
+}
+
+.type-card :deep(.el-card__body) {
+  padding: var(--ui-space-4);
+}
+
 .type-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--ui-space-3);
+  gap: var(--ui-space-4);
 }
 
 .type-title-wrap {
   display: flex;
   align-items: center;
   gap: var(--ui-space-3);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.type-main-tag {
+  min-height: 28px;
+  padding: 0 var(--ui-space-3);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .type-subtitle {
@@ -662,23 +685,48 @@ onMounted(load);
   font-size: 13px;
 }
 
+.type-meta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
+}
+
+.type-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  flex-wrap: wrap;
+}
+
+.type-metric-tag {
+  font-weight: 500;
+}
+
+.type-toggle-button {
+  flex-shrink: 0;
+}
+
 .bulk-panel {
-  padding: var(--ui-space-3);
+  padding: var(--ui-space-4);
   margin-bottom: var(--ui-space-3);
   background: var(--ui-bg-surface-soft);
   box-shadow: none;
 }
 
-.bulk-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ui-text-muted);
-  margin-bottom: var(--ui-space-2);
+.bulk-row {
+  row-gap: var(--ui-space-3);
 }
 
 .bulk-actions {
   display: flex;
   align-items: center;
+}
+
+.bulk-actions :deep(.el-space) {
+  flex-wrap: wrap;
 }
 
 .bulk-preview {
@@ -723,14 +771,26 @@ onMounted(load);
     align-items: flex-start;
   }
 
+  .type-meta-actions,
+  .type-metrics {
+    justify-content: flex-start;
+  }
+
   .bulk-actions {
     justify-content: flex-start;
     margin-top: var(--ui-space-2);
   }
 
-  .type-title-wrap,
-  .type-header :deep(.el-space__item) {
-    min-width: 0;
+  .type-meta-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .type-card :deep(.el-card__header),
+  .type-card :deep(.el-card__body),
+  .bulk-panel {
+    padding: var(--ui-space-3);
   }
 }
 </style>
