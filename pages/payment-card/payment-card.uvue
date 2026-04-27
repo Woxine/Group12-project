@@ -74,7 +74,7 @@
 
 <script setup lang="uts">
 import { reactive, ref, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
@@ -114,6 +114,7 @@ const isStaffRole = ref(false)
 const selectedBrandIndex = ref(-1)
 const selectedBrandLabel = ref('')
 const selectedBrandLogo = ref('')
+const entryFrom = ref('')
 
 const form = reactive({
 	holderName: '',
@@ -289,6 +290,10 @@ const submitAddCard = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				showSuccess(getAppMessage('paymentCard', 'addSuccess', 'Card added'))
+				if (entryFrom.value == 'payment') {
+					uni.navigateBack({ delta: 1 })
+					return
+				}
 				form.holderName = ''
 				updateSelectedBrand(-1)
 				form.cardNumber = ''
@@ -395,6 +400,16 @@ const goGuestProfile = () => {
 
 onMounted(() => {
 	setScrollHeight()
+})
+
+onLoad((options) => {
+	const params = options as UTSJSONObject | null
+	if (params == null) {
+		entryFrom.value = ''
+		return
+	}
+	const fromParam = params['from']
+	entryFrom.value = fromParam != null ? ('' + fromParam).trim().toLowerCase() : ''
 })
 
 onShow(() => {

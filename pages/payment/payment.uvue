@@ -77,46 +77,47 @@
 							<text class="manage_cards_link" @click="goManageCards">Add Card</text>
 						</view>
 					</view>
-					
-					<view class="span1"></view>
-					
-					<!-- 选择银行 -->
-					<view class="form_group">
-						<text class="label">Bank</text>
-						<view class="picker_view" @click="showBankPicker">
-							<text class="picker_text">{{ banks[bankIndex] }}</text>
-							<text class="arrow_text">▼</text>
+					<view v-if="savedCards.length == 0">
+						<view class="span1"></view>
+						
+						<!-- 选择银行 -->
+						<view class="form_group">
+							<text class="label">Bank</text>
+							<view class="picker_view" @click="showBankPicker">
+								<text class="picker_text">{{ banks[bankIndex] }}</text>
+								<text class="arrow_text">▼</text>
+							</view>
 						</view>
-					</view>
-					
-					<view class="span1"></view>
-					
-					<!-- 卡号输入 -->
-					<view class="form_group">
-						<text class="label">Card Number</text>
-						<input 
-							v-model="paymentInfo.cardNumber" 
-							type="number" 
-							placeholder="1234 5678 9012 3456" 
-							maxlength="16"
-							confirm-type="next" 
-							class="input"
-							@input="formatCardNumber"
-						/>
-					</view>
-					
-					<view class="span1"></view>
-					
-					<!-- 密码输入 -->
-					<view class="form_group">
-						<text class="label">Password</text>
-						<input 
-							v-model="paymentInfo.cardPassword" 
-							type="password" 
-							placeholder="Enter payment password" 
-							confirm-type="done" 
-							class="input"
-						/>
+						
+						<view class="span1"></view>
+						
+						<!-- 卡号输入 -->
+						<view class="form_group">
+							<text class="label">Card Number</text>
+							<input 
+								v-model="paymentInfo.cardNumber" 
+								type="number" 
+								placeholder="1234 5678 9012 3456" 
+								maxlength="16"
+								confirm-type="next" 
+								class="input"
+								@input="formatCardNumber"
+							/>
+						</view>
+						
+						<view class="span1"></view>
+						
+						<!-- 密码输入 -->
+						<view class="form_group">
+							<text class="label">Password</text>
+							<input 
+								v-model="paymentInfo.cardPassword" 
+								type="password" 
+								placeholder="Enter payment password" 
+								confirm-type="done" 
+								class="input"
+							/>
+						</view>
 					</view>
 					
 				</view>
@@ -387,7 +388,7 @@ const selectSavedCard = (cardId: string) => {
 
 const goManageCards = () => {
 	uni.navigateTo({
-		url: '/pages/payment-card/payment-card'
+		url: '/pages/payment-card/payment-card?from=payment'
 	});
 };
 
@@ -920,7 +921,7 @@ onShow(() => {
 }
 
 .manage_cards_link {
-	font-size: 12px;
+	font-size: 14px;
 	color: #4CAF50;
 }
 
