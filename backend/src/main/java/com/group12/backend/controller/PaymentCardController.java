@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.group12.backend.dto.BinLookupRequest;
 import com.group12.backend.dto.StorePaymentCardRequest;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
@@ -72,6 +73,15 @@ public class PaymentCardController {
         return ResponseEntity.ok(Map.of("data", paymentCardService.setDefaultCard(userId, cardId)));
     }
 
+    @PostMapping("/bin-lookup")
+    public ResponseEntity<Object> lookupCardBin(@PathVariable String userId,
+                                                @Valid @RequestBody BinLookupRequest request,
+                                                HttpServletRequest httpRequest) {
+        ensureUserOwnership(userId, httpRequest);
+        String clientKey = userId + ":" + resolveClientAddress(httpRequest);
+        return ResponseEntity.ok(Map.of("data", paymentCardService.lookupCardBin(userId, request.getPrefix(), clientKey)));
+    }
+
     /**
      * ID9: 店员为未注册用户（guest）代绑定信用卡。
      */
@@ -90,5 +100,15 @@ public class PaymentCardController {
         if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
             throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
+    }
+
+    private String resolveClientAddress(HttpServletRequest httpRequest) {
+        String forwarded = httpRequest.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.trim().isEmpty()) {
+            int commaIndex = forwarded.indexOf(',');
+            return (commaIndex > 0 ? forwarded.substring(0, commaIndex) : forwarded).trim();
+        }
+        String remoteAddr = httpRequest.getRemoteAddr();
+        return remoteAddr == null ? "unknown" : remoteAddr.trim();
     }
 }

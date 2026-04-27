@@ -9,9 +9,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.PaymentCardResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
 import com.group12.backend.entity.PaymentCard;
@@ -31,6 +33,8 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     private final PaymentCardRepository paymentCardRepository;
     private final UserRepository userRepository;
+    @Autowired(required = false)
+    private PaymentCardBinLookupService paymentCardBinLookupService;
 
     public PaymentCardServiceImpl(PaymentCardRepository paymentCardRepository, UserRepository userRepository) {
         this.paymentCardRepository = paymentCardRepository;
@@ -237,6 +241,23 @@ public class PaymentCardServiceImpl implements PaymentCardService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public BinLookupResponse lookupCardBin(String userId, String prefix, String clientKey) {
+        Long parsedUserId = parseId(userId, "userId");
+        ensureUserExists(parsedUserId);
+        String normalizedPrefix = normalizeBinPrefix(prefix);
+        if (paymentCardBinLookupService == null) {
+            BinLookupResponse response = new BinLookupResponse();
+            response.setBrand("UNKNOWN");
+            response.setIssuerBank("");
+            response.setCardType("");
+            response.setCountryCode("");
+            response.setStatus("DEGRADED");
+            return response;
+        }
+        return paymentCardBinLookupService.lookup(normalizedPrefix, clientKey);
+    }
+
     private void ensureUserExists(Long userId) {
         if (userRepository.findById(userId).isEmpty()) {
             throw new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -256,6 +277,17 @@ public class PaymentCardServiceImpl implements PaymentCardService {
             return "";
         }
         return input.replaceAll("\\s+", "").trim();
+    }
+
+    private String normalizeBinPrefix(String input) {
+        if (input == null) {
+            throw new BusinessException("prefix is invalid", HttpStatus.BAD_REQUEST);
+        }
+        String normalized = input.replaceAll("\\s+", "").trim();
+        if (!normalized.matches("\\d{6,8}")) {
+            throw new BusinessException("prefix is invalid", HttpStatus.BAD_REQUEST);
+        }
+        return normalized;
     }
 
     private void validateCardNumber(String cardNumber) {

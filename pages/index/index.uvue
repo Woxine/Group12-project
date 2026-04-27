@@ -278,17 +278,6 @@
 	}
 
 	const onMapRegionChange = (e: any | null) => {
-		let eventType: string | null = null
-		if (e != null) {
-			const rawEvent = e as UTSJSONObject
-			const rawType = rawEvent['type']
-			if (rawType != null) {
-				eventType = rawType as string
-			}
-		}
-		if (eventType == 'begin') {
-			return
-		}
 		const timerToClear = regionDebounceTimer
 		if (timerToClear != null) {
 			clearTimeout(timerToClear as number)

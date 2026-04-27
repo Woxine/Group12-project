@@ -7,6 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -70,14 +72,33 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Object> handleRuntimeException(RuntimeException e) {
-        // 返回 400 Bad Request 状态码，方便前端直接通过 catch 捕获
-        // SECURITY: Ensure e.getMessage() does not contain sensitive info (SQL, paths, etc.)
-        // Developers must ensure thrown RuntimeExceptions strictly contain safe messages.
+        // Avoid exposing framework/internal Java details through raw runtime messages.
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.BUSINESS_ERROR,
-                        e.getMessage()
+                        "The request could not be processed. Please check your input and try again."
+                ));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Object> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorMessages.VALIDATION_ERROR,
+                        "Invalid request format. Please provide valid numeric values."
+                ));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Object> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        String parameterName = e.getName() == null ? "parameter" : e.getName();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorMessages.VALIDATION_ERROR,
+                        "Invalid value for '" + parameterName + "'."
                 ));
     }
 

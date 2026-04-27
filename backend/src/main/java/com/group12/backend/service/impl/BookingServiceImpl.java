@@ -38,6 +38,7 @@ import com.group12.backend.service.BookingService;
 import com.group12.backend.service.DiscountService;
 import com.group12.backend.service.EmailNotificationService;
 import com.group12.backend.service.pricing.RentalPricing;
+import com.group12.backend.util.BookingTimeSupport;
 
 /**
  * 实现预约订单创建、取消、完成和车辆状态同步的业务逻辑。
@@ -80,7 +81,7 @@ public class BookingServiceImpl implements BookingService {
     public Object createBooking(CreateBookingRequest request) {
         Long userId = Long.parseLong(request.getUser_id());
         Long scooterId = Long.parseLong(request.getScooter_id());
-        String durationRequest = request.getDuration();
+        int durationMinutes = resolveDurationMinutes(request.getDurationMinutes(), request.getDurationCode(), request.getDuration());
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.USER_NOT_FOUND, HttpStatus.NOT_FOUND));
@@ -104,9 +105,10 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException(ErrorMessages.scooterUnavailable(scooter.getStatus()));
         }
 
-        LocalDateTime startTime = LocalDateTime.now();
-        Double durationHours = resolveDurationHours(durationRequest);
-        LocalDateTime endTime = startTime.plusMinutes(Math.round(durationHours * 60));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = resolveClientStartTime(request.getStartTime(), now);
+        Double durationHours = durationMinutes / 60.0;
+        LocalDateTime endTime = startTime.plusMinutes(durationMinutes);
 
         java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
         if (overlapping != null && !overlapping.isEmpty()) {
@@ -114,10 +116,10 @@ public class BookingServiceImpl implements BookingService {
         }
 
         BigDecimal rate = scooter.getHourRate();
-        BillingRule billingRule = billingService.getCurrentRule();
-        BigDecimal originalPrice = RentalPricing.computeTotal(rate, durationHours, billingRule);
+        BillingRule billingRule = billingService == null ? null : billingService.getCurrentRule();
+        BigDecimal originalPrice = computeOriginalPrice(rate, durationHours, billingRule);
         DiscountBreakdownResponse discountBreakdown = discountService != null
-                ? discountService.calculateDiscount(userId, scooterId, durationRequest)
+                ? discountService.calculateDiscount(userId, scooterId, String.valueOf(durationMinutes) + "M")
                 : null;
         BigDecimal discountMultiplier = resolveDiscountMultiplierFromBreakdown(discountBreakdown);
         BigDecimal totalPrice = originalPrice.multiply(discountMultiplier).setScale(2, RoundingMode.HALF_UP);
@@ -163,7 +165,8 @@ public class BookingServiceImpl implements BookingService {
         Long salespersonId = parseId(request.getSalespersonId(), "salespersonId");
         Long guestUserId = parseGuestOwnerId(request.getGuestId());
         Long scooterId = parseId(request.getScooterId(), "scooterId");
-        String durationRequest = request.getDuration();
+        int durationMinutes = resolveDurationMinutes(request.getDurationMinutes(), request.getDurationCode(), request.getDuration());
+        String durationCode = resolveDurationCode(request.getDurationCode(), request.getDuration(), durationMinutes);
 
         User salesperson = resolveUserSafely(salespersonId);
         if (salesperson != null && !isStaffOrAdmin(salesperson)) {
@@ -194,9 +197,10 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException(ErrorMessages.scooterUnavailable(scooter.getStatus()));
         }
 
-        LocalDateTime startTime = LocalDateTime.now();
-        Double durationHours = resolveDurationHours(durationRequest);
-        LocalDateTime endTime = startTime.plusMinutes(Math.round(durationHours * 60));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = resolveClientStartTime(request.getStartTime(), now);
+        Double durationHours = durationMinutes / 60.0;
+        LocalDateTime endTime = startTime.plusMinutes(durationMinutes);
 
         if (bookingRepository != null) {
             java.util.List<Booking> overlapping = bookingRepository.findOverlappingBookings(scooterId, startTime, endTime);
@@ -234,7 +238,11 @@ public class BookingServiceImpl implements BookingService {
         result.put("guestName", request.getGuestName());
         result.put("guestContact", request.getGuestContact());
         result.put("scooterId", String.valueOf(scooterId));
-        result.put("duration", durationRequest);
+        result.put("duration", BookingTimeSupport.formatDurationLabel(durationMinutes));
+        result.put("durationCode", durationCode);
+        result.put("durationMinutes", durationMinutes);
+        result.put("startTime", startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+        result.put("endTime", endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
         return result;
     }
 
@@ -373,22 +381,46 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private static double resolveDurationHours(String durationRequest) {
-        if ("10M".equalsIgnoreCase(durationRequest)) {
-            return 10.0 / 60.0;
+        return resolveDurationMinutes(null, null, durationRequest) / 60.0;
+    }
+
+    private static int resolveDurationMinutes(Integer durationMinutes, String durationCode, String legacyDuration) {
+        if (durationMinutes == null
+                && (durationCode == null || durationCode.isBlank())
+                && (legacyDuration == null || legacyDuration.isBlank())) {
+            throw new BusinessException("duration is required", HttpStatus.BAD_REQUEST);
         }
-        if ("1H".equalsIgnoreCase(durationRequest)) {
-            return 1.0;
+        int resolved = BookingTimeSupport.resolveDurationMinutes(durationMinutes, durationCode, legacyDuration);
+        try {
+            BookingTimeSupport.validateDurationMinutes(resolved);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(ex.getMessage(), HttpStatus.BAD_REQUEST);
         }
-        if ("4H".equalsIgnoreCase(durationRequest)) {
-            return 4.0;
+        Integer fromCode = BookingTimeSupport.presetMinutesByCode(durationCode);
+        if (fromCode != null && fromCode.intValue() != resolved) {
+            throw new BusinessException("durationCode does not match durationMinutes", HttpStatus.BAD_REQUEST);
         }
-        if ("1D".equalsIgnoreCase(durationRequest)) {
-            return 24.0;
+        return resolved;
+    }
+
+    private static String resolveDurationCode(String durationCode, String legacyDuration, int durationMinutes) {
+        String normalized = durationCode != null && !durationCode.isBlank() ? durationCode.trim().toUpperCase()
+                : (legacyDuration != null ? legacyDuration.trim().toUpperCase() : null);
+        Integer presetByCode = BookingTimeSupport.presetMinutesByCode(normalized);
+        if (presetByCode != null) {
+            return normalized;
         }
-        if ("1W".equalsIgnoreCase(durationRequest)) {
-            return 168.0;
+        return BookingTimeSupport.presetCodeByMinutes(durationMinutes);
+    }
+
+    private static LocalDateTime resolveClientStartTime(String startTimeRaw, LocalDateTime now) {
+        try {
+            return BookingTimeSupport.parseClientStartTime(startTimeRaw, now);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(ex.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception ex) {
+            throw new BusinessException("startTime format is invalid", HttpStatus.BAD_REQUEST);
         }
-        return 1.0;
     }
 
     private static BigDecimal resolveDiscountMultiplier(BigDecimal originalPrice, BigDecimal finalPrice) {
@@ -396,6 +428,16 @@ public class BookingServiceImpl implements BookingService {
             return BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
         }
         return finalPrice.divide(originalPrice, 4, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal computeOriginalPrice(BigDecimal rate, double durationHours, BillingRule billingRule) {
+        if (rate == null || durationHours <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (billingRule == null) {
+            return rate.multiply(BigDecimal.valueOf(durationHours)).setScale(2, RoundingMode.HALF_UP);
+        }
+        return RentalPricing.computeTotal(rate, durationHours, billingRule);
     }
 
     private static BigDecimal resolveDiscountMultiplierFromBreakdown(DiscountBreakdownResponse discountBreakdown) {
@@ -430,7 +472,10 @@ public class BookingServiceImpl implements BookingService {
                 createdAtStr);
         response.setStartTime(booking.getStartTime() == null ? null : booking.getStartTime().format(fmt));
         response.setEndTime(booking.getEndTime() == null ? null : booking.getEndTime().format(fmt));
+        int durationMinutes = booking.getDurationHours() == null ? 0 : (int) Math.round(booking.getDurationHours() * 60.0);
         response.setDuration(resolveDurationLabel(booking.getDurationHours()));
+        response.setDurationMinutes(durationMinutes > 0 ? durationMinutes : null);
+        response.setDurationCode(durationMinutes > 0 ? BookingTimeSupport.presetCodeByMinutes(durationMinutes) : null);
         response.setTotalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice().doubleValue() : null);
         response.setOriginalPrice(booking.getOriginalPrice() != null ? booking.getOriginalPrice().doubleValue() : null);
         response.setDiscountAmount(booking.getDiscountAmount() != null ? booking.getDiscountAmount().doubleValue() : null);
@@ -448,22 +493,8 @@ public class BookingServiceImpl implements BookingService {
         if (durationHours == null) {
             return null;
         }
-        if (Math.abs(durationHours - (10.0 / 60.0)) < 0.0001) {
-            return "10M";
-        }
-        if (Math.abs(durationHours - 1.0) < 0.0001) {
-            return "1H";
-        }
-        if (Math.abs(durationHours - 4.0) < 0.0001) {
-            return "4H";
-        }
-        if (Math.abs(durationHours - 24.0) < 0.0001) {
-            return "1D";
-        }
-        if (Math.abs(durationHours - 168.0) < 0.0001) {
-            return "1W";
-        }
-        return durationHours + " hours";
+        int durationMinutes = (int) Math.round(durationHours * 60.0);
+        return BookingTimeSupport.formatDurationLabel(durationMinutes);
     }
 
     private void validatePaymentCardSelection(Long userId, String paymentCardId) {

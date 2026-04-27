@@ -29,14 +29,14 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.service.AdminService;
+import com.group12.backend.util.BookingTimeSupport;
 
 /**
  * 实现后台收入统计与按租期经营分析相关的业务逻辑。
  */
 @Service
 public class AdminServiceImpl implements AdminService {
-    private static final double TEN_MINUTES_IN_HOURS = 10.0 / 60.0;
-    private static final List<String> DURATION_ORDER = List.of("10M", "1H", "4H", "1D", "1W");
+    private static final List<String> DURATION_ORDER = List.of("10M", "1H", "4H", "1D", "1W", "CUSTOM", "Unknown");
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -278,23 +278,8 @@ public class AdminServiceImpl implements AdminService {
      */
     private static String toDurationType(Double hours) {
         if (hours == null || hours <= 0) return "Unknown";
-        final double eps = 0.01;
-        if (Math.abs(hours - TEN_MINUTES_IN_HOURS) < eps) return "10M";
-        if (Math.abs(hours - 1.0) < eps) return "1H";
-        if (Math.abs(hours - 4.0) < eps) return "4H";
-        if (Math.abs(hours - 24.0) < eps) return "1D";
-        if (Math.abs(hours - 168.0) < eps) return "1W";
-
-        long totalMinutes = Math.round(hours * 60.0);
-        if (totalMinutes < 60) {
-            return totalMinutes + "M";
-        }
-
-        if (totalMinutes % 60 == 0) {
-            return (totalMinutes / 60) + "H";
-        }
-
-        return String.format("%.2fH", hours);
+        int totalMinutes = (int) Math.round(hours * 60.0);
+        return BookingTimeSupport.toAnalyticsBucket(totalMinutes);
     }
 
     private static int durationOrderIndex(String durationType) {

@@ -197,8 +197,8 @@ function formatDate(date: Date) {
 }
 
 .stats-row {
-  margin-top: 8px;
-  margin-bottom: 24px;
+  margin-top: var(--ui-space-2);
+  margin-bottom: var(--ui-space-6);
 }
 
 .stat-card {
@@ -208,18 +208,18 @@ function formatDate(date: Date) {
 .stat-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  padding: 24px;
+  padding: var(--ui-space-6);
 }
 
 .stat-icon {
   width: 64px;
   height: 64px;
-  border-radius: 16px;
+  border-radius: var(--ui-radius-lg);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 32px;
-  margin-right: 20px;
+  margin-right: var(--ui-space-5);
 }
 
 .stat-info {
@@ -229,7 +229,7 @@ function formatDate(date: Date) {
 .stat-title {
   font-size: 14px;
   color: var(--ui-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--ui-space-2);
 }
 
 .stat-value {

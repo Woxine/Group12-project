@@ -13,7 +13,14 @@
         />
       </el-form-item>
     </el-form>
-    <el-alert v-if="!isRateValid" title="Enter a discount rate between 0.0001 and 1." type="warning" :closable="false" show-icon />
+    <el-alert
+      v-if="!isRateValid"
+      title="Enter a discount rate between 0.0001 and 1."
+      type="warning"
+      :closable="false"
+      show-icon
+      class="admin-hint"
+    />
     <template #footer>
       <el-button @click="emit('update:visible', false)">Cancel</el-button>
       <el-button type="primary" :loading="saving" :disabled="!isRateValid" @click="emit('save', localRate)">
@@ -80,7 +87,7 @@ const isRateValid = computed(() => localRate.value >= 0.0001 && localRate.value 
 }
 
 .form {
-  margin-top: 16px;
+  margin-top: var(--ui-space-4);
 }
 
 .full-width {
@@ -88,11 +95,10 @@ const isRateValid = computed(() => localRate.value >= 0.0001 && localRate.value 
 }
 
 :deep(.el-alert) {
-  margin-top: 4px;
-  border-radius: 10px;
+  margin-top: var(--ui-space-2);
 }
 
 :deep(.el-dialog__body) {
-  padding-bottom: 14px;
+  padding-bottom: var(--ui-space-4);
 }
 </style>

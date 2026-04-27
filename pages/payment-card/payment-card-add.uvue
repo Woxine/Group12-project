@@ -1,0 +1,414 @@
+<template>
+	<view class="container">
+		<view class="scroll-wrap" :style="{ height: scrollWrapHeight + 'px' }">
+			<scroll-view class="scroll-area" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }">
+				<view class="form_card">
+					<text class="section_title">Add New Card</text>
+					<input v-model="form.holderName" class="input" placeholder="Card holder name" />
+					<view class="brand_field">
+						<text class="field_label">Brand</text>
+						<view class="brand_picker" @click="openBrandPicker">
+							<view class="brand_picker_inner">
+								<view class="brand_preview">
+									<view v-if="selectedBrandLogo != ''" class="brand_logo_box">
+										<image :src="selectedBrandLogo" mode="aspectFit" class="brand_logo"></image>
+									</view>
+									<view v-else-if="selectedBrandLabel != ''" class="brand_fallback">
+										<text class="brand_fallback_text">{{ selectedBrandLabel }}</text>
+									</view>
+									<text class="picker_text" :class="{ picker_placeholder_text: selectedBrandLabel == '' }">
+										{{ selectedBrandLabel != '' ? selectedBrandLabel : 'Select card brand' }}
+									</text>
+								</view>
+								<text class="picker_arrow">▼</text>
+							</view>
+						</view>
+					</view>
+					<input v-model="form.cardNumber" class="input" type="number" maxlength="19" placeholder="Card number" @input="onCardNumberInput" />
+					<view v-if="binLookupHint != ''" class="lookup_hint_wrap">
+						<text class="lookup_hint">{{ binLookupHint }}</text>
+					</view>
+					<view v-if="issuerBankDisplay != '' || cardTypeDisplay != ''" class="lookup_result_wrap">
+						<text v-if="issuerBankDisplay != ''" class="lookup_result">Issuer: {{ issuerBankDisplay }}</text>
+						<text v-if="cardTypeDisplay != ''" class="lookup_result">Type: {{ cardTypeDisplay }}</text>
+					</view>
+					<view class="row">
+						<view class="half">
+							<text class="field_label">Expiry Month</text>
+							<input v-model="form.expiryMonth" class="input date_input" type="number" maxlength="2" placeholder="MM" />
+						</view>
+						<view class="half">
+							<text class="field_label">Expiry Year</text>
+							<input v-model="form.expiryYear" class="input date_input" type="number" maxlength="4" placeholder="YYYY" />
+						</view>
+					</view>
+					<button class="primary_btn" :disabled="isSubmitting" @click="submitAddCard">
+						{{ isSubmitting ? 'Adding...' : 'Add Card' }}
+					</button>
+				</view>
+			</scroll-view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { reactive, ref, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { BASE_URL } from '../../common/api.uts'
+import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
+import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
+
+type CardBrandOption = {
+	value: string
+	label: string
+	logo: string
+}
+
+const cardBrandOptions: CardBrandOption[] = [
+	{ value: 'VISA', label: 'VISA', logo: '/static/visa-official.svg' },
+	{ value: 'MASTERCARD', label: 'Mastercard', logo: '/static/mastercard-official.png' },
+	{ value: 'UNIONPAY', label: 'UnionPay', logo: '/static/unionpay.png' },
+	{ value: 'AMEX', label: 'AMEX', logo: '/static/amex-official.png' },
+	{ value: 'JCB', label: 'JCB', logo: '/static/jcb-official.gif' }
+]
+const cardBrandLabels = ['VISA', 'Mastercard', 'UnionPay', 'AMEX', 'JCB']
+const cardBrandValues = ['VISA', 'MASTERCARD', 'UNIONPAY', 'AMEX', 'JCB']
+const isSubmitting = ref(false)
+const scrollWrapHeight = ref(600)
+const scrollViewHeight = ref(560)
+const selectedBrandIndex = ref(-1)
+const selectedBrandLabel = ref('')
+const selectedBrandLogo = ref('')
+const entryFrom = ref('')
+const issuerBankDisplay = ref('')
+const cardTypeDisplay = ref('')
+const binLookupHint = ref('')
+const isBrandManuallySelected = ref(false)
+let lookupDebounceTimer: number | null = null
+let latestLookupPrefix = ''
+
+const form = reactive({
+	holderName: '',
+	brand: '',
+	cardNumber: '',
+	expiryMonth: '',
+	expiryYear: ''
+})
+
+const readStorageStringOrNull = (key: string): string | null => {
+	const raw = uni.getStorageSync(key)
+	if (raw == null) return null
+	const value = ('' + raw).trim()
+	return value.length < 1 ? null : value
+}
+
+const getAuth = (): UTSJSONObject | null => {
+	const userId = readStorageStringOrNull('userId')
+	const token = readStorageStringOrNull('token')
+	if (userId == null || token == null) {
+		showInfo(getAppMessage('auth', 'loginRequired', 'Please login first'))
+		return null
+	}
+	const auth = {} as UTSJSONObject
+	auth['userId'] = userId
+	auth['token'] = token
+	return auth
+}
+
+const normalizeCardNumber = (value: string): string => {
+	return value.replace(/\s/g, '').trim()
+}
+
+const updateSelectedBrand = (index: number) => {
+	if (index < 0 || index >= cardBrandOptions.length) {
+		selectedBrandIndex.value = -1
+		selectedBrandLabel.value = ''
+		selectedBrandLogo.value = ''
+		form.brand = ''
+		return
+	}
+	const option = cardBrandOptions[index]
+	selectedBrandIndex.value = index
+	selectedBrandLabel.value = option.label
+	selectedBrandLogo.value = option.logo
+	form.brand = option.value
+}
+
+const inferBrandFromPrefix = (cardNumber: string): string => {
+	if (/^4/.test(cardNumber)) return 'VISA'
+	if (/^(5[1-5]|2(2[2-9]|[3-6]|7[01]|720))/.test(cardNumber)) return 'MASTERCARD'
+	if (/^3[47]/.test(cardNumber)) return 'AMEX'
+	if (/^62/.test(cardNumber)) return 'UNIONPAY'
+	if (/^35(2[89]|[3-8])/.test(cardNumber)) return 'JCB'
+	return ''
+}
+
+const updateBrandByValue = (brandValue: string, fromManual: boolean) => {
+	const normalized = ('' + brandValue).trim().toUpperCase()
+	if (normalized == '') {
+		if (!fromManual && isBrandManuallySelected.value) return
+		updateSelectedBrand(-1)
+		return
+	}
+	const targetIndex = cardBrandValues.indexOf(normalized)
+	if (targetIndex < 0) {
+		if (fromManual) {
+			updateSelectedBrand(-1)
+		}
+		return
+	}
+	if (!fromManual && isBrandManuallySelected.value && form.brand != '') return
+	updateSelectedBrand(targetIndex)
+}
+
+const parseLookupData = (rawData: any | null): UTSJSONObject | null => {
+	if (rawData == null) return null
+	return rawData as UTSJSONObject
+}
+
+const applyLookupResult = (lookupData: UTSJSONObject | null) => {
+	if (lookupData == null) {
+		binLookupHint.value = 'Card details not available, please choose brand manually.'
+		return
+	}
+	const statusRaw = lookupData['status']
+	const status = statusRaw != null ? ('' + statusRaw).toUpperCase() : 'UNKNOWN'
+	const brandRaw = lookupData['brand']
+	const issuerRaw = lookupData['issuerBank']
+	const typeRaw = lookupData['cardType']
+	const normalizedBrand = brandRaw != null ? ('' + brandRaw).trim().toUpperCase() : ''
+	const issuer = issuerRaw != null ? ('' + issuerRaw).trim() : ''
+	const cardType = typeRaw != null ? ('' + typeRaw).trim().toUpperCase() : ''
+	if (issuer != '' && issuer != 'UNKNOWN') {
+		issuerBankDisplay.value = issuer
+	}
+	if (cardType != '' && cardType != 'UNKNOWN') {
+		cardTypeDisplay.value = cardType
+	}
+	if (normalizedBrand != '' && normalizedBrand != 'UNKNOWN') {
+		updateBrandByValue(normalizedBrand, false)
+	}
+	if (status == 'DEGRADED') {
+		binLookupHint.value = 'Bank lookup is temporarily unavailable, brand selection is still supported.'
+		return
+	}
+	if (status == 'UNKNOWN') {
+		binLookupHint.value = 'No BIN match yet, continue typing or choose brand manually.'
+		return
+	}
+	binLookupHint.value = ''
+}
+
+const requestBinLookup = (prefix: string) => {
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards/bin-lookup',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		data: {
+			prefix: prefix
+		},
+		success: (res) => {
+			if (prefix != latestLookupPrefix) return
+			if (res.statusCode == 429) {
+				binLookupHint.value = 'Lookup limit reached, please continue with manual brand selection.'
+				return
+			}
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const responseData = res.data as UTSJSONObject | null
+				const dataField = responseData != null ? responseData['data'] : null
+				applyLookupResult(parseLookupData(dataField))
+				return
+			}
+			binLookupHint.value = 'Card lookup failed, please choose brand manually.'
+		},
+		fail: () => {
+			if (prefix != latestLookupPrefix) return
+			binLookupHint.value = 'Network is unstable, please choose brand manually.'
+		}
+	})
+}
+
+const scheduleBinLookup = (cardNumber: string) => {
+	const cleaned = normalizeCardNumber(cardNumber)
+	const inferredBrand = inferBrandFromPrefix(cleaned)
+	if (inferredBrand != '') {
+		updateBrandByValue(inferredBrand, false)
+	}
+	if (cleaned.length < 6) {
+		latestLookupPrefix = ''
+		issuerBankDisplay.value = ''
+		cardTypeDisplay.value = ''
+		if (cleaned.length == 0) {
+			binLookupHint.value = ''
+			isBrandManuallySelected.value = false
+			updateSelectedBrand(-1)
+		} else {
+			binLookupHint.value = 'Type at least 6 digits for bank/type lookup.'
+		}
+		if (lookupDebounceTimer != null) {
+			clearTimeout(lookupDebounceTimer as number)
+			lookupDebounceTimer = null
+		}
+		return
+	}
+	const prefixLength = cleaned.length >= 8 ? 8 : cleaned.length
+	const prefix = cleaned.substring(0, prefixLength)
+	if (prefix == latestLookupPrefix) return
+	latestLookupPrefix = prefix
+	issuerBankDisplay.value = ''
+	cardTypeDisplay.value = ''
+	binLookupHint.value = 'Checking card issuer details...'
+	if (lookupDebounceTimer != null) {
+		clearTimeout(lookupDebounceTimer as number)
+		lookupDebounceTimer = null
+	}
+	lookupDebounceTimer = setTimeout(() => {
+		requestBinLookup(prefix)
+	}, 280)
+}
+
+const onCardNumberInput = () => {
+	scheduleBinLookup('' + form.cardNumber)
+}
+
+const openBrandPicker = () => {
+	uni.showActionSheet({
+		itemList: cardBrandLabels,
+		success: (res) => {
+			isBrandManuallySelected.value = true
+			updateSelectedBrand(res.tapIndex)
+		}
+	})
+}
+
+const validateForm = (): boolean => {
+	const holderName = ('' + form.holderName).trim()
+	const brand = ('' + form.brand).trim()
+	const cardNumber = normalizeCardNumber('' + form.cardNumber)
+	const month = parseInt('' + form.expiryMonth)
+	const year = parseInt('' + form.expiryYear)
+	if (holderName.length < 2) {
+		showInfo(getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'))
+		return false
+	}
+	if (cardBrandValues.indexOf(brand) < 0) {
+		showInfo(getAppMessage('paymentCard', 'brandInvalid', 'Invalid brand'))
+		return false
+	}
+	if (!/^\d{13,19}$/.test(cardNumber)) {
+		showInfo(getAppMessage('paymentCard', 'cardNumberInvalid', 'Invalid card number'))
+		return false
+	}
+	if (isNaN(month) || month < 1 || month > 12) {
+		showInfo(getAppMessage('paymentCard', 'expiryMonthInvalid', 'Invalid expiry month'))
+		return false
+	}
+	if (isNaN(year) || year < 2024) {
+		showInfo(getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'))
+		return false
+	}
+	return true
+}
+
+const submitAddCard = () => {
+	if (isSubmitting.value) return
+	if (!validateForm()) return
+	const auth = getAuth()
+	if (auth == null) return
+	const userId = '' + auth['userId']
+	const token = '' + auth['token']
+	isSubmitting.value = true
+	uni.request({
+		url: BASE_URL + '/api/v1/users/' + userId + '/payment-cards',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		data: {
+			holderName: ('' + form.holderName).trim(),
+			brand: ('' + form.brand).trim(),
+			cardNumber: normalizeCardNumber('' + form.cardNumber),
+			expiryMonth: parseInt('' + form.expiryMonth),
+			expiryYear: parseInt('' + form.expiryYear)
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				showSuccess(getAppMessage('paymentCard', 'addSuccess', 'Card added'))
+				uni.navigateBack({ delta: entryFrom.value == 'payment' ? 2 : 1 })
+				return
+			}
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Failed to add card')))
+		},
+		fail: () => {
+			showError(getAppMessage('network', 'requestFailed', 'Network error'))
+		},
+		complete: () => {
+			isSubmitting.value = false
+		}
+	})
+}
+
+const setScrollHeight = () => {
+	try {
+		const sys = uni.getSystemInfoSync()
+		const h = sys.windowHeight != null ? sys.windowHeight : 600
+		scrollWrapHeight.value = h
+		scrollViewHeight.value = h - 24
+	} catch (e) {
+		scrollWrapHeight.value = 600
+		scrollViewHeight.value = 560
+	}
+}
+
+onMounted(() => {
+	setScrollHeight()
+})
+
+onLoad((options) => {
+	setScrollHeight()
+	const params = options as UTSJSONObject | null
+	if (params == null) {
+		entryFrom.value = ''
+		return
+	}
+	const fromParam = params['from']
+	entryFrom.value = fromParam != null ? ('' + fromParam).trim().toLowerCase() : ''
+})
+</script>
+
+<style lang="scss">
+.container { width: 100%; height: 100%; background: #f5f5f5; box-sizing: border-box; display: flex; flex-direction: column; }
+.scroll-wrap { width: 100%; }
+.scroll-area { width: 100%; padding: 16px; padding-bottom: 24px; box-sizing: border-box; }
+.form_card { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 12px; }
+.section_title { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 8px; display: block; }
+.input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 8px; background: #fafafa; }
+.field_label { font-size: 12px; color: #666; margin-bottom: 6px; display: block; }
+.brand_field { margin-bottom: 8px; }
+.brand_picker { width: 100%; }
+.brand_picker_inner { width: 100%; min-height: 46px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; padding: 10px 12px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; }
+.brand_preview { display: flex; align-items: center; min-width: 0; flex: 1; }
+.brand_logo_box { width: 42px; height: 28px; border-radius: 6px; background: #fff; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
+.brand_logo { width: 34px; height: 20px; }
+.brand_fallback { padding: 4px 8px; border-radius: 6px; background: #eef3ff; margin-right: 10px; flex-shrink: 0; }
+.brand_fallback_text { font-size: 11px; font-weight: 600; color: #3355aa; }
+.picker_text { color: #333; font-size: 14px; flex: 1; }
+.picker_placeholder_text { color: #999; }
+.picker_arrow { color: #999; font-size: 12px; margin-left: 8px; }
+.lookup_hint_wrap { margin-top: -2px; margin-bottom: 8px; }
+.lookup_hint { color: #7a7a7a; font-size: 12px; }
+.lookup_result_wrap { margin-top: -4px; margin-bottom: 8px; background: #f3f8ff; border: 1px solid #d8e7ff; border-radius: 8px; padding: 8px 10px; }
+.lookup_result { color: #365d95; font-size: 12px; display: block; line-height: 1.4; }
+.row { display: flex; gap: 8px; }
+.half { flex: 1; }
+.date_input { margin-bottom: 0; }
+.primary_btn { margin-top: 6px; background: #4CAF50; color: #fff; border: none; height: 40px; font-size: 16px; }
+</style>

@@ -1,9 +1,9 @@
 <template>
   <el-card shadow="never" class="verify-container admin-page-card">
     <template #header>
-      <div class="header admin-page-header">
+      <div class="admin-page-header">
         <div>
-          <span class="page-title admin-page-title">Discount Verification Review</span>
+          <span class="admin-page-title">Discount Verification Review</span>
           <div class="admin-page-subtitle">Review student and senior submissions with approval traceability.</div>
         </div>
         <el-space class="admin-page-toolbar">
@@ -79,6 +79,12 @@
           <span v-if="row.status !== 'PENDING'" class="admin-status-text admin-status-text--muted">Reviewed</span>
         </template>
       </el-table-column>
+      <template #empty>
+        <div class="admin-table-empty-state">
+          <p class="admin-table-empty-title">No submissions found</p>
+          <p class="admin-table-empty-text">Try another type or status filter to review more verification records.</p>
+        </div>
+      </template>
     </el-table>
 
     <div class="admin-pagination-footer">

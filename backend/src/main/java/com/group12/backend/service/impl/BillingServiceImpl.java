@@ -56,6 +56,11 @@ public class BillingServiceImpl implements BillingService {
             BigDecimal frequentDiscountRate,
             Long operatorUserId) {
         BillingSettings settings = loadOrCreateSettings();
+        boolean hasM1Update = longRentHourRateMultiplier != null;
+        boolean hasM2Update = extraLongRentHourRateMultiplier != null;
+        boolean hasStudentUpdate = studentDiscountRate != null;
+        boolean hasSeniorUpdate = seniorDiscountRate != null;
+        boolean hasFrequentUpdate = frequentDiscountRate != null;
 
         BigDecimal newM1 = longRentHourRateMultiplier == null ? settings.getLongRentMultiplier() : longRentHourRateMultiplier;
         BigDecimal newM2 = extraLongRentHourRateMultiplier == null
@@ -65,14 +70,26 @@ public class BillingServiceImpl implements BillingService {
         BigDecimal newSeniorRate = seniorDiscountRate == null ? settings.getSeniorDiscountRate() : seniorDiscountRate;
         BigDecimal newFrequentRate = frequentDiscountRate == null ? settings.getFrequentDiscountRate() : frequentDiscountRate;
 
-        validateMultiplier(newM1, "longRentHourRateMultiplier");
-        validateMultiplier(newM2, "extraLongRentHourRateMultiplier");
-        validateMultiplier(newStudentRate, "studentDiscountRate");
-        validateMultiplier(newSeniorRate, "seniorDiscountRate");
-        validateMultiplier(newFrequentRate, "frequentDiscountRate");
+        if (hasM1Update) {
+            validateMultiplier(newM1, "Long-rent multiplier (24h-72h)");
+        }
+        if (hasM2Update) {
+            validateMultiplier(newM2, "Long-rent multiplier (>72h)");
+        }
+        if (hasStudentUpdate) {
+            validateMultiplier(newStudentRate, "Student discount rate");
+        }
+        if (hasSeniorUpdate) {
+            validateMultiplier(newSeniorRate, "Senior discount rate");
+        }
+        if (hasFrequentUpdate) {
+            validateMultiplier(newFrequentRate, "Frequent user discount rate");
+        }
 
-        if (newM2.compareTo(newM1) > 0) {
-            throw new BusinessException("extraLongRentHourRateMultiplier must be <= longRentHourRateMultiplier", HttpStatus.BAD_REQUEST);
+        if ((hasM1Update || hasM2Update) && newM2.compareTo(newM1) > 0) {
+            throw new BusinessException(
+                    "The >72h long-rent multiplier cannot be higher than the 24h-72h multiplier.",
+                    HttpStatus.BAD_REQUEST);
         }
 
         BigDecimal oldM1 = settings.getLongRentMultiplier();
@@ -113,16 +130,20 @@ public class BillingServiceImpl implements BillingService {
         BigDecimal t1 = defaultValue(billingProperties.getLongRentThresholdHours(), new BigDecimal("24"));
         BigDecimal t2 = defaultValue(billingProperties.getExtraLongRentThresholdHours(), new BigDecimal("72"));
         if (t2.compareTo(t1) <= 0) {
-            throw new BusinessException("billing thresholds must satisfy extraLongRentThresholdHours > longRentThresholdHours", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(
+                    "The >72h threshold must be greater than the 24h threshold.",
+                    HttpStatus.BAD_REQUEST);
         }
         BigDecimal m1 = defaultValue(billingProperties.getLongRentHourRateMultiplier(), new BigDecimal("0.85"));
         BigDecimal m2 = defaultValue(billingProperties.getExtraLongRentHourRateMultiplier(), new BigDecimal("0.75"));
         BigDecimal commonDiscountRate = defaultValue(discountProperties.getRate(), new BigDecimal("0.8"));
-        validateMultiplier(m1, "longRentHourRateMultiplier");
-        validateMultiplier(m2, "extraLongRentHourRateMultiplier");
-        validateMultiplier(commonDiscountRate, "discountRate");
+        validateMultiplier(m1, "Long-rent multiplier (24h-72h)");
+        validateMultiplier(m2, "Long-rent multiplier (>72h)");
+        validateMultiplier(commonDiscountRate, "Default discount rate");
         if (m2.compareTo(m1) > 0) {
-            throw new BusinessException("extraLongRentHourRateMultiplier must be <= longRentHourRateMultiplier", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(
+                    "The >72h long-rent multiplier cannot be higher than the 24h-72h multiplier.",
+                    HttpStatus.BAD_REQUEST);
         }
 
         BillingSettings defaults = new BillingSettings();
@@ -140,10 +161,10 @@ public class BillingServiceImpl implements BillingService {
 
     private static void validateMultiplier(BigDecimal value, String fieldName) {
         if (value == null) {
-            throw new BusinessException(fieldName + " is required", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(fieldName + " is required.", HttpStatus.BAD_REQUEST);
         }
         if (value.compareTo(MIN_POSITIVE) < 0 || value.compareTo(MAX_MULTIPLIER) > 0) {
-            throw new BusinessException(fieldName + " must be in range [0.0001, 1.0]", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(fieldName + " must be between 0.0001 and 1.", HttpStatus.BAD_REQUEST);
         }
     }
 

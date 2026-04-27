@@ -31,13 +31,11 @@ class ExtendBookingRequestValidationTest {
     }
 
     @Test
-    @DisplayName("duration 为空时校验失败")
-    void invalid_when_durationBlank() {
+    @DisplayName("duration 为空时允许由服务层校验 durationMinutes")
+    void valid_when_durationBlankForMinuteBasedFlow() {
         ExtendBookingRequest req = new ExtendBookingRequest();
         Set<ConstraintViolation<ExtendBookingRequest>> violations = validator.validate(req);
-        assertThat(violations).isNotEmpty();
-        assertThat(violations.stream().map(v -> v.getPropertyPath().toString()).collect(Collectors.toSet()))
-                .contains("duration");
+        assertThat(violations).isEmpty();
     }
 
     @Test

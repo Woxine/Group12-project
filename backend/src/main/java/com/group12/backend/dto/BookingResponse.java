@@ -12,6 +12,8 @@ public class BookingResponse {
     private String startTime;
     private String endTime;
     private String duration;
+    private Integer durationMinutes;
+    private String durationCode;
     private Double totalPrice;
     private Double originalPrice;
     private Double discountAmount;
@@ -50,6 +52,10 @@ public class BookingResponse {
     public void setEndTime(String endTime) { this.endTime = endTime; }
     public String getDuration() { return duration; }
     public void setDuration(String duration) { this.duration = duration; }
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
+    public String getDurationCode() { return durationCode; }
+    public void setDurationCode(String durationCode) { this.durationCode = durationCode; }
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
     public Double getOriginalPrice() { return originalPrice; }

@@ -31,14 +31,14 @@
               @change="onInputChange('m2')"
             />
           </el-form-item>
-          <el-alert v-if="inlineValidationMessage" :title="inlineValidationMessage" type="warning" show-icon :closable="false" class="status-alert" />
+          <el-alert v-if="inlineValidationMessage" :title="inlineValidationMessage" type="warning" show-icon :closable="false" class="status-alert admin-hint" />
           <el-alert
             v-else
             title="You can review and save after confirming both multipliers."
             type="success"
             show-icon
             :closable="false"
-            class="status-alert"
+            class="status-alert admin-hint"
           />
           <el-text v-if="state.updatedAt" class="updated-at">
             Last updated: {{ state.updatedAt }}
@@ -88,7 +88,7 @@
       type="info"
       show-icon
       :closable="false"
-      class="preview-alert"
+      class="preview-alert admin-hint"
     />
     <el-descriptions :column="2" border>
       <el-descriptions-item label="m1 current">
@@ -489,7 +489,7 @@ onUnmounted(() => {
 
 <style scoped>
 .form-panel {
-  padding: 14px;
+  padding: var(--ui-space-4);
 }
 
 .full-width {
@@ -505,21 +505,25 @@ onUnmounted(() => {
 }
 
 .updated-at {
-  margin-top: 12px;
+  margin-top: var(--ui-space-3);
   display: inline-block;
   color: var(--ui-text-muted);
 }
 
 .status-alert {
-  margin-top: 4px;
-  border-radius: 10px;
+  margin-top: var(--ui-space-2);
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: var(--ui-space-3);
+  margin-bottom: var(--ui-space-3);
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-border-soft);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-bg-surface-soft);
 }
 
 .log-title {
@@ -528,16 +532,15 @@ onUnmounted(() => {
 }
 
 .log-table {
-  margin-top: 8px;
+  margin-top: var(--ui-space-2);
 }
 
 .preview-alert {
-  margin-bottom: 12px;
-  border-radius: 10px;
+  margin-bottom: var(--ui-space-3);
 }
 
 .preview-table {
-  margin-top: 14px;
+  margin-top: var(--ui-space-4);
 }
 
 .delta-up {
@@ -551,6 +554,6 @@ onUnmounted(() => {
 }
 
 :deep(.el-divider--horizontal) {
-  margin: 20px 0 16px;
+  margin: var(--ui-space-5) 0 var(--ui-space-4);
 }
 </style>

@@ -451,6 +451,17 @@ body {
     justify-content: flex-start;
   }
 
+  .admin-page-toolbar.el-space,
+  .admin-page-toolbar .el-space {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .admin-page-toolbar .el-space__item {
+    max-width: 100%;
+  }
+
   .admin-filter-select {
     width: 100%;
   }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,7 @@ class GuestBookingServiceTest {
         request.setGuestName("Guest A");
         request.setGuestContact("guest@example.com");
         request.setScooterId("1");
-        request.setDuration("1H");
+        request.setDurationMinutes(95);
 
         User salesperson = new User();
         salesperson.setId(10L);
@@ -83,5 +84,9 @@ class GuestBookingServiceTest {
 
         Object response = bookingService.createGuestBooking(request);
         assertThat(response).isNotNull();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseMap = (Map<String, Object>) response;
+        assertThat(responseMap).containsEntry("durationMinutes", 95);
+        assertThat(responseMap).containsEntry("duration", "1H 35M");
     }
 }

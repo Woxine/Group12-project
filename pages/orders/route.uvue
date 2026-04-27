@@ -13,10 +13,7 @@
 		</view>
 		<view v-else-if="!hasRoute" class="no-route-section">
 			<view class="no-route-icon-wrap">
-				<svg class="no-route-icon" viewBox="0 0 64 64">
-					<line x1="18" y1="18" x2="46" y2="46" stroke="#ef4444" stroke-width="6" stroke-linecap="round"></line>
-					<line x1="46" y1="18" x2="18" y2="46" stroke="#ef4444" stroke-width="6" stroke-linecap="round"></line>
-				</svg>
+				<text class="no-route-icon-text">✕</text>
 			</view>
 			<text class="no-route-text">No route information available.</text>
 			<text class="no-route-hint">GPS data for this ride is missing or incomplete.</text>
@@ -369,9 +366,11 @@ onLoad((options: UTSJSONObject) => {
 	margin-bottom: 14px;
 }
 
-.no-route-icon {
-	width: 52px;
-	height: 52px;
+.no-route-icon-text {
+	font-size: 44px;
+	line-height: 1;
+	font-weight: 700;
+	color: #ef4444;
 }
 
 .back-btn {

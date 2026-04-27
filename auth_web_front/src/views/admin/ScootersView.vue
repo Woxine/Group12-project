@@ -654,7 +654,7 @@ onMounted(load);
 .type-title-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--ui-space-3);
 }
 
 .type-subtitle {
@@ -704,7 +704,7 @@ onMounted(load);
 }
 
 .edit-form {
-  margin-top: 8px;
+  margin-top: var(--ui-space-2);
 }
 
 .full-width {

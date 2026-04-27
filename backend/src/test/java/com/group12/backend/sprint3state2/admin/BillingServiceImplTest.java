@@ -1,6 +1,7 @@
 package com.group12.backend.sprint3state2.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -82,5 +83,30 @@ class BillingServiceImplTest {
         assertThat(updated.seniorDiscountRate()).isEqualByComparingTo("0.80");
         assertThat(updated.frequentDiscountRate()).isEqualByComparingTo("0.80");
         verify(billingSettingsLogRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("updateSettings_allowsStudentPatch_whenOtherStoredRatesAreLegacyInvalid")
+    void updateSettings_allowsStudentPatch_whenOtherStoredRatesAreLegacyInvalid() {
+        BillingSettings existing = new BillingSettings();
+        existing.setId(1L);
+        existing.setLongRentThresholdHours(new BigDecimal("24"));
+        existing.setExtraLongRentThresholdHours(new BigDecimal("72"));
+        existing.setLongRentMultiplier(new BigDecimal("0.85"));
+        existing.setExtraLongRentMultiplier(new BigDecimal("0.75"));
+        existing.setStudentDiscountRate(new BigDecimal("0.80"));
+        existing.setSeniorDiscountRate(new BigDecimal("0.00"));
+        existing.setFrequentDiscountRate(new BigDecimal("0.00"));
+
+        when(billingSettingsRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(billingSettingsRepository.save(any(BillingSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThatCode(() -> billingService.updateSettings(
+                null,
+                null,
+                new BigDecimal("0.76"),
+                null,
+                null,
+                11L)).doesNotThrowAnyException();
     }
 }

@@ -546,7 +546,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .analytics-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--ui-space-4);
 }
 
 .control-card {
@@ -556,7 +556,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  gap: var(--ui-space-4);
 }
 
 .kpi-card {
@@ -566,18 +566,18 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .small-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  padding: 18px;
+  padding: var(--ui-space-5);
 }
 
 .stat-icon {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: var(--ui-radius-md);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 28px;
-  margin-right: 16px;
+  margin-right: var(--ui-space-4);
 }
 
 .stat-info {
@@ -587,14 +587,14 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .stat-title {
   font-size: 14px;
   color: var(--ui-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: var(--ui-space-2);
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: bold;
   color: var(--ui-text-strong);
-  margin-bottom: 8px;
+  margin-bottom: var(--ui-space-2);
   line-height: 1;
 }
 
@@ -606,7 +606,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--ui-space-4);
 }
 
 .big-card {
@@ -625,14 +625,14 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--ui-space-3);
 }
 
 .hot-summary {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
+  gap: var(--ui-space-4);
+  margin-bottom: var(--ui-space-3);
 }
 
 .chart {
@@ -645,7 +645,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 }
 
 .chart-a11y-desc {
-  margin: 0 0 8px;
+  margin: 0 0 var(--ui-space-2);
   color: var(--ui-text-muted);
   font-size: 14px;
 }
@@ -656,8 +656,8 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 
 .heatmap-stats {
   display: flex;
-  gap: 20px;
-  margin-top: 10px;
+  gap: var(--ui-space-5);
+  margin-top: var(--ui-space-3);
 }
 
 .chart-summary-card {
@@ -688,7 +688,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 }
 
 .chart-summary-card h2 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--ui-space-2);
   font-size: 16px;
 }
 

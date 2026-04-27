@@ -1,9 +1,9 @@
 <template>
   <el-card shadow="never" class="high-priority-container admin-page-card">
     <template #header>
-      <div class="header admin-page-header">
+      <div class="admin-page-header">
         <div>
-          <span class="page-title admin-page-title">High Priority Issues</span>
+          <span class="admin-page-title">High Priority Issues</span>
           <div class="admin-page-subtitle">Focus on unresolved urgent feedback and escalation progress.</div>
         </div>
         <el-space class="admin-page-toolbar">
@@ -52,6 +52,12 @@
           <span v-else class="admin-status-text admin-status-text--success">Resolved</span>
         </template>
       </el-table-column>
+      <template #empty>
+        <div class="admin-table-empty-state">
+          <p class="admin-table-empty-title">No high priority issues found</p>
+          <p class="admin-table-empty-text">Try adjusting the escalation filter or check again after new urgent feedback arrives.</p>
+        </div>
+      </template>
     </el-table>
   </el-card>
 </template>

@@ -9,20 +9,28 @@
 		
 		<view class="login_container">
 			<!-- Name Input -->
-			<input v-model="formData.name" type="text" placeholder="please enter your name" confirm-type="next" class="input"/>
-			<view class="span1"></view>
+			<view class="field-group">
+				<text class="field-label">Name</text>
+				<input v-model="formData.name" type="text" placeholder="please enter your name" placeholder-class="input-placeholder" confirm-type="next" class="input"/>
+			</view>
 			
 			<!-- Email Input -->
-			<input v-model="formData.email" type="text" placeholder="please enter account (email)" confirm-type="next" class="input"/>
-			<view class="span1"></view>
+			<view class="field-group">
+				<text class="field-label">Email</text>
+				<input v-model="formData.email" type="text" placeholder="please enter account (email)" placeholder-class="input-placeholder" confirm-type="next" class="input"/>
+			</view>
 			
 			<!-- Password Input -->
-			<input v-model="formData.password" type="password" placeholder="please enter password" class="input"/>
-			<view class="span2"></view>
+			<view class="field-group">
+				<text class="field-label">Password</text>
+				<input v-model="formData.password" type="password" placeholder="please enter password" placeholder-class="input-placeholder" class="input"/>
+			</view>
 			
 			<!-- Confirm Password Input -->
-			<input v-model="confirmPassword" type="password" placeholder="please check password" class="input"/>
-			<view class="span2"></view>
+			<view class="field-group">
+				<text class="field-label">Confirm</text>
+				<input v-model="confirmPassword" type="password" placeholder="please check password" placeholder-class="input-placeholder" class="input"/>
+			</view>
 			
 			<view class="validation-info">
 				<text class="validation-message" :class="{'valid': isNameValid, 'invalid': formData.name != '' && !isNameValid}">
@@ -41,14 +49,16 @@
 			
 			<view class="span2"></view>
 			
-			<!-- Register Button -->
-			<button 
-				@click="handleRegister" 
-				:disabled="isSubmitting || !isFormValid" 
-				size="default" 
-				style="color: white;background-color: rgba(60, 60, 60, 0.7);">
-				{{ isSubmitting ? 'Registering...' : 'Sign Up' }}
-			</button>
+			<view class="form-actions">
+				<button
+					@click="handleRegister"
+					:disabled="isSubmitting || !isFormValid"
+					size="default"
+					class="primary-button">
+					{{ isSubmitting ? 'Registering...' : 'Sign Up' }}
+				</button>
+				<button @click="goBackToLogin" size="default" class="secondary-button">Back</button>
+			</view>
 		</view>
 	</view>
 	
@@ -120,6 +130,12 @@ const isFormValid = computed((): boolean => {
 const registerMessage = (key: string, fallback: string): string => getAppMessage('register', key, fallback);
 const networkMessage = (key: string, fallback: string): string => getAppMessage('network', key, fallback);
 const commonMessage = (key: string, fallback: string): string => getAppMessage('common', key, fallback);
+
+const goBackToLogin = (): void => {
+	uni.reLaunch({
+		url: '/pages/login/login'
+	});
+};
 
 const handleRegister = async (): Promise<void> => {
 	if (!isNameValid.value) {
@@ -314,21 +330,39 @@ const handleRegister = async (): Promise<void> => {
 		width: 100%;
 		max-width: 320px;
 		padding: 28px 24px;
-		background-color: rgba(227, 225, 225, 0.46);
+		background-color: rgba(255, 255, 255, 0.92);
+		border: 1px solid rgba(0, 0, 0, 0.08);
 		border-radius: 14px;
-		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+		box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
+
+		.field-group {
+			width: 100%;
+			margin-bottom: 14px;
+		}
+
+		.field-label {
+			display: block;
+			margin-bottom: 6px;
+			color: #1f2937;
+			font-size: 14px;
+			font-weight: 600;
+		}
 		
 		.input {
 			width: 100%;
-			min-height: 44px;
-			padding: 12px 16px;
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			min-height: 46px;
+			padding: 12px 14px;
+			border: 1px solid rgba(0, 0, 0, 0.14);
 			border-radius: 8px;
-			background-color: rgba(60, 60, 60, 0.65);
-			color: white;
+			background-color: #ffffff;
+			color: #111827;
 			font-size: 16px;
 			box-sizing: border-box;
+		}
+
+		.input-placeholder {
+			color: #6b7280;
 		}
 		
 		.span1 {
@@ -345,26 +379,56 @@ const handleRegister = async (): Promise<void> => {
 		
 		.validation-info {
 			margin: 8px 0;
-			padding: 10px;
-			background-color: rgba(0, 0, 0, 0.12);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			padding: 12px;
+			background-color: rgba(31, 41, 55, 0.05);
+			border: 1px solid rgba(31, 41, 55, 0.1);
 			border-radius: 8px;
 			box-sizing: border-box;
 		}
 
 		.validation-message {
+			display: block;
+			color: #374151;
 			font-size: 12px;
 			margin-bottom: 5px;
 		}
 
 		.validation-message.valid {
-			color: #2ecc71; // Green color
+			color: #16803c; // Green color
 			font-weight: bold;
 		}
 
 		.validation-message.invalid {
-			color: #e74c3c; // Red color
+			color: #c0392b; // Red color
 			font-weight: bold;
+		}
+
+		.form-actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			width: 100%;
+		}
+
+		.primary-button,
+		.secondary-button {
+			flex: 1;
+			width: 100%;
+			font-size: 16px;
+			font-weight: 600;
+			border-radius: 8px;
+			box-sizing: border-box;
+		}
+
+		.primary-button {
+			color: #ffffff;
+			background-color: #1f2937;
+		}
+
+		.secondary-button {
+			color: #1f2937;
+			background-color: #ffffff;
+			border: 1px solid rgba(31, 41, 55, 0.28);
 		}
 		
 		.server-config {

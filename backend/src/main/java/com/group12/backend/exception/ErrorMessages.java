@@ -31,6 +31,7 @@ public final class ErrorMessages {
     public static final String PAYMENT_CARD_REQUIRED_FOR_BOOKING = "Please bind a payment card before booking.";
     public static final String BOOKING_PAYMENT_EXPIRED = "Payment window expired. Please place a new booking.";
     public static final String BOOKING_ALREADY_PAID = "Booking has already been paid.";
+    public static final String BIN_LOOKUP_RATE_LIMITED = "Too many BIN lookup requests. Please try again later.";
     public static final String INVALID_FEEDBACK_ID = "Invalid feedback id";
     public static final String INVALID_FEEDBACK_PROCESS_ACTION = "Invalid process action";
     public static final String ESCALATE_TARGET_REQUIRED = "Escalate target is required for ESCALATE action";

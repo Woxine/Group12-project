@@ -67,3 +67,15 @@ discount-verification:
       - image/jpeg
       - image/png
       - application/pdf
+
+payment-card:
+  bin-lookup:
+    enabled: ${PAYMENT_CARD_BIN_LOOKUP_ENABLED:false}
+    endpoint: ${PAYMENT_CARD_BIN_LOOKUP_ENDPOINT:}
+    api-key: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY:}
+    api-key-header: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY_HEADER:Authorization}
+    api-key-prefix: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY_PREFIX:Bearer }
+    connect-timeout-ms: ${PAYMENT_CARD_BIN_LOOKUP_CONNECT_TIMEOUT_MS:1200}
+    read-timeout-ms: ${PAYMENT_CARD_BIN_LOOKUP_READ_TIMEOUT_MS:1200}
+    cache-ttl-seconds: ${PAYMENT_CARD_BIN_LOOKUP_CACHE_TTL_SECONDS:900}
+    rate-limit-per-minute: ${PAYMENT_CARD_BIN_LOOKUP_RATE_LIMIT_PER_MINUTE:30}
