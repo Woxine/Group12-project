@@ -88,6 +88,33 @@ class State2AdminServiceTest {
         assertThat(byDate.get(startOfWeek.plusDays(3)).getOrderCount()).isZero();
     }
 
+    @Test
+    @DisplayName("getPopularRentalDates_withCustomRange_returnsSortedLeaderboard")
+    void getPopularRentalDates_withCustomRange_returnsSortedLeaderboard() {
+        LocalDate start = LocalDate.of(2026, 2, 1);
+        LocalDate end = start.plusDays(14);
+
+        Booking day3HigherRevenue = booking(start.plusDays(3), "COMPLETED", "120.00");
+        Booking day10LowerRevenueA = booking(start.plusDays(10), "CONFIRMED", "50.00");
+        Booking day10LowerRevenueB = booking(start.plusDays(10), "CONFIRMED", "40.00");
+        Booking outsideRange = booking(start.minusDays(1), "COMPLETED", "999.00");
+
+        when(bookingRepository.findAll()).thenReturn(List.of(
+                day3HigherRevenue, day10LowerRevenueA, day10LowerRevenueB, outsideRange));
+
+        List<PopularRentalDateDTO> result = adminService.getPopularRentalDates(start, end);
+
+        assertThat(result).hasSize(15);
+        assertThat(result.get(0).getDate()).isEqualTo(start.plusDays(3));
+        assertThat(result.get(0).getRevenue()).isEqualByComparingTo("120.00");
+        assertThat(result.get(0).getOrderCount()).isEqualTo(1);
+        assertThat(result.get(1).getDate()).isEqualTo(start.plusDays(10));
+        assertThat(result.get(1).getRevenue()).isEqualByComparingTo("90.00");
+        assertThat(result.get(1).getOrderCount()).isEqualTo(2);
+        assertThat(result).extracting(PopularRentalDateDTO::getRank)
+                .containsExactlyElementsOf(java.util.stream.IntStream.rangeClosed(1, 15).boxed().toList());
+    }
+
     private static Booking booking(LocalDate date, String status, String totalPrice) {
         Booking booking = new Booking();
         booking.setStartTime(LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(), 10, 0));

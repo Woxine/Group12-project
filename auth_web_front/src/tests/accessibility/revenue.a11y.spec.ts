@@ -49,7 +49,7 @@ async function mockRevenueApis(page: Page) {
       return;
     }
 
-    if (path === "/api/v1/admin/revenue/popular-dates-week") {
+    if (path === "/api/v1/admin/revenue/popular-dates-week" || path === "/api/v1/admin/revenue/popular-dates") {
       await route.fulfill({
         status: 200,
         contentType: "application/json",

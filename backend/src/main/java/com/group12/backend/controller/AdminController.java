@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.BillingSettingsResponse;
 import com.group12.backend.dto.BillingSettingsLogResponse;
+import com.group12.backend.dto.BulkScooterUpdateRequest;
 import com.group12.backend.dto.CreateScooterRequest;
 import com.group12.backend.dto.UpdateBillingSettingsRequest;
 import com.group12.backend.entity.BillingSettingsLog;
@@ -86,6 +87,28 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Scooter deleted"));
     }
 
+    /**
+     * 预览按车型批量修改将影响的车辆规模与风险。
+     */
+    @PostMapping("/scooters/bulk-by-type/preview")
+    public ResponseEntity<Object> previewBulkUpdateByType(
+            @Valid @RequestBody BulkScooterUpdateRequest body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(Map.of("data", scooterService.previewBulkUpdateByType(body)));
+    }
+
+    /**
+     * 按车型批量更新车辆参数（高风险字段需显式确认）。
+     */
+    @PostMapping("/scooters/bulk-by-type/apply")
+    public ResponseEntity<Object> applyBulkUpdateByType(
+            @Valid @RequestBody BulkScooterUpdateRequest body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(Map.of("data", scooterService.applyBulkUpdateByType(body)));
+    }
+
     // API-008: 获取收入统计信息
     /**
      * 获取收益统计信息
@@ -131,6 +154,18 @@ public class AdminController {
     }
 
     /**
+     * 获取指定日期范围热门租赁日期榜单。
+     */
+    @GetMapping("/revenue/popular-dates")
+    public ResponseEntity<Object> getPopularRentalDates(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start_date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end_date,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(Map.of("data", adminService.getPopularRentalDates(start_date, end_date)));
+    }
+
+    /**
      * 获取管理端看板总览数据。
      */
     @GetMapping("/dashboard/overview")
@@ -155,9 +190,12 @@ public class AdminController {
             HttpServletRequest request) {
         adminAccessGuard.requireAdmin(request);
         Long operatorUserId = extractUserId(request);
-        BillingRule updated = billingService.updateMultipliers(
-                java.math.BigDecimal.valueOf(updateRequest.getLongRentHourRateMultiplier()),
-                java.math.BigDecimal.valueOf(updateRequest.getExtraLongRentHourRateMultiplier()),
+        BillingRule updated = billingService.updateSettings(
+                toBigDecimal(updateRequest.getLongRentHourRateMultiplier()),
+                toBigDecimal(updateRequest.getExtraLongRentHourRateMultiplier()),
+                toBigDecimal(updateRequest.getStudentDiscountRate()),
+                toBigDecimal(updateRequest.getSeniorDiscountRate()),
+                toBigDecimal(updateRequest.getFrequentDiscountRate()),
                 operatorUserId);
         return ResponseEntity.ok(Map.of("data", toBillingSettingsResponse(updated)));
     }
@@ -182,6 +220,12 @@ public class AdminController {
                 rule.longRentHourRateMultiplier() == null ? null : rule.longRentHourRateMultiplier().doubleValue());
         response.setExtraLongRentHourRateMultiplier(
                 rule.extraLongRentHourRateMultiplier() == null ? null : rule.extraLongRentHourRateMultiplier().doubleValue());
+        response.setStudentDiscountRate(
+                rule.studentDiscountRate() == null ? null : rule.studentDiscountRate().doubleValue());
+        response.setSeniorDiscountRate(
+                rule.seniorDiscountRate() == null ? null : rule.seniorDiscountRate().doubleValue());
+        response.setFrequentDiscountRate(
+                rule.frequentDiscountRate() == null ? null : rule.frequentDiscountRate().doubleValue());
         response.setUpdatedAt(rule.updatedAt());
         return response;
     }
@@ -210,6 +254,10 @@ public class AdminController {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private static java.math.BigDecimal toBigDecimal(Double value) {
+        return value == null ? null : java.math.BigDecimal.valueOf(value);
     }
 }
 

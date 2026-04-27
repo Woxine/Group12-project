@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.group12.backend.entity.User;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BillingService;
+import com.group12.backend.service.LegacyScooterTypeRepairService;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -14,11 +15,17 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final BillingService billingService;
+    private final LegacyScooterTypeRepairService legacyScooterTypeRepairService;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder, BillingService billingService) {
+    public DataInitializer(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            BillingService billingService,
+            LegacyScooterTypeRepairService legacyScooterTypeRepairService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.billingService = billingService;
+        this.legacyScooterTypeRepairService = legacyScooterTypeRepairService;
     }
 
     @Override
@@ -42,5 +49,6 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("==========================================================");
         }
         billingService.getCurrentRule();
+        legacyScooterTypeRepairService.repairLegacyGen1Types();
     }
 }

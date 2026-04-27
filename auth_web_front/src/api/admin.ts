@@ -8,11 +8,14 @@ import type {
   DurationRevenue,
   EscalatedFeedbackResponse,
   FeedbackItem,
+  BulkScooterUpdatePayload,
   HighPriorityIssue,
   PopularRentalDate,
   ProcessFeedbackPayload,
   RevenueStats,
-  Scooter
+  Scooter,
+  ScooterBulkApplyResult,
+  ScooterBulkPreview
 } from "@/types/api";
 
 export async function getRevenueStats(params: { start_date?: string; end_date?: string }) {
@@ -48,6 +51,7 @@ export async function getAdminScooters(params: { status?: string; page?: number;
 
 export async function createScooter(payload: {
   status?: string;
+  type?: string;
   hour_rate: number;
   location_lat?: number;
   location_lng?: number;
@@ -65,6 +69,7 @@ export async function deleteScooter(scooterId: number) {
 export async function updateScooter(
   scooterId: number,
   payload: {
+    type?: string;
     status?: string;
     hour_rate?: number;
     location_lat?: number;
@@ -73,6 +78,16 @@ export async function updateScooter(
   }
 ) {
   const response = await http.put<ApiEnvelope<Scooter>>(`/api/v1/scooters/${scooterId}`, payload);
+  return response.data.data;
+}
+
+export async function previewBulkUpdateByType(payload: BulkScooterUpdatePayload) {
+  const response = await http.post<ApiEnvelope<ScooterBulkPreview>>("/api/v1/admin/scooters/bulk-by-type/preview", payload);
+  return response.data.data;
+}
+
+export async function applyBulkUpdateByType(payload: BulkScooterUpdatePayload) {
+  const response = await http.post<ApiEnvelope<ScooterBulkApplyResult>>("/api/v1/admin/scooters/bulk-by-type/apply", payload);
   return response.data.data;
 }
 
@@ -141,9 +156,12 @@ export async function fetchBillingSettings() {
   return response.data.data;
 }
 
-export async function updateBillingMultipliers(payload: {
-  longRentHourRateMultiplier: number;
-  extraLongRentHourRateMultiplier: number;
+export async function updateBillingSettings(payload: {
+  longRentHourRateMultiplier?: number;
+  extraLongRentHourRateMultiplier?: number;
+  studentDiscountRate?: number;
+  seniorDiscountRate?: number;
+  frequentDiscountRate?: number;
 }) {
   const response = await http.put<ApiEnvelope<BillingSettings>>("/api/v1/admin/billing-settings", payload);
   return response.data.data;
@@ -158,5 +176,10 @@ export async function fetchBillingSettingsLogs(limit = 20) {
 
 export async function getPopularRentalDatesThisWeek() {
   const response = await http.get<ApiEnvelope<PopularRentalDate[]>>("/api/v1/admin/revenue/popular-dates-week");
+  return response.data.data;
+}
+
+export async function getPopularRentalDates(params: { start_date?: string; end_date?: string }) {
+  const response = await http.get<ApiEnvelope<PopularRentalDate[]>>("/api/v1/admin/revenue/popular-dates", { params });
   return response.data.data;
 }

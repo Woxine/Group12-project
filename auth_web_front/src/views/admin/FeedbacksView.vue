@@ -47,11 +47,20 @@
     <p id="feedback-table-help" class="sr-only">
       Feedback table with priority, resolution status, escalation status, and actions for direct handling or escalation.
     </p>
-    <el-table :data="rows" stripe v-loading="loading" class="data-table" aria-label="Feedback records" aria-describedby="feedback-table-help">
+    <el-table
+      :data="rows"
+      stripe
+      v-loading="loading"
+      class="data-table"
+      aria-label="Feedback records"
+      aria-describedby="feedback-table-help"
+      :row-class-name="() => 'clickable-row'"
+      @row-click="openDetailDialog"
+    >
       <el-table-column prop="id" label="ID" width="80" align="center" />
       <el-table-column prop="userId" label="User ID" width="100" align="center" />
       <el-table-column prop="scooterId" label="Scooter ID" width="120" align="center" />
-      
+
       <el-table-column prop="priority" label="Priority" width="120" align="center">
         <template #default="{ row }">
           <el-tag
@@ -63,10 +72,10 @@
           </el-tag>
         </template>
       </el-table-column>
-      
+
       <el-table-column label="Status" width="120" align="center">
         <template #default="{ row }">
-          <el-tag 
+          <el-tag
             :type="row.resolved ? 'success' : 'warning'"
             effect="dark"
             round
@@ -98,10 +107,14 @@
           <el-tag effect="plain" round>{{ row.escalationStatus || "PENDING" }}</el-tag>
         </template>
       </el-table-column>
-      
-      <el-table-column prop="content" label="Feedback Content" min-width="320" show-overflow-tooltip />
-      
-      <el-table-column label="Actions" width="260" align="center" fixed="right">
+
+      <el-table-column label="Feedback Content" min-width="280" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{ summarizeContent(row.content) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column label="Actions" width="320" align="center" fixed="right">
         <template #default="{ row }">
           <el-button
             v-if="row.priority === 'LOW' && !row.resolved"
@@ -109,7 +122,7 @@
             link
             :icon="CircleCheck"
             :aria-label="`Directly handle feedback ${row.id}`"
-            @click="directHandle(row.id)"
+            @click.stop="directHandle(row.id)"
           >
             Direct Handle
           </el-button>
@@ -119,7 +132,7 @@
             link
             :icon="Warning"
             :aria-label="`Escalate high priority feedback ${row.id}`"
-            @click="openEscalateDialog(row)"
+            @click.stop="openEscalateDialog(row)"
           >
             Escalate
           </el-button>
@@ -148,10 +161,37 @@
   </el-card>
 
   <el-dialog
+    v-model="detailDialogVisible"
+    title="Feedback Details"
+    width="560px"
+    append-to-body
+  >
+    <div v-if="detailRow" class="detail-dialog-grid">
+      <div class="detail-field"><span class="label">ID</span><span>#{{ detailRow.id }}</span></div>
+      <div class="detail-field"><span class="label">User ID</span><span>{{ detailRow.userId ?? "-" }}</span></div>
+      <div class="detail-field"><span class="label">Scooter ID</span><span>{{ detailRow.scooterId ?? "-" }}</span></div>
+      <div class="detail-field"><span class="label">Priority</span><span>{{ detailRow.priority }}</span></div>
+      <div class="detail-field"><span class="label">Resolved</span><span>{{ detailRow.resolved ? "Yes" : "No" }}</span></div>
+      <div class="detail-field"><span class="label">Escalated</span><span>{{ detailRow.escalated ? "Yes" : "No" }}</span></div>
+      <div class="detail-field"><span class="label">Escalated To</span><span>{{ detailRow.escalatedTo || "-" }}</span></div>
+      <div class="detail-field"><span class="label">Process Status</span><span>{{ detailRow.escalationStatus || "PENDING" }}</span></div>
+    </div>
+    <el-divider />
+    <div class="detail-content">
+      <div class="label">Feedback Content</div>
+      <p class="full-content">{{ detailRow?.content || "-" }}</p>
+    </div>
+    <template #footer>
+      <el-button @click="detailDialogVisible = false">Close</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog
     v-model="escalateDialog.visible"
     title="Escalate High Priority Feedback"
     width="460px"
     destroy-on-close
+    append-to-body
   >
     <el-form label-position="top">
       <el-form-item label="Escalate To" required>
@@ -200,6 +240,8 @@ const pager = reactive({ page: 1, size: 10 });
 const filters = reactive<{ resolved?: boolean; priority?: string }>({});
 const resolvedView = ref<boolean | undefined>(undefined);
 const liveMessage = ref("");
+const detailDialogVisible = ref(false);
+const detailRow = ref<FeedbackItem | null>(null);
 const escalateDialog = reactive({
   visible: false,
   feedbackId: 0,
@@ -217,6 +259,18 @@ function announce(message: string) {
   window.setTimeout(() => {
     liveMessage.value = message;
   }, 0);
+}
+
+function summarizeContent(content: string) {
+  if (!content) return "-";
+  const plain = content.replace(/\s+/g, " ").trim();
+  if (plain.length <= 80) return plain;
+  return `${plain.slice(0, 80)}...`;
+}
+
+function openDetailDialog(row: FeedbackItem) {
+  detailRow.value = row;
+  detailDialogVisible.value = true;
 }
 
 async function load() {
@@ -343,11 +397,48 @@ onMounted(load);
   padding: 8px 0;
 }
 
+.detail-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.detail-field {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.label {
+  color: #6b7280;
+  min-width: 90px;
+}
+
+.detail-content {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.full-content {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
 .resolved-text {
   color: #67C23A;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+:deep(.clickable-row) {
+  cursor: pointer;
 }
 </style>

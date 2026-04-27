@@ -18,7 +18,13 @@
       </div>
     </template>
 
-    <el-table :data="rows" stripe v-loading="loading">
+    <el-table
+      :data="rows"
+      stripe
+      v-loading="loading"
+      :row-class-name="() => 'clickable-row'"
+      @row-click="openDetailDialog"
+    >
       <el-table-column prop="id" label="ID" width="90" />
       <el-table-column prop="userId" label="User ID" width="100" />
       <el-table-column prop="type" label="Type" width="120">
@@ -39,23 +45,34 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="originalFilename" label="File Name" min-width="180" show-overflow-tooltip />
-      <el-table-column prop="mimeType" label="MIME" width="160" />
-      <el-table-column prop="sizeBytes" label="Size" width="120">
+      <el-table-column label="File Name" min-width="200">
         <template #default="{ row }">
-          {{ formatBytes(row.sizeBytes) }}
+          {{ summarizeFilename(row.originalFilename) }}
         </template>
       </el-table-column>
       <el-table-column prop="submittedAt" label="Submitted At" width="180" />
       <el-table-column prop="reviewedAt" label="Reviewed At" width="180" />
-      <el-table-column prop="rejectReason" label="Reject Reason" min-width="180" show-overflow-tooltip />
-      <el-table-column label="Actions" width="220" fixed="right">
+      <el-table-column label="Actions" width="260" fixed="right">
         <template #default="{ row }">
-          <el-space v-if="row.status === 'PENDING'">
-            <el-button type="success" link :icon="Check" @click="approve(row.id)">Approve</el-button>
-            <el-button type="danger" link :icon="Close" @click="openRejectDialog(row.id)">Reject</el-button>
-          </el-space>
-          <span v-else class="muted">Reviewed</span>
+          <el-button
+            v-if="row.status === 'PENDING'"
+            type="success"
+            link
+            :icon="Check"
+            @click.stop="approve(row.id)"
+          >
+            Approve
+          </el-button>
+          <el-button
+            v-if="row.status === 'PENDING'"
+            type="danger"
+            link
+            :icon="Close"
+            @click.stop="openRejectDialog(row.id)"
+          >
+            Reject
+          </el-button>
+          <span v-if="row.status !== 'PENDING'" class="muted">Reviewed</span>
         </template>
       </el-table-column>
     </el-table>
@@ -74,7 +91,27 @@
     </div>
   </el-card>
 
-  <el-dialog v-model="rejectDialogVisible" title="Reject Submission" width="480px">
+  <el-dialog v-model="detailDialogVisible" title="Submission Details" width="620px" append-to-body>
+    <div v-if="detailRow" class="detail-dialog-grid">
+      <div class="detail-field"><span class="label">ID</span><span>#{{ detailRow.id }}</span></div>
+      <div class="detail-field"><span class="label">User ID</span><span>{{ detailRow.userId }}</span></div>
+      <div class="detail-field"><span class="label">Type</span><span>{{ detailRow.type }}</span></div>
+      <div class="detail-field"><span class="label">Status</span><span>{{ detailRow.status }}</span></div>
+      <div class="detail-field"><span class="label">File</span><span>{{ detailRow.originalFilename }}</span></div>
+      <div class="detail-field"><span class="label">MIME</span><span>{{ detailRow.mimeType }}</span></div>
+      <div class="detail-field"><span class="label">Size</span><span>{{ formatBytes(detailRow.sizeBytes) }}</span></div>
+      <div class="detail-field"><span class="label">Submitted</span><span>{{ detailRow.submittedAt }}</span></div>
+      <div class="detail-field"><span class="label">Reviewed</span><span>{{ detailRow.reviewedAt || "-" }}</span></div>
+      <div class="detail-field"><span class="label">Reviewer</span><span>{{ detailRow.reviewerUserId ?? "-" }}</span></div>
+      <div class="detail-field full-row"><span class="label">Storage Path</span><span>{{ detailRow.storagePath || "-" }}</span></div>
+      <div class="detail-field full-row"><span class="label">Reject Reason</span><span>{{ detailRow.rejectReason || "-" }}</span></div>
+    </div>
+    <template #footer>
+      <el-button @click="detailDialogVisible = false">Close</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="rejectDialogVisible" title="Reject Submission" width="480px" append-to-body>
     <el-input
       v-model="rejectReason"
       type="textarea"
@@ -111,6 +148,8 @@ const filters = reactive<{
   status?: "PENDING" | "APPROVED" | "REJECTED";
 }>({});
 
+const detailDialogVisible = ref(false);
+const detailRow = ref<DiscountVerificationSubmission | null>(null);
 const rejectDialogVisible = ref(false);
 const rejecting = ref(false);
 const rejectTargetId = ref<number | null>(null);
@@ -150,11 +189,22 @@ function onSizeChange(size: number) {
   load();
 }
 
+function summarizeFilename(name: string) {
+  if (!name) return "-";
+  if (name.length <= 36) return name;
+  return `${name.slice(0, 36)}...`;
+}
+
 function formatBytes(size: number) {
   if (!size) return "0 B";
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function openDetailDialog(row: DiscountVerificationSubmission) {
+  detailRow.value = row;
+  detailDialogVisible.value = true;
 }
 
 async function approve(id: number) {
@@ -218,7 +268,35 @@ onMounted(load);
   justify-content: center;
 }
 
+.detail-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.detail-field {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.label {
+  color: #6b7280;
+  min-width: 90px;
+}
+
+.full-row {
+  grid-column: span 2;
+}
+
 .muted {
   color: #909399;
+}
+
+:deep(.clickable-row) {
+  cursor: pointer;
 }
 </style>

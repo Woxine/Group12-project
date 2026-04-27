@@ -8,7 +8,13 @@ import com.group12.backend.entity.BillingSettingsLog;
 public interface BillingService {
     BillingRule getCurrentRule();
 
-    BillingRule updateMultipliers(BigDecimal longRentHourRateMultiplier, BigDecimal extraLongRentHourRateMultiplier, Long operatorUserId);
+    BillingRule updateSettings(
+            BigDecimal longRentHourRateMultiplier,
+            BigDecimal extraLongRentHourRateMultiplier,
+            BigDecimal studentDiscountRate,
+            BigDecimal seniorDiscountRate,
+            BigDecimal frequentDiscountRate,
+            Long operatorUserId);
 
     List<BillingSettingsLog> getRecentLogs(int limit);
 }

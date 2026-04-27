@@ -103,9 +103,21 @@ public class AdminServiceImpl implements AdminService {
         LocalDate today = LocalDate.now();
         LocalDate startOfWeek = today.with(DayOfWeek.MONDAY);
         LocalDate endOfWeek = startOfWeek.plusDays(6);
+        return getPopularRentalDates(startOfWeek, endOfWeek);
+    }
 
-        List<Booking> validBookingsThisWeek = getValidBookingsWithinRange(startOfWeek, endOfWeek);
-        List<DailyTrendPointDTO> weeklyTrend = buildDailyTrend(validBookingsThisWeek, startOfWeek, endOfWeek);
+    @Override
+    public List<PopularRentalDateDTO> getPopularRentalDates(LocalDate startDate, LocalDate endDate) {
+        LocalDate resolvedStart = startDate;
+        LocalDate resolvedEnd = endDate;
+        if (resolvedStart == null || resolvedEnd == null || resolvedEnd.isBefore(resolvedStart)) {
+            LocalDate today = LocalDate.now();
+            resolvedEnd = today;
+            resolvedStart = today.minusDays(6);
+        }
+
+        List<Booking> validBookingsInRange = getValidBookingsWithinRange(resolvedStart, resolvedEnd);
+        List<DailyTrendPointDTO> trend = buildDailyTrend(validBookingsInRange, resolvedStart, resolvedEnd);
 
         Comparator<DailyTrendPointDTO> leaderboardComparator = Comparator
                 .comparing(
@@ -114,7 +126,7 @@ public class AdminServiceImpl implements AdminService {
                 .thenComparing(DailyTrendPointDTO::getOrderCount, Comparator.reverseOrder())
                 .thenComparing(DailyTrendPointDTO::getDate, Comparator.reverseOrder());
 
-        List<DailyTrendPointDTO> sortedTrend = weeklyTrend.stream()
+        List<DailyTrendPointDTO> sortedTrend = trend.stream()
                 .sorted(leaderboardComparator)
                 .collect(Collectors.toList());
 

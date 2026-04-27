@@ -36,4 +36,9 @@ public interface AdminService {
      * ID20 TODO: 获取本周热门租赁日期周榜（按日收入/订单数排序）。
      */
     List<PopularRentalDateDTO> getPopularRentalDatesThisWeek();
+
+    /**
+     * 获取指定日期范围内热门租赁日期榜单（按日收入/订单数排序）。
+     */
+    List<PopularRentalDateDTO> getPopularRentalDates(LocalDate startDate, LocalDate endDate);
 }

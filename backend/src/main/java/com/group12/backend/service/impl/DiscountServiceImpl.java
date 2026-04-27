@@ -30,6 +30,7 @@ import com.group12.backend.service.pricing.RentalPricing;
  */
 @Service
 public class DiscountServiceImpl implements DiscountService {
+    private static final BigDecimal DEFAULT_DISCOUNT_RATE = new BigDecimal("0.8");
 
     private static final String DISCOUNT_NONE = "NONE";
     private static final String DISCOUNT_FREQUENT = "FREQUENT";
@@ -162,8 +163,25 @@ public class DiscountServiceImpl implements DiscountService {
         if (!isDiscountEnabled() || !isDiscountTypeEligible(discountType)) {
             return safeOrigin.setScale(2, RoundingMode.HALF_UP);
         }
-        BigDecimal rate = getProperties().getRate() == null ? new BigDecimal("0.8") : getProperties().getRate();
+        BillingRule rule = billingService == null ? null : billingService.getCurrentRule();
+        BigDecimal rate = resolveRateForType(discountType, rule);
         return safeOrigin.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal resolveRateForType(String discountType, BillingRule rule) {
+        if (rule != null) {
+            if (DISCOUNT_STUDENT.equalsIgnoreCase(discountType) && rule.studentDiscountRate() != null) {
+                return rule.studentDiscountRate();
+            }
+            if (DISCOUNT_SENIOR.equalsIgnoreCase(discountType) && rule.seniorDiscountRate() != null) {
+                return rule.seniorDiscountRate();
+            }
+            if (DISCOUNT_FREQUENT.equalsIgnoreCase(discountType) && rule.frequentDiscountRate() != null) {
+                return rule.frequentDiscountRate();
+            }
+        }
+        BigDecimal fallbackRate = getProperties().getRate();
+        return fallbackRate == null ? DEFAULT_DISCOUNT_RATE : fallbackRate;
     }
 
     private BigDecimal calculateOriginalPrice(Long scooterId, String duration) {

@@ -29,6 +29,15 @@ public class BillingSettings implements Serializable {
     @Column(name = "extra_long_rent_multiplier", nullable = false)
     private BigDecimal extraLongRentMultiplier;
 
+    @Column(name = "student_discount_rate", nullable = false)
+    private BigDecimal studentDiscountRate;
+
+    @Column(name = "senior_discount_rate", nullable = false)
+    private BigDecimal seniorDiscountRate;
+
+    @Column(name = "frequent_discount_rate", nullable = false)
+    private BigDecimal frequentDiscountRate;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -70,6 +79,30 @@ public class BillingSettings implements Serializable {
 
     public void setExtraLongRentMultiplier(BigDecimal extraLongRentMultiplier) {
         this.extraLongRentMultiplier = extraLongRentMultiplier;
+    }
+
+    public BigDecimal getStudentDiscountRate() {
+        return studentDiscountRate;
+    }
+
+    public void setStudentDiscountRate(BigDecimal studentDiscountRate) {
+        this.studentDiscountRate = studentDiscountRate;
+    }
+
+    public BigDecimal getSeniorDiscountRate() {
+        return seniorDiscountRate;
+    }
+
+    public void setSeniorDiscountRate(BigDecimal seniorDiscountRate) {
+        this.seniorDiscountRate = seniorDiscountRate;
+    }
+
+    public BigDecimal getFrequentDiscountRate() {
+        return frequentDiscountRate;
+    }
+
+    public void setFrequentDiscountRate(BigDecimal frequentDiscountRate) {
+        this.frequentDiscountRate = frequentDiscountRate;
     }
 
     public LocalDateTime getUpdatedAt() {

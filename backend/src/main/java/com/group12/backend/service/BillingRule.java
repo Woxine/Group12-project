@@ -8,6 +8,9 @@ public record BillingRule(
         BigDecimal extraLongRentThresholdHours,
         BigDecimal longRentHourRateMultiplier,
         BigDecimal extraLongRentHourRateMultiplier,
+        BigDecimal studentDiscountRate,
+        BigDecimal seniorDiscountRate,
+        BigDecimal frequentDiscountRate,
         LocalDateTime updatedAt
 ) {
 }

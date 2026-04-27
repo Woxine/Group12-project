@@ -1,9 +1,9 @@
 <template>
-  <el-card shadow="never" class="analytics-container" role="region" aria-labelledby="analytics-heading">
-    <template #header>
+  <section class="analytics-container" role="region" aria-labelledby="analytics-heading">
+    <el-card shadow="never" class="control-card">
       <div class="header">
         <h1 id="analytics-heading" class="page-title">Management Analytics</h1>
-        <el-space>
+        <el-space wrap>
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -16,124 +16,137 @@
           <el-button type="primary" :icon="Refresh" :loading="loading" aria-label="Refresh analytics data" @click="load">Refresh</el-button>
         </el-space>
       </div>
-    </template>
+    </el-card>
 
-    <el-row :gutter="24" class="stats-row">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card blue">
-          <div class="stat-icon"><el-icon><Tickets /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Total Orders</div>
-            <div class="stat-value">{{ overview.orderStats.totalOrders }}</div>
-            <div class="stat-desc">Valid: {{ overview.orderStats.validOrders }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card green">
-          <div class="stat-icon"><el-icon><Money /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Total Revenue</div>
-            <div class="stat-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
-            <div class="stat-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card purple">
-          <div class="stat-icon"><el-icon><Bicycle /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Scooter Usage</div>
-            <div class="stat-value">{{ usageRatePercent }}%</div>
-            <div class="stat-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card orange">
-          <div class="stat-icon"><el-icon><Warning /></el-icon></div>
-          <div class="stat-info">
-            <div class="stat-title">Fault Reports</div>
-            <div class="stat-value">{{ overview.faultStats.totalFeedbacks }}</div>
-            <div class="stat-desc">Resolved: {{ overview.faultStats.resolvedFeedbacks }}</div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="kpi-grid">
+      <el-card shadow="hover" class="kpi-card small-card blue">
+        <div class="stat-icon"><el-icon><Tickets /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-title">Total Orders</div>
+          <div class="stat-value">{{ overview.orderStats.totalOrders }}</div>
+          <div class="stat-desc">Valid: {{ overview.orderStats.validOrders }}</div>
+        </div>
+      </el-card>
+      <el-card shadow="hover" class="kpi-card small-card green">
+        <div class="stat-icon"><el-icon><Money /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-title">Total Revenue</div>
+          <div class="stat-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
+          <div class="stat-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
+        </div>
+      </el-card>
+      <el-card shadow="hover" class="kpi-card small-card purple">
+        <div class="stat-icon"><el-icon><Bicycle /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-title">Scooter Usage</div>
+          <div class="stat-value">{{ usageRatePercent }}%</div>
+          <div class="stat-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
+        </div>
+      </el-card>
+      <el-card shadow="hover" class="kpi-card small-card orange">
+        <div class="stat-icon"><el-icon><Warning /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-title">Fault Reports</div>
+          <div class="stat-value">{{ overview.faultStats.totalFeedbacks }}</div>
+          <div class="stat-desc">Resolved: {{ overview.faultStats.resolvedFeedbacks }}</div>
+        </div>
+      </el-card>
+    </div>
 
-    <el-row :gutter="24" class="charts-row">
-      <el-col :span="24">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="chart-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
-          </template>
-          <p id="trend-chart-desc" class="chart-a11y-desc">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
-          <div class="chart-accessible" role="img" aria-labelledby="trend-chart-desc">
-            <v-chart class="chart" :option="trendChartOption" autoresize aria-hidden="true" />
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="analytics-grid">
+      <el-card shadow="hover" class="big-card">
+        <template #header>
+          <div class="card-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
+        </template>
+        <p id="trend-chart-desc" class="chart-a11y-desc">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
+        <div class="chart-accessible" role="img" aria-labelledby="trend-chart-desc">
+          <v-chart class="chart" :option="trendChartOption" autoresize aria-hidden="true" />
+        </div>
+      </el-card>
 
-    <el-row :gutter="24" class="charts-row">
-      <el-col :span="12">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="chart-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
-          </template>
-          <p id="vehicle-chart-desc" class="chart-a11y-desc">Donut chart showing available, rented, and maintenance scooter counts.</p>
-          <div class="chart-accessible" role="img" aria-labelledby="vehicle-chart-desc">
-            <v-chart class="chart" :option="vehicleStatusOption" autoresize aria-hidden="true" />
+      <el-card shadow="hover" class="medium-card hot-dates-card">
+        <template #header>
+          <div class="hot-header">
+            <div class="card-title"><el-icon><Calendar /></el-icon> Popular Rental Dates</div>
+            <el-radio-group
+              v-model="hotRangeKey"
+              size="small"
+              @change="onHotRangeChange"
+            >
+              <el-radio-button label="WEEK">Last 7 Days</el-radio-button>
+              <el-radio-button label="HALF_MONTH">Last 15 Days</el-radio-button>
+              <el-radio-button label="MONTH">Last 30 Days</el-radio-button>
+              <el-radio-button label="QUARTER">Last 90 Days</el-radio-button>
+            </el-radio-group>
           </div>
-        </el-card>
-      </el-col>
+        </template>
 
-      <el-col :span="12">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="chart-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
-          </template>
-          <p id="fault-resolution-desc" class="chart-a11y-desc">Pie chart comparing resolved and unresolved fault reports.</p>
-          <div class="chart-accessible" role="img" aria-labelledby="fault-resolution-desc">
-            <v-chart class="chart" :option="faultResolutionOption" autoresize aria-hidden="true" />
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="24" class="charts-row">
-
-      <el-col :span="12">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="chart-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
-          </template>
-          <p id="fault-priority-desc" class="chart-a11y-desc">Horizontal bar chart of fault counts by priority level.</p>
-          <div class="chart-accessible" role="img" aria-labelledby="fault-priority-desc">
-            <v-chart class="chart" :option="faultPriorityOption" autoresize aria-hidden="true" />
-          </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :span="12">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="chart-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
-          </template>
-          <p id="heatmap-desc" class="chart-a11y-desc">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
-          <div class="heatmap-wrapper">
-            <div class="chart-accessible" role="img" aria-labelledby="heatmap-desc">
-              <v-chart class="chart" :option="heatmapOption" autoresize aria-hidden="true" />
+        <el-skeleton :loading="hotDatesLoading" animated :rows="5">
+          <template #default>
+            <div class="hot-summary">
+              <el-statistic title="Top Date" :value="topHotDateLabel" />
+              <el-statistic title="Top Orders" :value="topHotOrders" />
             </div>
-            <div class="heatmap-stats">
-              <el-statistic title="Avg Daily Rides" :value="averageDailyRides" />
-              <el-statistic title="Max Daily Rides" :value="maxDailyRides" />
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-    <section class="chart-summary-card" aria-labelledby="chart-summary-heading">
+            <el-table :data="hotDates" size="small" max-height="270">
+              <el-table-column prop="rank" label="#" width="60" />
+              <el-table-column prop="date" label="Date" min-width="120" />
+              <el-table-column prop="orderCount" label="Orders" width="90" align="right" />
+              <el-table-column label="Revenue" width="100" align="right">
+                <template #default="{ row }">
+                  £{{ Number(row.revenue).toFixed(2) }}
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
+        </el-skeleton>
+      </el-card>
+
+      <el-card shadow="hover" class="big-card">
+        <template #header>
+          <div class="card-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
+        </template>
+        <p id="heatmap-desc" class="chart-a11y-desc">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
+        <div class="chart-accessible" role="img" aria-labelledby="heatmap-desc">
+          <v-chart class="chart" :option="heatmapOption" autoresize aria-hidden="true" />
+        </div>
+        <div class="heatmap-stats">
+          <el-statistic title="Avg Daily Rides" :value="averageDailyRides" />
+          <el-statistic title="Max Daily Rides" :value="maxDailyRides" />
+        </div>
+      </el-card>
+
+      <el-card shadow="hover" class="medium-card">
+        <template #header>
+          <div class="card-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
+        </template>
+        <p id="vehicle-chart-desc" class="chart-a11y-desc">Donut chart showing available, rented, and maintenance scooter counts.</p>
+        <div class="chart-accessible" role="img" aria-labelledby="vehicle-chart-desc">
+          <v-chart class="chart compact-chart" :option="vehicleStatusOption" autoresize aria-hidden="true" />
+        </div>
+      </el-card>
+
+      <el-card shadow="hover" class="medium-card">
+        <template #header>
+          <div class="card-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
+        </template>
+        <p id="fault-resolution-desc" class="chart-a11y-desc">Pie chart comparing resolved and unresolved fault reports.</p>
+        <div class="chart-accessible" role="img" aria-labelledby="fault-resolution-desc">
+          <v-chart class="chart compact-chart" :option="faultResolutionOption" autoresize aria-hidden="true" />
+        </div>
+      </el-card>
+
+      <el-card shadow="hover" class="medium-card">
+        <template #header>
+          <div class="card-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
+        </template>
+        <p id="fault-priority-desc" class="chart-a11y-desc">Horizontal bar chart of fault counts by priority level.</p>
+        <div class="chart-accessible" role="img" aria-labelledby="fault-priority-desc">
+          <v-chart class="chart compact-chart" :option="faultPriorityOption" autoresize aria-hidden="true" />
+        </div>
+      </el-card>
+    </div>
+
+    <el-card shadow="never" class="chart-summary-card" aria-labelledby="chart-summary-heading">
       <h2 id="chart-summary-heading">Text summary of key analytics</h2>
       <ul>
         <li>{{ chartSummary.totalOrders }}</li>
@@ -142,16 +155,17 @@
         <li>{{ chartSummary.faultStatus }}</li>
         <li>{{ chartSummary.activity }}</li>
       </ul>
-    </section>
+    </el-card>
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ liveMessage }}</div>
-  </el-card>
+  </section>
 </template>
 
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
-import { getDashboardOverview } from "@/api/admin";
+import { getDashboardOverview, getPopularRentalDates } from "@/api/admin";
 import type { DashboardOverview } from "@/types/api";
+import type { PopularRentalDate } from "@/types/api";
 
 import { Refresh, Tickets, Money, Bicycle, Warning, TrendCharts, PieChart, SuccessFilled, DataAnalysis, Calendar } from '@element-plus/icons-vue';
 
@@ -184,6 +198,9 @@ use([
 
 const loading = ref(false);
 const dateRange = ref<[string, string] | null>(getDefaultRange());
+const hotDatesLoading = ref(false);
+const hotRangeKey = ref<"WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER">("WEEK");
+const hotDates = ref<PopularRentalDate[]>([]);
 const liveMessage = ref("");
 const overview = reactive<DashboardOverview>({
   orderStats: {
@@ -225,6 +242,10 @@ const maxDailyRides = computed(() => {
   if (overview.dailyTrend.length === 0) return 0;
   return Math.max(...overview.dailyTrend.map(d => d.orderCount));
 });
+
+const topHotDate = computed(() => hotDates.value[0]);
+const topHotDateLabel = computed(() => topHotDate.value?.date ?? "-");
+const topHotOrders = computed(() => topHotDate.value?.orderCount ?? 0);
 
 const chartSummary = computed(() => ({
   totalOrders: `Total orders: ${overview.orderStats.totalOrders}.`,
@@ -392,8 +413,8 @@ const heatmapOption = computed(() => {
     },
     calendar: {
       top: 40,
-      left: 40,
-      right: 180, // Leave space for stats on the right
+      left: 20,
+      right: 20,
       cellSize: ['auto', 20],
       range: [start, end],
       itemStyle: {
@@ -429,7 +450,26 @@ async function load() {
   }
 }
 
+async function loadHotDates() {
+  hotDatesLoading.value = true;
+  const [start, end] = getHotRangeDates(hotRangeKey.value);
+  try {
+    hotDates.value = await getPopularRentalDates({ start_date: start, end_date: end });
+  } catch (error: any) {
+    const message = error?.response?.data?.message ?? "Failed to load popular rental dates";
+    ElMessage.error(message);
+    announce(message);
+  } finally {
+    hotDatesLoading.value = false;
+  }
+}
+
+function onHotRangeChange() {
+  loadHotDates();
+}
+
 onMounted(load);
+onMounted(loadHotDates);
 
 function getDefaultRange(): [string, string] {
   const end = new Date();
@@ -445,17 +485,37 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [string, string] {
+  const end = new Date();
+  const start = new Date();
+  const daysByRange = {
+    WEEK: 7,
+    HALF_MONTH: 15,
+    MONTH: 30,
+    QUARTER: 90
+  } as const;
+  start.setDate(end.getDate() - (daysByRange[range] - 1));
+  return [formatDate(start), formatDate(end)];
+}
+
 </script>
 
 <style scoped>
 .analytics-container {
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-card {
+  border-radius: 10px;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .page-title {
@@ -463,24 +523,23 @@ function formatDate(date: Date) {
   font-size: 18px;
   font-weight: 600;
   color: #303133;
+  white-space: nowrap;
 }
 
-.stats-row {
-  margin-top: 8px;
-  margin-bottom: 24px;
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
 }
 
-.stat-card {
+.kpi-card {
   border-radius: 12px;
-  border: none;
-  background-color: #ffffff;
-  height: 100%;
 }
 
-.stat-card :deep(.el-card__body) {
+.small-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  padding: 20px;
+  padding: 18px;
 }
 
 .stat-icon {
@@ -510,7 +569,7 @@ function formatDate(date: Date) {
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: bold;
   color: #303133;
   margin-bottom: 8px;
@@ -522,15 +581,23 @@ function formatDate(date: Date) {
   color: #606266;
 }
 
-.charts-row {
-  margin-bottom: 24px;
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.chart-card {
-  border-radius: 8px;
+.big-card {
+  grid-column: span 2;
+  border-radius: 12px;
 }
 
-.chart-title {
+.medium-card {
+  grid-column: span 1;
+  border-radius: 12px;
+}
+
+.card-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -538,9 +605,27 @@ function formatDate(date: Date) {
   color: #303133;
 }
 
+.hot-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hot-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
 .chart {
   height: 300px;
   width: 100%;
+}
+
+.compact-chart {
+  height: 250px;
 }
 
 .chart-a11y-desc {
@@ -553,39 +638,40 @@ function formatDate(date: Date) {
   width: 100%;
 }
 
-.heatmap-wrapper {
-  position: relative;
-}
-
 .heatmap-stats {
-  position: absolute;
-  top: 10px;
-  right: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-}
-
-.heatmap-stats :deep(.el-statistic__title) {
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.heatmap-stats :deep(.el-statistic__content) {
-  font-size: 20px;
-  font-weight: bold;
-  color: #409EFF;
+  gap: 20px;
+  margin-top: 10px;
 }
 
 .chart-summary-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
+  border-radius: 10px;
+}
+
+@media (max-width: 1200px) {
+  .analytics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .big-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .big-card,
+  .medium-card {
+    grid-column: span 1;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .chart-summary-card h2 {

@@ -16,6 +16,7 @@ import com.group12.backend.entity.Scooter;
 @Repository
 public interface ScooterRepository extends JpaRepository<Scooter, Long> {
     List<Scooter> findByStatus(String status);
+    List<Scooter> findByType(String type);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Scooter s WHERE s.id = :id")

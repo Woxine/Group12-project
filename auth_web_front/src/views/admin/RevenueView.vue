@@ -113,7 +113,7 @@ import { ElMessage } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
 import { Search, Money, Tickets, DataAnalysis, Calendar } from '@element-plus/icons-vue';
 
-import { getPopularRentalDatesThisWeek, getRevenueByDuration, getRevenueStats, getWeeklyRevenueByDuration } from "@/api/admin";
+import { getPopularRentalDates, getRevenueByDuration, getRevenueStats, getWeeklyRevenueByDuration } from "@/api/admin";
 import type { DurationRevenue, PopularRentalDate, RevenueStats } from "@/types/api";
 
 const loading = ref(false);
@@ -146,7 +146,7 @@ async function load() {
       getRevenueStats(params),
       getRevenueByDuration(params),
       getWeeklyRevenueByDuration(),
-      getPopularRentalDatesThisWeek()
+      getPopularRentalDates(getCurrentWeekRange())
     ]);
     stats.totalRevenue = statsRes.totalRevenue ?? 0;
     stats.totalOrders = statsRes.totalOrders ?? 0;
@@ -165,6 +165,27 @@ async function load() {
 }
 
 onMounted(load);
+
+function getCurrentWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const start = new Date(now);
+  start.setDate(now.getDate() + diffToMonday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return {
+    start_date: formatDate(start),
+    end_date: formatDate(end)
+  };
+}
+
+function formatDate(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 </script>
 
 <style scoped>

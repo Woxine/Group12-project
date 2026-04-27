@@ -1,7 +1,7 @@
 <template>
 	<view class="page-container">
 		<!-- 1. 全局沉浸式地图 -->
-		<map id="mainMap" class="full-map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location></map>
+		<map id="mainMap" class="full-map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location @regionchange="onMapRegionChange"></map>
 
 		<!-- 2. 顶部悬浮栏 (包含公告) -->
 		<view class="top-notice-pill">
@@ -135,7 +135,7 @@
 			</view>
 		</view>
 	</view>
-	
+
 	<TabBar current="home" />
 </template>
 
@@ -147,13 +147,16 @@
 	import { BASE_URL } from '../../common/api.uts'
 	import { getAppMessage } from '../../common/messages.uts'
 	import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
-	
+
 	const longitude = ref(116.392325)
 	const latitude = ref(40.01811)
 	const scale = ref(16)
 	const markers = ref([] as Marker[])
 	const mapContext = ref(null as MapContext | null)
-	
+	const FILTER_RADIUS_METERS = 3000
+	const MARKER_LIMIT = 50
+	let regionDebounceTimer: number | null = null
+
 	const isVehicleIntroVisible = ref(false)
 	
 	const showVehicleIntro = () => {
@@ -164,12 +167,19 @@
 		isVehicleIntroVisible.value = false
 	}
 	
-	const buildNearbyMarkers = (lat: number, lng: number): Marker[] => {
-	  return JSON.parse<Marker[]>(JSON.stringify([
-	    { id: 1, longitude: lng - 0.0006, latitude: lat - 0.0007, title: '附近1', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
-	    { id: 2, longitude: lng + 0.0005, latitude: lat + 0.0005, title: '附近2', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } },
-	    { id: 3, longitude: lng - 0.0003, latitude: lat + 0.0004, title: '附近3', iconPath: '/static/loc.png', width: 32, height: 32, anchor: { x: 0.5, y: 1 } }
-	  ]))!
+	const toRadians = (deg: number): number => {
+		return deg * Math.PI / 180
+	}
+
+	const distanceInMeters = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+		const earthRadius = 6371000
+		const dLat = toRadians(lat2 - lat1)
+		const dLng = toRadians(lng2 - lng1)
+		const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+			Math.sin(dLng / 2) * Math.sin(dLng / 2)
+		const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+		return earthRadius * c
 	}
 	
 	const getMarkerIcon = (type: string | null): string => {
@@ -188,13 +198,13 @@
 	  }
 	}
 
-	const fetchScooterMarkers = (nearby: Marker[], lat: number, lng: number) => {
+	const fetchScooterMarkers = (lat: number, lng: number) => {
 	  uni.request({
 	    url: BASE_URL + '/api/v1/scooters',
 	    method: 'GET',
 	    success: (res) => {
 	      if (res.statusCode != 200 || res.data == null) {
-	        markers.value = nearby
+	        markers.value = []
 	        return
 	      }
 	      const raw = res.data as UTSJSONObject
@@ -208,13 +218,16 @@
 	      }
 	      const scooterMarkers: Marker[] = []
 	      let count = 0
-	      for (let i = 0; i < arr.length && count < 5; i++) {
+	      for (let i = 0; i < arr.length && count < MARKER_LIMIT; i++) {
 	        const item = arr[i] as UTSJSONObject
 	        const latVal = item['location_lat'] != null ? item['location_lat'] : item['locationLat']
 	        const lngVal = item['location_lng'] != null ? item['location_lng'] : item['locationLng']
 	        const numLat = latVal != null ? (latVal as number) : null
 	        const numLng = lngVal != null ? (lngVal as number) : null
 	        if (numLat != null && numLng != null && !isNaN(numLat) && !isNaN(numLng)) {
+	          if (distanceInMeters(lat, lng, numLat, numLng) > FILTER_RADIUS_METERS) {
+	            continue
+	          }
 	          const rawId = item['id']
 	          const sid = rawId != null ? ('SC' + ('' + rawId)) : ('SC' + (count + 1))
 	          const type = item['type'] != null ? ('' + item['type']) : 'GEN1'
@@ -231,17 +244,59 @@
 	          count++
 	        }
 	      }
-	      markers.value = nearby.concat(scooterMarkers)
+	      markers.value = scooterMarkers
 	    },
 	    fail: () => {
-	      markers.value = nearby
+	      markers.value = []
 	    }
 	  })
 	}
 	
 	const applyMarkers = (lat: number, lng: number) => {
-	  const nearby = buildNearbyMarkers(lat, lng)
-	  fetchScooterMarkers(nearby, lat, lng)
+	  fetchScooterMarkers(lat, lng)
+	}
+
+	const refreshMarkersByViewportCenter = () => {
+		if (mapContext.value == null) {
+			applyMarkers(latitude.value, longitude.value)
+			return
+		}
+		mapContext.value.getCenterLocation({
+			success: (res) => {
+				const centerLat = res.latitude
+				const centerLng = res.longitude
+				if (centerLat == null || centerLng == null) {
+					applyMarkers(latitude.value, longitude.value)
+					return
+				}
+				applyMarkers(centerLat, centerLng)
+			},
+			fail: () => {
+				applyMarkers(latitude.value, longitude.value)
+			}
+		})
+	}
+
+	const onMapRegionChange = (e: any | null) => {
+		let eventType: string | null = null
+		if (e != null) {
+			const rawEvent = e as UTSJSONObject
+			const rawType = rawEvent['type']
+			if (rawType != null) {
+				eventType = rawType as string
+			}
+		}
+		if (eventType == 'begin') {
+			return
+		}
+		const timerToClear = regionDebounceTimer
+		if (timerToClear != null) {
+			clearTimeout(timerToClear as number)
+			regionDebounceTimer = null
+		}
+		regionDebounceTimer = setTimeout(() => {
+			refreshMarkersByViewportCenter()
+		}, 500) as number
 	}
 	
 	const getCurrentLocation = () => {

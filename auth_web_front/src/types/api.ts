@@ -38,11 +38,41 @@ export interface Scooter {
   extraLongRentHourRateMultiplier?: number;
 }
 
+export interface BulkScooterUpdatePayload {
+  type: 'GEN1' | 'GEN2' | 'GEN3' | 'GEN3PRO';
+  hour_rate?: number;
+  status?: 'AVAILABLE' | 'RESERVED' | 'RENTED' | 'MAINTENANCE';
+  visible?: boolean;
+  confirm_risky?: boolean;
+}
+
+export interface ScooterBulkPreview {
+  type: string;
+  matchedCount: number;
+  hiddenCount: number;
+  statusBreakdown: Record<string, number>;
+  risky: boolean;
+  riskWarnings: string[];
+}
+
+export interface ScooterBulkApplyResult {
+  type: string;
+  matchedCount: number;
+  updatedCount: number;
+  hiddenCount: number;
+  statusBreakdown: Record<string, number>;
+  risky: boolean;
+  riskWarnings: string[];
+}
+
 export interface BillingSettings {
   longRentThresholdHours: number;
   extraLongRentThresholdHours: number;
   longRentHourRateMultiplier: number;
   extraLongRentHourRateMultiplier: number;
+  studentDiscountRate: number;
+  seniorDiscountRate: number;
+  frequentDiscountRate: number;
   updatedAt?: string;
 }
 

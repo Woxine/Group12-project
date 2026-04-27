@@ -291,6 +291,9 @@ onShow(() => {
 	justify-content: center;
 	flex-shrink: 0;
 	margin-right: 12px;
+}
+
+.menu-leading-text {
 	font-size: 17px;
 	line-height: 17px;
 }

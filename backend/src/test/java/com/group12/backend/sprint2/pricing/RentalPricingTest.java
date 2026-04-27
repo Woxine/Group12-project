@@ -18,6 +18,9 @@ class RentalPricingTest {
             new BigDecimal("72"),
             new BigDecimal("0.85"),
             new BigDecimal("0.75"),
+            new BigDecimal("0.80"),
+            new BigDecimal("0.80"),
+            new BigDecimal("0.80"),
             null);
 
     @Test

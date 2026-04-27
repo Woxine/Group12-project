@@ -3,7 +3,10 @@ package com.group12.backend.service;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import com.group12.backend.dto.BulkScooterUpdateRequest;
 import com.group12.backend.dto.CreateScooterRequest;
+import com.group12.backend.dto.ScooterBulkApplyResponse;
+import com.group12.backend.dto.ScooterBulkPreviewResponse;
 
 /**
  * 定义滑板车查询、定位和基础信息更新相关的服务能力。
@@ -33,6 +36,16 @@ public interface ScooterService {
      * 管理员新增车辆。
      */
     Object createScooter(CreateScooterRequest request);
+
+    /**
+     * 预览按车型批量更新将影响的车辆范围与风险信息。
+     */
+    ScooterBulkPreviewResponse previewBulkUpdateByType(BulkScooterUpdateRequest request);
+
+    /**
+     * 按车型批量更新车辆参数（需显式确认高风险字段）。
+     */
+    ScooterBulkApplyResponse applyBulkUpdateByType(BulkScooterUpdateRequest request);
 
     /**
      * 永久删除车辆（存在任意订单记录时不允许删除）。

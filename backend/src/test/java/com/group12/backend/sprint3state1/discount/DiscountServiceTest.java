@@ -28,6 +28,8 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.DiscountVerificationSubmissionRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.BillingRule;
+import com.group12.backend.service.BillingService;
 import com.group12.backend.service.DiscountVerificationConstants;
 import com.group12.backend.service.impl.DiscountServiceImpl;
 
@@ -43,6 +45,8 @@ class DiscountServiceTest {
     private ScooterRepository scooterRepository;
     @Mock
     private DiscountVerificationSubmissionRepository discountVerificationSubmissionRepository;
+    @Mock
+    private BillingService billingService;
 
     @InjectMocks
     private DiscountServiceImpl discountService;
@@ -101,6 +105,26 @@ class DiscountServiceTest {
         discountService.setDiscountProperties(properties);
         BigDecimal finalPrice = discountService.applyDiscount(new BigDecimal("100.00"), "STUDENT");
         assertThat(finalPrice).isEqualByComparingTo("80.00");
+    }
+
+    @Test
+    @DisplayName("applyDiscount_usesTypeSpecificRatesFromBillingSettings")
+    void applyDiscount_usesTypeSpecificRatesFromBillingSettings() {
+        DiscountProperties properties = new DiscountProperties();
+        discountService.setDiscountProperties(properties);
+        when(billingService.getCurrentRule()).thenReturn(new BillingRule(
+                new BigDecimal("24"),
+                new BigDecimal("72"),
+                new BigDecimal("0.85"),
+                new BigDecimal("0.75"),
+                new BigDecimal("0.70"),
+                new BigDecimal("0.65"),
+                new BigDecimal("0.60"),
+                LocalDateTime.now()));
+
+        assertThat(discountService.applyDiscount(new BigDecimal("100.00"), "STUDENT")).isEqualByComparingTo("70.00");
+        assertThat(discountService.applyDiscount(new BigDecimal("100.00"), "SENIOR")).isEqualByComparingTo("65.00");
+        assertThat(discountService.applyDiscount(new BigDecimal("100.00"), "FREQUENT")).isEqualByComparingTo("60.00");
     }
 
     @Test
