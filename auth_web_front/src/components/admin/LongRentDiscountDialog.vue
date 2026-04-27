@@ -2,7 +2,7 @@
   <el-dialog :model-value="visible" title="Long-Rent Discount Adjustment" width="1080px" @close="handleClose">
     <el-row :gutter="24">
       <el-col :span="10">
-        <el-form label-position="top" class="form-panel">
+        <el-form label-position="top" class="form-panel admin-dialog-form">
           <el-form-item label="Threshold T1 (hours)">
             <el-input-number v-model="state.longRentThresholdHours" :min="1" :max="200" :precision="0" disabled class="full-width" />
           </el-form-item>
@@ -31,8 +31,15 @@
               @change="onInputChange('m2')"
             />
           </el-form-item>
-          <el-alert v-if="!auditResult.ok" :title="auditResult.message" type="warning" show-icon :closable="false" />
-          <el-alert v-else title="Linked review passed: m1 >= m2." type="success" show-icon :closable="false" />
+          <el-alert v-if="inlineValidationMessage" :title="inlineValidationMessage" type="warning" show-icon :closable="false" class="status-alert" />
+          <el-alert
+            v-else
+            title="You can review and save after confirming both multipliers."
+            type="success"
+            show-icon
+            :closable="false"
+            class="status-alert"
+          />
           <el-text v-if="state.updatedAt" class="updated-at">
             Last updated: {{ state.updatedAt }}
           </el-text>
@@ -49,7 +56,7 @@
       <span class="log-title">Multiplier Adjustment Logs</span>
       <el-button size="small" @click="emit('refresh-logs')">Refresh Logs</el-button>
     </div>
-    <el-table :data="logs" stripe class="log-table" v-loading="logsLoading">
+    <el-table :data="logs" stripe class="log-table admin-data-table" v-loading="logsLoading">
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column label="m1" width="220">
         <template #default="{ row }">
@@ -75,7 +82,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="previewVisible" title="Confirm Multiplier Update" width="720px" append-to-body>
+  <el-dialog v-model="previewVisible" title="Confirm Multiplier Update" width="720px" append-to-body class="preview-dialog">
     <el-alert
       title="Please review the pricing impact before applying the new multipliers."
       type="info"
@@ -98,7 +105,7 @@
       </el-descriptions-item>
     </el-descriptions>
 
-    <el-table :data="previewRows" size="small" class="preview-table">
+    <el-table :data="previewRows" size="small" class="preview-table admin-data-table">
       <el-table-column prop="hours" label="Duration" width="140">
         <template #default="{ row }">{{ row.hours }}h</template>
       </el-table-column>
@@ -139,6 +146,10 @@ use([CanvasRenderer, LineChart, GridComponent, MarkLineComponent, TooltipCompone
 const H_MAX = 168;
 const PREVIEW_BASE_RATE = 3.5;
 const PREVIEW_HOURS = [24, 48, 72, 100, 168];
+const MIN_MULTIPLIER = 0.0001;
+const MAX_MULTIPLIER = 1;
+const DEFAULT_M1 = 0.85;
+const DEFAULT_M2 = 0.75;
 
 const props = defineProps<{
   visible: boolean;
@@ -156,35 +167,71 @@ const emit = defineEmits<{
 
 const chartRef = ref<InstanceType<typeof VChart> | null>(null);
 const previewVisible = ref(false);
+const lastEditedField = ref<"m1" | "m2">("m1");
 const state = reactive({
   longRentThresholdHours: 24,
   extraLongRentThresholdHours: 72,
-  longRentHourRateMultiplier: 0.85,
-  extraLongRentHourRateMultiplier: 0.75,
+  longRentHourRateMultiplier: DEFAULT_M1,
+  extraLongRentHourRateMultiplier: DEFAULT_M2,
   updatedAt: ""
 });
 const originalState = reactive({
-  longRentHourRateMultiplier: 0.85,
-  extraLongRentHourRateMultiplier: 0.75
+  longRentHourRateMultiplier: DEFAULT_M1,
+  extraLongRentHourRateMultiplier: DEFAULT_M2
 });
 
-const auditResult = computed(() => {
+const m1RangeError = computed(() => {
   const m1 = state.longRentHourRateMultiplier;
+  if (m1 < MIN_MULTIPLIER || m1 > MAX_MULTIPLIER) {
+    return "The 24h-72h multiplier must be between 0.0001 and 1.";
+  }
+  return "";
+});
+
+const m2RangeError = computed(() => {
   const m2 = state.extraLongRentHourRateMultiplier;
-  if (m1 < 0.0001 || m1 > 1 || m2 < 0.0001 || m2 > 1) {
-    return { ok: false, message: "Multipliers must be within [0.0001, 1.0]." };
+  if (m2 < MIN_MULTIPLIER || m2 > MAX_MULTIPLIER) {
+    return "The >72h multiplier must be between 0.0001 and 1.";
   }
-  if (m1 < m2) {
-    return { ok: false, message: "Linked review failed: m1 cannot be lower than m2." };
+  return "";
+});
+
+function uiColor(tokenName: string, fallback: string) {
+  if (typeof window === "undefined") {
+    return fallback;
   }
-  return { ok: true, message: "OK" };
+  return getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim() || fallback;
+}
+
+const relationError = computed(() => {
+  if (state.extraLongRentHourRateMultiplier > state.longRentHourRateMultiplier) {
+    return "The >72h multiplier should not be higher than the 24h-72h multiplier.";
+  }
+  return "";
+});
+
+const inlineValidationMessage = computed(() => {
+  if (lastEditedField.value === "m1") {
+    return m1RangeError.value;
+  }
+  if (lastEditedField.value === "m2") {
+    return m2RangeError.value;
+  }
+  return "";
 });
 
 function clampMultiplier(v: number) {
-  if (Number.isNaN(v)) return 1;
-  if (v < 0.0001) return 0.0001;
-  if (v > 1) return 1;
+  if (Number.isNaN(v)) return MAX_MULTIPLIER;
+  if (v < MIN_MULTIPLIER) return MIN_MULTIPLIER;
+  if (v > MAX_MULTIPLIER) return MAX_MULTIPLIER;
   return Math.round(v * 10000) / 10000;
+}
+
+function readNumberOrFallback(value: unknown, fallback: number) {
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  if (num <= 0) return fallback;
+  return clampMultiplier(num);
 }
 
 function computeSegmentedTotal(rate: number, hours: number, m1: number, m2: number) {
@@ -242,6 +289,11 @@ const stepSeriesData = computed(() => {
 });
 
 const chartOption = computed<EChartsOption>(() => {
+  const primary = uiColor("--ui-color-primary-600", "#2563eb");
+  const success = uiColor("--ui-color-success-600", "#16a34a");
+  const warning = uiColor("--ui-color-warning-500", "#f59e0b");
+  const surface = uiColor("--ui-bg-surface", "#ffffff");
+
   return {
     tooltip: {
       trigger: "axis",
@@ -262,7 +314,7 @@ const chartOption = computed<EChartsOption>(() => {
         step: "end",
         smooth: false,
         data: stepSeriesData.value,
-        lineStyle: { width: 3, color: "#409EFF" },
+        lineStyle: { width: 3, color: primary },
         symbol: "none",
         markLine: {
           symbol: "none",
@@ -278,7 +330,7 @@ const chartOption = computed<EChartsOption>(() => {
         shape: { r: 9 },
         position: [0, 0],
         draggable: true,
-        style: { fill: "#67C23A", stroke: "#fff", lineWidth: 2 },
+        style: { fill: success, stroke: surface, lineWidth: 2 },
         ondrag: function (this: any) {
           onHandleDrag("m1", this);
         }
@@ -289,7 +341,7 @@ const chartOption = computed<EChartsOption>(() => {
         shape: { r: 9 },
         position: [0, 0],
         draggable: true,
-        style: { fill: "#E6A23C", stroke: "#fff", lineWidth: 2 },
+        style: { fill: warning, stroke: surface, lineWidth: 2 },
         ondrag: function (this: any) {
           onHandleDrag("m2", this);
         }
@@ -311,16 +363,13 @@ function refreshHandlePositions() {
   });
 }
 
-function applyLinkedReview(source: "m1" | "m2", value: number) {
+function applySingleFieldNormalization(source: "m1" | "m2", value: number) {
   const normalized = clampMultiplier(value);
   if (source === "m1") {
     state.longRentHourRateMultiplier = normalized;
-    if (state.extraLongRentHourRateMultiplier > state.longRentHourRateMultiplier) {
-      state.extraLongRentHourRateMultiplier = state.longRentHourRateMultiplier;
-    }
-  } else {
-    state.extraLongRentHourRateMultiplier = Math.min(normalized, clampMultiplier(state.longRentHourRateMultiplier));
+    return;
   }
+  state.extraLongRentHourRateMultiplier = normalized;
 }
 
 function onHandleDrag(kind: "m1" | "m2", target: { x: number; y: number }) {
@@ -330,21 +379,23 @@ function onHandleDrag(kind: "m1" | "m2", target: { x: number; y: number }) {
   const fixedPixelX = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [fixedX, 0]) as number[];
   target.x = fixedPixelX[0];
   const dataCoord = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [fixedPixelX[0], target.y]) as number[];
-  applyLinkedReview(kind, dataCoord[1]);
+  lastEditedField.value = kind;
+  applySingleFieldNormalization(kind, dataCoord[1]);
   syncChartFromInputs();
 }
 
 function syncChartFromInputs() {
-  applyLinkedReview("m1", state.longRentHourRateMultiplier);
-  applyLinkedReview("m2", state.extraLongRentHourRateMultiplier);
+  state.longRentHourRateMultiplier = clampMultiplier(state.longRentHourRateMultiplier);
+  state.extraLongRentHourRateMultiplier = clampMultiplier(state.extraLongRentHourRateMultiplier);
   nextTick(() => refreshHandlePositions());
 }
 
 function onInputChange(kind: "m1" | "m2") {
+  lastEditedField.value = kind;
   if (kind === "m1") {
-    applyLinkedReview("m1", state.longRentHourRateMultiplier);
+    applySingleFieldNormalization("m1", state.longRentHourRateMultiplier);
   } else {
-    applyLinkedReview("m2", state.extraLongRentHourRateMultiplier);
+    applySingleFieldNormalization("m2", state.extraLongRentHourRateMultiplier);
   }
   syncChartFromInputs();
 }
@@ -357,8 +408,9 @@ function hasPendingChanges() {
 }
 
 function openPreview() {
-  if (!auditResult.value.ok) {
-    ElMessage.error(auditResult.value.message);
+  const blockingError = m1RangeError.value || m2RangeError.value || relationError.value;
+  if (blockingError) {
+    ElMessage.error(blockingError);
     return;
   }
   if (!hasPendingChanges()) {
@@ -369,8 +421,9 @@ function openPreview() {
 }
 
 function confirmSave() {
-  if (!auditResult.value.ok) {
-    ElMessage.error(auditResult.value.message);
+  const blockingError = m1RangeError.value || m2RangeError.value || relationError.value;
+  if (blockingError) {
+    ElMessage.error(blockingError);
     return;
   }
   emit("save", {
@@ -383,12 +436,13 @@ function syncStateFromProps() {
   if (!props.settings) return;
   state.longRentThresholdHours = Number(props.settings.longRentThresholdHours);
   state.extraLongRentThresholdHours = Number(props.settings.extraLongRentThresholdHours);
-  state.longRentHourRateMultiplier = Number(props.settings.longRentHourRateMultiplier);
-  state.extraLongRentHourRateMultiplier = Number(props.settings.extraLongRentHourRateMultiplier);
+  state.longRentHourRateMultiplier = readNumberOrFallback(props.settings.longRentHourRateMultiplier, DEFAULT_M1);
+  state.extraLongRentHourRateMultiplier = readNumberOrFallback(props.settings.extraLongRentHourRateMultiplier, DEFAULT_M2);
   state.updatedAt = props.settings.updatedAt ? String(props.settings.updatedAt).replace("T", " ").substring(0, 19) : "";
-  originalState.longRentHourRateMultiplier = Number(props.settings.longRentHourRateMultiplier);
-  originalState.extraLongRentHourRateMultiplier = Number(props.settings.extraLongRentHourRateMultiplier);
+  originalState.longRentHourRateMultiplier = readNumberOrFallback(props.settings.longRentHourRateMultiplier, DEFAULT_M1);
+  originalState.extraLongRentHourRateMultiplier = readNumberOrFallback(props.settings.extraLongRentHourRateMultiplier, DEFAULT_M2);
   previewVisible.value = false;
+  lastEditedField.value = "m1";
   syncChartFromInputs();
 }
 
@@ -435,9 +489,7 @@ onUnmounted(() => {
 
 <style scoped>
 .form-panel {
-  background: #fff;
-  border-radius: 8px;
-  padding: 12px;
+  padding: 14px;
 }
 
 .full-width {
@@ -447,24 +499,32 @@ onUnmounted(() => {
 .chart {
   width: 100%;
   height: 460px;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border-soft);
+  background: var(--ui-bg-surface);
 }
 
 .updated-at {
-  margin-top: 10px;
+  margin-top: 12px;
   display: inline-block;
-  color: #909399;
+  color: var(--ui-text-muted);
+}
+
+.status-alert {
+  margin-top: 4px;
+  border-radius: 10px;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .log-title {
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: var(--ui-text-strong);
 }
 
 .log-table {
@@ -473,6 +533,7 @@ onUnmounted(() => {
 
 .preview-alert {
   margin-bottom: 12px;
+  border-radius: 10px;
 }
 
 .preview-table {
@@ -480,12 +541,16 @@ onUnmounted(() => {
 }
 
 .delta-up {
-  color: #e6a23c;
+  color: var(--ui-color-warning-600);
   font-weight: 600;
 }
 
 .delta-down {
-  color: #67c23a;
+  color: var(--ui-color-success-600);
   font-weight: 600;
+}
+
+:deep(.el-divider--horizontal) {
+  margin: 20px 0 16px;
 }
 </style>

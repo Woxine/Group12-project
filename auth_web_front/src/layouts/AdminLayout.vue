@@ -1,9 +1,12 @@
 <template>
   <el-container class="layout">
-    <el-aside width="240px" class="aside" aria-label="Admin sidebar">
+    <el-aside width="248px" class="aside" aria-label="Admin sidebar">
       <div class="brand">
         <el-icon class="brand-icon"><Platform /></el-icon>
-        Admin Console
+        <div class="brand-text-wrap">
+          <span class="brand-title">Admin Console</span>
+          <span class="brand-subtitle">Operations Center</span>
+        </div>
       </div>
       <nav aria-label="Admin primary navigation">
         <el-menu :default-active="route.path" router class="menu">
@@ -43,10 +46,10 @@
       </nav>
     </el-aside>
 
-    <el-container>
+    <el-container class="layout-main-shell">
       <el-header class="header" role="banner">
         <div class="header-left">
-          <!-- Optional breadcrumb or title here in the future -->
+          <span class="header-title">Management Workspace</span>
         </div>
         <div class="header-right">
           <el-space :size="16">
@@ -64,7 +67,9 @@
         </div>
       </el-header>
       <el-main id="main-content" ref="mainContentRef" class="main-content" tabindex="-1">
-        <router-view />
+        <div class="content-inner">
+          <router-view />
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -110,66 +115,103 @@ watch(
 <style scoped>
 .layout {
   min-height: 100vh;
+  background: var(--ui-bg-app);
 }
 
 .aside {
-  border-right: 1px solid #e5e7eb;
-  background: #ffffff;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  border-right: 1px solid var(--ui-border-soft);
+  background: linear-gradient(180deg, var(--ui-bg-surface) 0%, var(--ui-bg-surface-soft) 100%);
+  box-shadow: var(--ui-shadow-sm);
   z-index: 10;
 }
 
 .brand {
-  height: 60px;
+  height: 72px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
-  color: #303133;
-  border-bottom: 1px solid #f0f2f5;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--ui-border-soft);
 }
 
 .brand-icon {
-  margin-right: 8px;
-  font-size: 20px;
-  color: #409EFF;
+  font-size: 22px;
+  color: var(--ui-color-primary-600);
+}
+
+.brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ui-text-strong);
+}
+
+.brand-subtitle {
+  font-size: 12px;
+  color: var(--ui-text-muted);
 }
 
 .menu {
   border-right: none;
-  margin-top: 8px;
+  margin-top: 10px;
+  padding: 0 8px;
 }
 
-.el-menu-item {
+:deep(.menu .el-menu-item) {
   margin: 4px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   height: 48px;
   line-height: 48px;
-}
-
-.el-menu-item.is-active {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-  font-weight: 600;
-  border-left: 4px solid #1d4ed8;
-}
-
-.el-menu-item.is-active::after {
-  content: " (current)";
-  font-size: 12px;
+  color: var(--ui-text-muted);
   font-weight: 500;
 }
 
+:deep(.menu .el-menu-item:hover) {
+  background: var(--ui-color-primary-50);
+  color: var(--ui-color-primary-700);
+}
+
+:deep(.menu .el-menu-item.is-active) {
+  background-color: var(--ui-color-primary-50);
+  color: var(--ui-color-primary-700);
+  font-weight: 600;
+  border-left: 4px solid var(--ui-color-primary-700);
+}
+
+:deep(.menu .el-menu-item.is-active::after) {
+  content: " (current)";
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ui-color-primary-700);
+}
+
+.layout-main-shell {
+  min-width: 0;
+}
+
 .header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--ui-bg-surface);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ui-border-soft);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--ui-shadow-sm);
   z-index: 5;
-  padding: 0 24px;
+  padding: 0 22px;
+}
+
+.header-title {
+  font-size: 14px;
+  color: var(--ui-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .header-right {
@@ -184,19 +226,37 @@ watch(
 }
 
 .avatar {
-  background: #409EFF;
+  background: var(--ui-color-primary-600);
   color: white;
   font-weight: bold;
+  box-shadow: var(--ui-shadow-sm);
 }
 
 .greeting {
   font-size: 14px;
-  color: #606266;
+  color: var(--ui-text-muted);
   font-weight: 500;
 }
 
 .main-content {
-  background-color: #f5f7fa;
-  padding: 24px;
+  background-color: var(--ui-bg-app);
+  padding: 18px;
+}
+
+.content-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1080px) {
+  .aside {
+    width: 220px !important;
+  }
+}
+
+@media (max-width: 880px) {
+  .header-title {
+    display: none;
+  }
 }
 </style>

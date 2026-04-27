@@ -1,14 +1,19 @@
 <template>
-  <el-card shadow="never" class="billing-container">
+  <el-card shadow="never" class="billing-container admin-page-card">
     <template #header>
-      <div class="header">
-        <span class="page-title">Billing Discount Hub</span>
-        <el-button :icon="Refresh" :loading="loading" @click="load">Reload</el-button>
+      <div class="admin-page-header">
+        <div>
+          <span class="admin-page-title">Billing Discount Hub</span>
+          <div class="admin-page-subtitle">Manage pricing multipliers and discount rates in one place.</div>
+        </div>
+        <div class="admin-page-toolbar">
+          <el-button :icon="Refresh" :loading="loading" @click="load">Reload</el-button>
+        </div>
       </div>
     </template>
 
-    <el-row :gutter="16" v-loading="loading">
-      <el-col :xs="24" :sm="12">
+    <el-row :gutter="16" v-loading="loading" class="billing-grid">
+      <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
           title="Long-Rent Discount"
           tag="LONG_RENT"
@@ -16,7 +21,7 @@
           @click="longRentDialogVisible = true"
         />
       </el-col>
-      <el-col :xs="24" :sm="12">
+      <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
           title="Student Discount"
           tag="STUDENT"
@@ -24,7 +29,7 @@
           @click="studentDialogVisible = true"
         />
       </el-col>
-      <el-col :xs="24" :sm="12">
+      <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
           title="Senior Discount"
           tag="SENIOR"
@@ -32,7 +37,7 @@
           @click="seniorDialogVisible = true"
         />
       </el-col>
-      <el-col :xs="24" :sm="12">
+      <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
           title="Frequent User Discount"
           tag="FREQUENT"
@@ -62,7 +67,7 @@
     :rate="settings?.studentDiscountRate ?? 0.8"
     :saving="savingKind === 'student'"
     @update:visible="studentDialogVisible = $event"
-    @save="(rate) => saveSingleRate('studentDiscountRate', rate, 'student', 'Student discount updated')"
+    @save="(rate) => saveSingleRate('studentDiscountRate', rate, 'student', 'Student discount has been updated.')"
   />
 
   <SimpleDiscountRateDialog
@@ -73,7 +78,7 @@
     :rate="settings?.seniorDiscountRate ?? 0.8"
     :saving="savingKind === 'senior'"
     @update:visible="seniorDialogVisible = $event"
-    @save="(rate) => saveSingleRate('seniorDiscountRate', rate, 'senior', 'Senior discount updated')"
+    @save="(rate) => saveSingleRate('seniorDiscountRate', rate, 'senior', 'Senior discount has been updated.')"
   />
 
   <SimpleDiscountRateDialog
@@ -84,7 +89,7 @@
     :rate="settings?.frequentDiscountRate ?? 0.8"
     :saving="savingKind === 'frequent'"
     @update:visible="frequentDialogVisible = $event"
-    @save="(rate) => saveSingleRate('frequentDiscountRate', rate, 'frequent', 'Frequent user discount updated')"
+    @save="(rate) => saveSingleRate('frequentDiscountRate', rate, 'frequent', 'Frequent user discount has been updated.')"
   />
 </template>
 
@@ -132,12 +137,30 @@ const frequentSummary = computed(() => {
   return `Current rate: ${settings.value.frequentDiscountRate.toFixed(4)}`;
 });
 
+function normalizeBillingErrorMessage(error: any, fallback: string) {
+  const rawMessage = error?.response?.data?.message;
+  if (typeof rawMessage !== "string" || !rawMessage.trim()) {
+    return fallback;
+  }
+  const lowered = rawMessage.toLowerCase();
+  const looksTechnical =
+    lowered.includes("java.") ||
+    lowered.includes("com.fasterxml") ||
+    lowered.includes("cannot deserialize") ||
+    lowered.includes("json parse") ||
+    lowered.includes("failed to convert");
+  if (looksTechnical) {
+    return "Request format is invalid. Please check the value and try again.";
+  }
+  return rawMessage;
+}
+
 async function load() {
   loading.value = true;
   try {
     settings.value = await fetchBillingSettings();
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to load billing settings");
+    ElMessage.error(normalizeBillingErrorMessage(error, "Could not load billing settings."));
   } finally {
     loading.value = false;
   }
@@ -149,7 +172,7 @@ async function loadLogs() {
     const result = await fetchBillingSettingsLogs(20);
     logs.value = result.data;
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to load billing logs");
+    ElMessage.error(normalizeBillingErrorMessage(error, "Could not load billing logs."));
   } finally {
     logsLoading.value = false;
   }
@@ -159,11 +182,11 @@ async function saveLongRent(payload: { longRentHourRateMultiplier: number; extra
   savingKind.value = "longRent";
   try {
     settings.value = await updateBillingSettings(payload);
-    ElMessage.success("Long-rent discount updated");
+    ElMessage.success("Long-rent discount has been updated.");
     longRentDialogVisible.value = false;
     await loadLogs();
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to update long-rent discount");
+    ElMessage.error(normalizeBillingErrorMessage(error, "Could not update the long-rent discount."));
   } finally {
     savingKind.value = "";
   }
@@ -183,7 +206,7 @@ async function saveSingleRate(
     if (kind === "senior") seniorDialogVisible.value = false;
     if (kind === "frequent") frequentDialogVisible.value = false;
   } catch (error: any) {
-    ElMessage.error(error?.response?.data?.message ?? "Failed to update discount setting");
+    ElMessage.error(normalizeBillingErrorMessage(error, "Could not update this discount setting."));
   } finally {
     savingKind.value = "";
   }
@@ -197,18 +220,19 @@ onMounted(async () => {
 
 <style scoped>
 .billing-container {
-  border-radius: 8px;
+  border-radius: var(--ui-radius-lg);
+  overflow: hidden;
 }
 
-.header {
+.billing-grid {
+  row-gap: 12px;
+}
+
+.billing-grid-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+.billing-grid-item :deep(.discount-card) {
+  width: 100%;
 }
 </style>

@@ -1,14 +1,17 @@
 <template>
-  <el-card shadow="never" class="verify-container">
+  <el-card shadow="never" class="verify-container admin-page-card">
     <template #header>
-      <div class="header">
-        <span class="page-title">Discount Verification Review</span>
-        <el-space>
-          <el-select v-model="filters.type" clearable placeholder="Type" style="width: 140px">
+      <div class="header admin-page-header">
+        <div>
+          <span class="page-title admin-page-title">Discount Verification Review</span>
+          <div class="admin-page-subtitle">Review student and senior submissions with approval traceability.</div>
+        </div>
+        <el-space class="admin-page-toolbar">
+          <el-select v-model="filters.type" clearable placeholder="Type" class="admin-filter-select">
             <el-option label="Student" value="STUDENT" />
             <el-option label="Senior" value="SENIOR" />
           </el-select>
-          <el-select v-model="filters.status" clearable placeholder="Status" style="width: 140px">
+          <el-select v-model="filters.status" clearable placeholder="Status" class="admin-filter-select">
             <el-option label="Pending" value="PENDING" />
             <el-option label="Approved" value="APPROVED" />
             <el-option label="Rejected" value="REJECTED" />
@@ -22,6 +25,7 @@
       :data="rows"
       stripe
       v-loading="loading"
+      class="admin-data-table"
       :row-class-name="() => 'clickable-row'"
       @row-click="openDetailDialog"
     >
@@ -29,7 +33,7 @@
       <el-table-column prop="userId" label="User ID" width="100" />
       <el-table-column prop="type" label="Type" width="120">
         <template #default="{ row }">
-          <el-tag :type="row.type === 'STUDENT' ? 'primary' : 'warning'" effect="light">
+          <el-tag type="info" effect="plain" round>
             {{ row.type }}
           </el-tag>
         </template>
@@ -37,8 +41,8 @@
       <el-table-column prop="status" label="Status" width="120">
         <template #default="{ row }">
           <el-tag
-            :type="row.status === 'APPROVED' ? 'success' : row.status === 'REJECTED' ? 'danger' : 'info'"
-            effect="dark"
+            :type="getAdminStatusTagType(row.status)"
+            effect="light"
             round
           >
             {{ row.status }}
@@ -72,12 +76,12 @@
           >
             Reject
           </el-button>
-          <span v-if="row.status !== 'PENDING'" class="muted">Reviewed</span>
+          <span v-if="row.status !== 'PENDING'" class="admin-status-text admin-status-text--muted">Reviewed</span>
         </template>
       </el-table-column>
     </el-table>
 
-    <div class="pager-container">
+    <div class="admin-pagination-footer">
       <el-pagination
         background
         layout="total, sizes, prev, pager, next, jumper"
@@ -92,19 +96,19 @@
   </el-card>
 
   <el-dialog v-model="detailDialogVisible" title="Submission Details" width="620px" append-to-body>
-    <div v-if="detailRow" class="detail-dialog-grid">
-      <div class="detail-field"><span class="label">ID</span><span>#{{ detailRow.id }}</span></div>
-      <div class="detail-field"><span class="label">User ID</span><span>{{ detailRow.userId }}</span></div>
-      <div class="detail-field"><span class="label">Type</span><span>{{ detailRow.type }}</span></div>
-      <div class="detail-field"><span class="label">Status</span><span>{{ detailRow.status }}</span></div>
-      <div class="detail-field"><span class="label">File</span><span>{{ detailRow.originalFilename }}</span></div>
-      <div class="detail-field"><span class="label">MIME</span><span>{{ detailRow.mimeType }}</span></div>
-      <div class="detail-field"><span class="label">Size</span><span>{{ formatBytes(detailRow.sizeBytes) }}</span></div>
-      <div class="detail-field"><span class="label">Submitted</span><span>{{ detailRow.submittedAt }}</span></div>
-      <div class="detail-field"><span class="label">Reviewed</span><span>{{ detailRow.reviewedAt || "-" }}</span></div>
-      <div class="detail-field"><span class="label">Reviewer</span><span>{{ detailRow.reviewerUserId ?? "-" }}</span></div>
-      <div class="detail-field full-row"><span class="label">Storage Path</span><span>{{ detailRow.storagePath || "-" }}</span></div>
-      <div class="detail-field full-row"><span class="label">Reject Reason</span><span>{{ detailRow.rejectReason || "-" }}</span></div>
+    <div v-if="detailRow" class="admin-detail-grid">
+      <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">User ID</span><span>{{ detailRow.userId }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Type</span><span>{{ detailRow.type }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Status</span><span>{{ detailRow.status }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">File</span><span>{{ detailRow.originalFilename }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">MIME</span><span>{{ detailRow.mimeType }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Size</span><span>{{ formatBytes(detailRow.sizeBytes) }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Submitted</span><span>{{ detailRow.submittedAt }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Reviewed</span><span>{{ detailRow.reviewedAt || "-" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Reviewer</span><span>{{ detailRow.reviewerUserId ?? "-" }}</span></div>
+      <div class="admin-detail-field admin-detail-field--full"><span class="admin-detail-label">Storage Path</span><span>{{ detailRow.storagePath || "-" }}</span></div>
+      <div class="admin-detail-field admin-detail-field--full"><span class="admin-detail-label">Reject Reason</span><span>{{ detailRow.rejectReason || "-" }}</span></div>
     </div>
     <template #footer>
       <el-button @click="detailDialogVisible = false">Close</el-button>
@@ -137,6 +141,7 @@ import {
   getDiscountVerifications,
   rejectDiscountVerification
 } from "@/api/admin";
+import { getAdminStatusTagType } from "@/adminStatus";
 import type { DiscountVerificationSubmission } from "@/types/api";
 
 const loading = ref(false);
@@ -247,53 +252,7 @@ onMounted(load);
 
 <style scoped>
 .verify-container {
-  border-radius: 8px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.pager-container {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-}
-
-.detail-dialog-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.detail-field {
-  display: flex;
-  gap: 6px;
-  font-size: 13px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.label {
-  color: #6b7280;
-  min-width: 90px;
-}
-
-.full-row {
-  grid-column: span 2;
-}
-
-.muted {
-  color: #909399;
+  border-radius: var(--ui-radius-lg);
 }
 
 :deep(.clickable-row) {

@@ -1,9 +1,12 @@
 <template>
-  <el-card shadow="never" class="feedbacks-container" role="region" aria-labelledby="feedback-management-heading">
+  <el-card shadow="never" class="feedbacks-container admin-page-card" role="region" aria-labelledby="feedback-management-heading">
     <template #header>
-      <div class="header">
-        <h1 id="feedback-management-heading" class="page-title">Feedback Management</h1>
-        <div class="toolbar">
+      <div class="header admin-page-header">
+        <div>
+          <h1 id="feedback-management-heading" class="page-title admin-page-title">Feedback Management</h1>
+          <div class="admin-page-subtitle">Track issue priority, escalation status, and close the resolution loop.</div>
+        </div>
+        <div class="toolbar admin-page-toolbar">
           <el-space>
             <label for="feedback-priority-filter" class="sr-only">Filter feedback by priority</label>
             <el-select
@@ -11,7 +14,7 @@
               v-model="filters.priority"
               clearable
               placeholder="Priority"
-              style="width: 140px"
+              class="admin-filter-select"
               aria-label="Filter feedback by priority"
             >
               <el-option label="LOW" value="LOW" />
@@ -23,7 +26,7 @@
               v-model="resolvedView"
               clearable
               placeholder="Resolution"
-              style="width: 160px"
+              class="admin-filter-select"
               aria-label="Filter feedback by resolution status"
               @change="onResolvedChange"
             >
@@ -51,7 +54,7 @@
       :data="rows"
       stripe
       v-loading="loading"
-      class="data-table"
+      class="data-table admin-data-table"
       aria-label="Feedback records"
       aria-describedby="feedback-table-help"
       :row-class-name="() => 'clickable-row'"
@@ -64,7 +67,7 @@
       <el-table-column prop="priority" label="Priority" width="120" align="center">
         <template #default="{ row }">
           <el-tag
-            :type="row.priority === 'HIGH' ? 'danger' : 'info'"
+            :type="getAdminPriorityTagType(row.priority)"
             effect="light"
             round
           >
@@ -76,7 +79,7 @@
       <el-table-column label="Status" width="120" align="center">
         <template #default="{ row }">
           <el-tag
-            :type="row.resolved ? 'success' : 'warning'"
+            :type="getAdminStatusTagType(row.resolved ? 'RESOLVED' : 'UNRESOLVED')"
             effect="dark"
             round
             size="small"
@@ -90,7 +93,7 @@
 
       <el-table-column label="Escalated" width="120" align="center">
         <template #default="{ row }">
-          <el-tag :type="row.escalated ? 'danger' : 'info'" effect="light" round>
+          <el-tag :type="getAdminStatusTagType(row.escalated ? 'ESCALATED' : 'NO')" effect="light" round>
             {{ row.escalated ? "Yes" : "No" }}
           </el-tag>
         </template>
@@ -104,7 +107,9 @@
 
       <el-table-column prop="escalationStatus" label="Process Status" width="170" align="center">
         <template #default="{ row }">
-          <el-tag effect="plain" round>{{ row.escalationStatus || "PENDING" }}</el-tag>
+          <el-tag :type="getAdminStatusTagType(row.escalationStatus || 'PENDING')" effect="plain" round>
+            {{ row.escalationStatus || "PENDING" }}
+          </el-tag>
         </template>
       </el-table-column>
 
@@ -136,17 +141,17 @@
           >
             Escalate
           </el-button>
-          <span v-else-if="row.priority === 'HIGH' && row.escalated" class="resolved-text">
+          <span v-else-if="row.priority === 'HIGH' && row.escalated" class="admin-status-text admin-status-text--success">
             <el-icon><Select /></el-icon> Escalated
           </span>
-          <span v-else class="resolved-text">
+          <span v-else class="admin-status-text admin-status-text--success">
             <el-icon><Check /></el-icon> Completed
           </span>
         </template>
       </el-table-column>
     </el-table>
 
-    <div class="pager-container">
+    <div class="admin-pagination-footer">
       <el-pagination
         background
         layout="total, sizes, prev, pager, next, jumper"
@@ -166,19 +171,19 @@
     width="560px"
     append-to-body
   >
-    <div v-if="detailRow" class="detail-dialog-grid">
-      <div class="detail-field"><span class="label">ID</span><span>#{{ detailRow.id }}</span></div>
-      <div class="detail-field"><span class="label">User ID</span><span>{{ detailRow.userId ?? "-" }}</span></div>
-      <div class="detail-field"><span class="label">Scooter ID</span><span>{{ detailRow.scooterId ?? "-" }}</span></div>
-      <div class="detail-field"><span class="label">Priority</span><span>{{ detailRow.priority }}</span></div>
-      <div class="detail-field"><span class="label">Resolved</span><span>{{ detailRow.resolved ? "Yes" : "No" }}</span></div>
-      <div class="detail-field"><span class="label">Escalated</span><span>{{ detailRow.escalated ? "Yes" : "No" }}</span></div>
-      <div class="detail-field"><span class="label">Escalated To</span><span>{{ detailRow.escalatedTo || "-" }}</span></div>
-      <div class="detail-field"><span class="label">Process Status</span><span>{{ detailRow.escalationStatus || "PENDING" }}</span></div>
+    <div v-if="detailRow" class="admin-detail-grid">
+      <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">User ID</span><span>{{ detailRow.userId ?? "-" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Scooter ID</span><span>{{ detailRow.scooterId ?? "-" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Priority</span><span>{{ detailRow.priority }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Resolved</span><span>{{ detailRow.resolved ? "Yes" : "No" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Escalated</span><span>{{ detailRow.escalated ? "Yes" : "No" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Escalated To</span><span>{{ detailRow.escalatedTo || "-" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Process Status</span><span>{{ detailRow.escalationStatus || "PENDING" }}</span></div>
     </div>
     <el-divider />
     <div class="detail-content">
-      <div class="label">Feedback Content</div>
+      <div class="admin-detail-label">Feedback Content</div>
       <p class="full-content">{{ detailRow?.content || "-" }}</p>
     </div>
     <template #footer>
@@ -193,7 +198,7 @@
     destroy-on-close
     append-to-body
   >
-    <el-form label-position="top">
+    <el-form label-position="top" class="admin-dialog-form">
       <el-form-item label="Escalate To" required>
         <el-input
           id="escalate-target"
@@ -231,6 +236,7 @@ import { onMounted, reactive, ref } from "vue";
 import { Search, CircleCheck, Check, Warning, Select } from '@element-plus/icons-vue';
 
 import { getFeedbacks, processFeedbackByPriority } from "@/api/admin";
+import { getAdminPriorityTagType, getAdminStatusTagType } from "@/adminStatus";
 import type { FeedbackItem } from "@/types/api";
 
 const loading = ref(false);
@@ -366,76 +372,20 @@ onMounted(load);
 
 <style scoped>
 .feedbacks-container {
-  border-radius: 8px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.data-table {
-  margin-top: 16px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #ebeef5;
-}
-
-.pager-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-  padding: 8px 0;
-}
-
-.detail-dialog-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.detail-field {
-  display: flex;
-  gap: 6px;
-  font-size: 13px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.label {
-  color: #6b7280;
-  min-width: 90px;
+  border-radius: var(--ui-radius-lg);
 }
 
 .detail-content {
   padding: 10px 12px;
-  background: #f8fafc;
-  border-radius: 8px;
+  background: var(--ui-bg-surface-soft);
+  border-radius: var(--ui-radius-sm);
 }
 
 .full-content {
   margin: 8px 0 0;
   white-space: pre-wrap;
   line-height: 1.6;
-  color: #1f2937;
-}
-
-.resolved-text {
-  color: #67C23A;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  color: var(--ui-text-default);
 }
 
 :deep(.clickable-row) {

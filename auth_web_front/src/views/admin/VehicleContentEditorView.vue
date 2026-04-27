@@ -1,9 +1,12 @@
 <template>
-  <el-card shadow="never" class="editor-container">
+  <el-card shadow="never" class="editor-container admin-page-card">
     <template #header>
-      <div class="header">
-        <span class="page-title">Vehicle Content Editor</span>
-        <el-space>
+      <div class="admin-page-header">
+        <div>
+          <span class="admin-page-title">Vehicle Content Editor</span>
+          <div class="admin-page-subtitle">Edit model descriptions and preview content in real time.</div>
+        </div>
+        <el-space class="admin-page-toolbar">
           <el-button @click="resetDefaults">Reset Defaults</el-button>
           <el-button type="primary" :icon="Check" @click="save">Save Content</el-button>
         </el-space>
@@ -15,12 +18,12 @@
       type="info"
       show-icon
       :closable="false"
-      class="hint"
+      class="hint admin-hint"
     />
 
     <el-row :gutter="20" class="content-row">
-      <el-col :span="14">
-        <el-card shadow="never">
+      <el-col :xs="24" :lg="14">
+        <el-card shadow="never" class="admin-panel">
           <template #header>
             <strong>Editable Content</strong>
           </template>
@@ -52,8 +55,8 @@
         </el-card>
       </el-col>
 
-      <el-col :span="10">
-        <el-card shadow="never">
+      <el-col :xs="24" :lg="10">
+        <el-card shadow="never" class="admin-panel">
           <template #header>
             <strong>Live Preview</strong>
           </template>
@@ -157,27 +160,16 @@ function resetDefaults() {
 
 <style scoped>
 .editor-container {
-  border-radius: 8px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  border-radius: var(--ui-radius-lg);
 }
 
 .hint {
-  margin-bottom: 16px;
+  margin-bottom: var(--ui-space-4);
 }
 
 .content-row {
   margin-top: 4px;
+  row-gap: var(--ui-space-4);
 }
 
 .form {
@@ -185,21 +177,21 @@ function resetDefaults() {
 }
 
 .preview-item {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
+  border: 1px solid var(--ui-border-soft);
+  border-radius: var(--ui-radius-sm);
   padding: 10px 12px;
-  background: #fafcff;
+  background: var(--ui-bg-surface-soft);
 }
 
 .preview-title {
   font-weight: 600;
   margin-bottom: 6px;
-  color: #303133;
+  color: var(--ui-text-strong);
 }
 
 .preview-line {
   font-size: 13px;
-  color: #606266;
+  color: var(--ui-text-muted);
   line-height: 1.5;
 }
 </style>

@@ -1,10 +1,13 @@
 <template>
-  <el-card shadow="never" class="high-priority-container">
+  <el-card shadow="never" class="high-priority-container admin-page-card">
     <template #header>
-      <div class="header">
-        <span class="page-title">High Priority Issues</span>
-        <el-space>
-          <el-select v-model="filters.escalated" clearable placeholder="Escalation" style="width: 160px">
+      <div class="header admin-page-header">
+        <div>
+          <span class="page-title admin-page-title">High Priority Issues</span>
+          <div class="admin-page-subtitle">Focus on unresolved urgent feedback and escalation progress.</div>
+        </div>
+        <el-space class="admin-page-toolbar">
+          <el-select v-model="filters.escalated" clearable placeholder="Escalation" class="admin-filter-select">
             <el-option label="Escalated" :value="true" />
             <el-option label="Not Escalated" :value="false" />
           </el-select>
@@ -13,13 +16,31 @@
       </div>
     </template>
 
-    <el-table :data="rows" stripe v-loading="loading">
+    <el-table :data="rows" stripe v-loading="loading" class="admin-data-table">
       <el-table-column prop="feedbackId" label="Feedback ID" width="120" />
-      <el-table-column prop="priority" label="Priority" width="120" />
-      <el-table-column prop="escalated" label="Escalated" width="120" />
+      <el-table-column prop="priority" label="Priority" width="120">
+        <template #default="{ row }">
+          <el-tag :type="getAdminPriorityTagType(row.priority)" effect="light" round>
+            {{ row.priority }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="escalated" label="Escalated" width="120">
+        <template #default="{ row }">
+          <el-tag :type="getAdminStatusTagType(row.escalated ? 'ESCALATED' : 'NO')" effect="plain" round>
+            {{ row.escalated ? "Yes" : "No" }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="escalatedTo" label="Escalated To" width="180" />
       <el-table-column prop="content" label="Content" min-width="280" show-overflow-tooltip />
-      <el-table-column prop="resolved" label="Resolved" width="120" />
+      <el-table-column prop="resolved" label="Resolved" width="120">
+        <template #default="{ row }">
+          <el-tag :type="getAdminStatusTagType(row.resolved ? 'RESOLVED' : 'OPEN')" effect="light" round>
+            {{ row.resolved ? "Resolved" : "Open" }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="Actions" width="300">
         <template #default="{ row }">
           <el-space v-if="!row.resolved && !row.escalated">
@@ -28,7 +49,7 @@
           <el-space v-else-if="!row.resolved && row.escalated">
             <el-button size="small" type="success" @click="markResolved(row.feedbackId)">Mark Resolved</el-button>
           </el-space>
-          <span v-else class="resolved-text">Resolved</span>
+          <span v-else class="admin-status-text admin-status-text--success">Resolved</span>
         </template>
       </el-table-column>
     </el-table>
@@ -39,6 +60,7 @@
 import { ElMessage, ElMessageBox } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
 import { getHighPriorityIssues, processFeedbackByPriority, updateFeedback } from "@/api/admin";
+import { getAdminPriorityTagType, getAdminStatusTagType } from "@/adminStatus";
 import type { HighPriorityIssue } from "@/types/api";
 
 const loading = ref(false);
@@ -110,23 +132,6 @@ onMounted(load);
 
 <style scoped>
 .high-priority-container {
-  border-radius: 8px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.resolved-text {
-  color: #67c23a;
-  font-size: 13px;
+  border-radius: var(--ui-radius-lg);
 }
 </style>

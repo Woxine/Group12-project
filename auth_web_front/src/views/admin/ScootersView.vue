@@ -1,15 +1,18 @@
 <template>
-  <el-card shadow="never" class="scooters-container">
+  <el-card shadow="never" class="scooters-container admin-page-card">
     <template #header>
-      <div class="header">
-        <span class="page-title">Scooter Management</span>
-        <div class="toolbar">
+      <div class="admin-page-header">
+        <div>
+          <span class="page-title admin-page-title">Scooter Management</span>
+          <div class="admin-page-subtitle">Manage fleet status, visibility, and bulk updates by vehicle type.</div>
+        </div>
+        <div class="admin-page-toolbar">
           <el-space>
             <el-select
               v-model="filters.status"
               clearable
               placeholder="Filter by status"
-              style="width: 180px"
+              class="admin-filter-select"
             >
               <el-option label="AVAILABLE" value="AVAILABLE" />
               <el-option label="RESERVED" value="RESERVED" />
@@ -27,7 +30,7 @@
       type="info"
       show-icon
       :closable="false"
-      class="hint-banner"
+      class="hint-banner admin-hint admin-inline-notice admin-inline-notice--info"
       title="Bulk controls apply to all scooters in the selected vehicle type."
     />
 
@@ -36,7 +39,7 @@
         v-for="section in sections"
         :key="section.type"
         shadow="hover"
-        class="type-card"
+        class="type-card admin-panel"
       >
         <template #header>
           <div class="type-header">
@@ -62,68 +65,78 @@
         </template>
 
         <div v-show="expandedTypes[section.type]">
-          <div class="bulk-panel">
-          <div class="bulk-title">Unified Controller</div>
-          <el-row :gutter="12" class="bulk-row">
-            <el-col :md="6" :sm="12" :xs="24">
-              <el-input-number
-                v-model="bulkForms[section.type].hour_rate"
-                :min="0.1"
-                :precision="2"
-                :step="0.5"
-                class="full-width"
-                placeholder="Hourly rate"
-              />
-            </el-col>
-            <el-col :md="6" :sm="12" :xs="24">
-              <el-select v-model="bulkForms[section.type].status" clearable placeholder="Status" class="full-width">
-                <el-option label="AVAILABLE" value="AVAILABLE" />
-                <el-option label="RESERVED" value="RESERVED" />
-                <el-option label="RENTED" value="RENTED" />
-                <el-option label="MAINTENANCE" value="MAINTENANCE" />
-              </el-select>
-            </el-col>
-            <el-col :md="6" :sm="12" :xs="24">
-              <el-select v-model="bulkForms[section.type].visibleChoice" class="full-width">
-                <el-option label="Visibility: keep unchanged" value="UNCHANGED" />
-                <el-option label="Visibility: show all" value="SHOW" />
-                <el-option label="Visibility: hide all" value="HIDE" />
-              </el-select>
-            </el-col>
-            <el-col :md="6" :sm="12" :xs="24" class="bulk-actions">
-              <el-space>
-                <el-button
-                  :loading="bulkForms[section.type].previewing"
-                  @click="previewBulk(section.type)"
-                >
-                  Preview
-                </el-button>
-                <el-button
-                  type="primary"
-                  :loading="bulkForms[section.type].applying"
-                  @click="applyBulk(section.type)"
-                >
-                  Apply
-                </el-button>
-              </el-space>
-            </el-col>
-          </el-row>
+          <div class="bulk-panel admin-panel">
+            <div class="bulk-title">Unified Controller</div>
+            <el-row :gutter="12" class="bulk-row">
+              <el-col :md="6" :sm="12" :xs="24">
+                <el-input-number
+                  v-model="bulkForms[section.type].hour_rate"
+                  :min="0.1"
+                  :precision="2"
+                  :step="0.5"
+                  class="full-width"
+                  placeholder="Hourly rate"
+                />
+              </el-col>
+              <el-col :md="6" :sm="12" :xs="24">
+                <el-select v-model="bulkForms[section.type].status" clearable placeholder="Status" class="full-width">
+                  <el-option label="AVAILABLE" value="AVAILABLE" />
+                  <el-option label="RESERVED" value="RESERVED" />
+                  <el-option label="RENTED" value="RENTED" />
+                  <el-option label="MAINTENANCE" value="MAINTENANCE" />
+                </el-select>
+              </el-col>
+              <el-col :md="6" :sm="12" :xs="24">
+                <el-select v-model="bulkForms[section.type].visibleChoice" class="full-width">
+                  <el-option label="Visibility: keep unchanged" value="UNCHANGED" />
+                  <el-option label="Visibility: show all" value="SHOW" />
+                  <el-option label="Visibility: hide all" value="HIDE" />
+                </el-select>
+              </el-col>
+              <el-col :md="6" :sm="12" :xs="24" class="bulk-actions">
+                <el-space>
+                  <el-button
+                    :loading="bulkForms[section.type].previewing"
+                    @click="previewBulk(section.type)"
+                  >
+                    Preview
+                  </el-button>
+                  <el-button
+                    type="primary"
+                    :loading="bulkForms[section.type].applying"
+                    @click="applyBulk(section.type)"
+                  >
+                    Apply
+                  </el-button>
+                </el-space>
+              </el-col>
+            </el-row>
 
-            <div v-if="bulkPreviews[section.type]" class="bulk-preview">
+            <div
+              v-if="bulkPreviews[section.type]"
+              :class="[
+                'bulk-preview',
+                'admin-inline-notice',
+                bulkPreviews[section.type]!.risky ? 'admin-inline-notice--warning' : 'admin-inline-notice--info'
+              ]"
+            >
               <el-tag size="small">Matched {{ bulkPreviews[section.type]!.matchedCount }}</el-tag>
               <el-tag size="small">Hidden {{ bulkPreviews[section.type]!.hiddenCount }}</el-tag>
               <el-tag v-if="bulkPreviews[section.type]!.risky" size="small" type="warning">Risky change</el-tag>
-              <span v-if="bulkPreviews[section.type]!.riskWarnings.length > 0" class="warning-text">
+              <span v-if="bulkPreviews[section.type]!.riskWarnings.length > 0" class="admin-status-text warning-text">
                 {{ bulkPreviews[section.type]!.riskWarnings.join(" ") }}
               </span>
             </div>
+            <p v-else class="bulk-preview-hint admin-inline-notice">
+              Run preview to estimate matched scooters before applying updates.
+            </p>
           </div>
 
-          <el-table :data="section.scooters" stripe class="data-table compact">
+          <el-table :data="section.scooters" stripe class="data-table compact admin-data-table">
             <el-table-column prop="id" label="ID" width="90" align="center" />
             <el-table-column prop="status" label="Status" width="150" align="center">
               <template #default="{ row }">
-                <el-tag :type="getStatusType(row.status)" effect="light" round>
+                <el-tag :type="getScooterStatusTagType(row.status)" effect="light" round>
                   {{ row.status }}
                 </el-tag>
               </template>
@@ -160,6 +173,12 @@
                 <el-button type="danger" link :icon="Delete" @click="confirmDelete(row)">Delete</el-button>
               </template>
             </el-table-column>
+            <template #empty>
+              <div class="admin-table-empty-state">
+                <p class="admin-table-empty-title">No scooters in {{ section.type }}</p>
+                <p class="admin-table-empty-text">Try another status filter or add a scooter for this vehicle type.</p>
+              </div>
+            </template>
           </el-table>
         </div>
       </el-card>
@@ -167,7 +186,7 @@
   </el-card>
 
   <el-dialog v-model="dialogVisible" title="Edit Scooter" width="500px" destroy-on-close>
-    <el-form label-position="top" :model="editForm" class="edit-form">
+    <el-form label-position="top" :model="editForm" class="edit-form admin-dialog-form">
       <el-form-item label="Vehicle Type">
         <el-select v-model="editForm.type" placeholder="Select type" class="full-width">
           <el-option label="GEN1 (Fz3)" value="GEN1" />
@@ -212,7 +231,7 @@
   </el-dialog>
 
   <el-dialog v-model="addDialogVisible" title="Add Scooter" width="500px" destroy-on-close @closed="resetAddForm">
-    <el-form label-position="top" :model="addForm" class="edit-form">
+    <el-form label-position="top" :model="addForm" class="edit-form admin-dialog-form">
       <el-form-item label="Vehicle Type">
         <el-select v-model="addForm.type" placeholder="Select type" class="full-width">
           <el-option label="GEN1 (Fz3)" value="GEN1" />
@@ -268,6 +287,7 @@ import {
   previewBulkUpdateByType,
   updateScooter
 } from "@/api/admin";
+import { getScooterStatusTagType } from "@/adminStatus";
 import type {
   BulkScooterUpdatePayload,
   Scooter,
@@ -382,16 +402,6 @@ function getTypeSubtitle(type: VehicleType) {
 
 function isListed(row: Scooter) {
   return row.visible !== false;
-}
-
-function getStatusType(status: string) {
-  switch (status) {
-    case "AVAILABLE": return "success";
-    case "RESERVED": return "warning";
-    case "RENTED": return "warning";
-    case "MAINTENANCE": return "danger";
-    default: return "info";
-  }
 }
 
 function getTypeTagColor(type: string) {
@@ -617,40 +627,28 @@ onMounted(load);
 
 <style scoped>
 .scooters-container {
-  border-radius: 8px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  border-radius: var(--ui-radius-lg);
 }
 
 .hint-banner {
-  margin-bottom: 16px;
+  margin-bottom: var(--ui-space-4);
 }
 
 .type-card-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--ui-space-4);
 }
 
 .type-card {
-  border-radius: 10px;
+  height: 100%;
 }
 
 .type-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--ui-space-3);
 }
 
 .type-title-wrap {
@@ -660,23 +658,22 @@ onMounted(load);
 }
 
 .type-subtitle {
-  color: #909399;
+  color: var(--ui-text-muted);
   font-size: 13px;
 }
 
 .bulk-panel {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #fafafa;
+  padding: var(--ui-space-3);
+  margin-bottom: var(--ui-space-3);
+  background: var(--ui-bg-surface-soft);
+  box-shadow: none;
 }
 
 .bulk-title {
   font-size: 13px;
   font-weight: 600;
-  color: #606266;
-  margin-bottom: 10px;
+  color: var(--ui-text-muted);
+  margin-bottom: var(--ui-space-2);
 }
 
 .bulk-actions {
@@ -687,23 +684,23 @@ onMounted(load);
 .bulk-preview {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-2);
 }
 
 .warning-text {
-  color: #e6a23c;
+  color: var(--ui-color-warning-600);
+  font-size: 12px;
+}
+
+.bulk-preview-hint {
+  margin: var(--ui-space-2) 0 0;
   font-size: 12px;
 }
 
 .data-table {
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #ebeef5;
-}
-
-.data-table.compact {
-  margin-top: 8px;
+  margin-top: var(--ui-space-2);
 }
 
 .edit-form {
@@ -717,6 +714,23 @@ onMounted(load);
 @media (max-width: 1280px) {
   .type-card-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 992px) {
+  .type-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .bulk-actions {
+    justify-content: flex-start;
+    margin-top: var(--ui-space-2);
+  }
+
+  .type-title-wrap,
+  .type-header :deep(.el-space__item) {
+    min-width: 0;
   }
 }
 </style>

@@ -1,9 +1,12 @@
 <template>
   <section class="analytics-container" role="region" aria-labelledby="analytics-heading">
-    <el-card shadow="never" class="control-card">
-      <div class="header">
-        <h1 id="analytics-heading" class="page-title">Management Analytics</h1>
-        <el-space wrap>
+    <el-card shadow="never" class="control-card admin-page-card">
+      <div class="header admin-page-header">
+        <div>
+          <h1 id="analytics-heading" class="page-title admin-page-title">Management Analytics</h1>
+          <div class="admin-page-subtitle">Operational KPIs, trends, and fleet health in one dashboard.</div>
+        </div>
+        <el-space wrap class="admin-page-toolbar">
           <el-date-picker
             v-model="dateRange"
             type="daterange"
@@ -19,32 +22,32 @@
     </el-card>
 
     <div class="kpi-grid">
-      <el-card shadow="hover" class="kpi-card small-card blue">
-        <div class="stat-icon"><el-icon><Tickets /></el-icon></div>
+      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
+        <div class="stat-icon admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
         <div class="stat-info">
           <div class="stat-title">Total Orders</div>
           <div class="stat-value">{{ overview.orderStats.totalOrders }}</div>
           <div class="stat-desc">Valid: {{ overview.orderStats.validOrders }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card green">
-        <div class="stat-icon"><el-icon><Money /></el-icon></div>
+      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
+        <div class="stat-icon admin-kpi-icon admin-kpi-icon--success"><el-icon><Money /></el-icon></div>
         <div class="stat-info">
           <div class="stat-title">Total Revenue</div>
           <div class="stat-value">£{{ overview.revenueStats.totalRevenue.toFixed(2) }}</div>
           <div class="stat-desc">Avg: £{{ overview.revenueStats.averageOrderValue.toFixed(2) }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card purple">
-        <div class="stat-icon"><el-icon><Bicycle /></el-icon></div>
+      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
+        <div class="stat-icon admin-kpi-icon admin-kpi-icon--neutral"><el-icon><Bicycle /></el-icon></div>
         <div class="stat-info">
           <div class="stat-title">Scooter Usage</div>
           <div class="stat-value">{{ usageRatePercent }}%</div>
           <div class="stat-desc">Rented: {{ overview.vehicleStats.rentedScooters }}</div>
         </div>
       </el-card>
-      <el-card shadow="hover" class="kpi-card small-card orange">
-        <div class="stat-icon"><el-icon><Warning /></el-icon></div>
+      <el-card shadow="hover" class="kpi-card small-card admin-kpi-card">
+        <div class="stat-icon admin-kpi-icon admin-kpi-icon--warning"><el-icon><Warning /></el-icon></div>
         <div class="stat-info">
           <div class="stat-title">Fault Reports</div>
           <div class="stat-value">{{ overview.faultStats.totalFeedbacks }}</div>
@@ -56,7 +59,7 @@
     <div class="analytics-grid">
       <el-card shadow="hover" class="big-card">
         <template #header>
-          <div class="card-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
+          <div class="admin-card-title"><el-icon><TrendCharts /></el-icon> Orders & Revenue Trend</div>
         </template>
         <p id="trend-chart-desc" class="chart-a11y-desc">Bar and line chart comparing daily order counts and revenue over the selected range.</p>
         <div class="chart-accessible" role="img" aria-labelledby="trend-chart-desc">
@@ -67,7 +70,7 @@
       <el-card shadow="hover" class="medium-card hot-dates-card">
         <template #header>
           <div class="hot-header">
-            <div class="card-title"><el-icon><Calendar /></el-icon> Popular Rental Dates</div>
+            <div class="admin-card-title"><el-icon><Calendar /></el-icon> Popular Rental Dates</div>
             <el-radio-group
               v-model="hotRangeKey"
               size="small"
@@ -87,7 +90,7 @@
               <el-statistic title="Top Date" :value="topHotDateLabel" />
               <el-statistic title="Top Orders" :value="topHotOrders" />
             </div>
-            <el-table :data="hotDates" size="small" max-height="270">
+            <el-table :data="hotDates" size="small" max-height="270" class="admin-data-table">
               <el-table-column prop="rank" label="#" width="60" />
               <el-table-column prop="date" label="Date" min-width="120" />
               <el-table-column prop="orderCount" label="Orders" width="90" align="right" />
@@ -103,7 +106,7 @@
 
       <el-card shadow="hover" class="big-card">
         <template #header>
-          <div class="card-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
+          <div class="admin-card-title"><el-icon><Calendar /></el-icon> Riding Activity Heatmap</div>
         </template>
         <p id="heatmap-desc" class="chart-a11y-desc">Calendar heatmap showing daily riding activity intensity for the selected date range.</p>
         <div class="chart-accessible" role="img" aria-labelledby="heatmap-desc">
@@ -117,7 +120,7 @@
 
       <el-card shadow="hover" class="medium-card">
         <template #header>
-          <div class="card-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
+          <div class="admin-card-title"><el-icon><PieChart /></el-icon> Vehicle Status Distribution</div>
         </template>
         <p id="vehicle-chart-desc" class="chart-a11y-desc">Donut chart showing available, rented, and maintenance scooter counts.</p>
         <div class="chart-accessible" role="img" aria-labelledby="vehicle-chart-desc">
@@ -127,7 +130,7 @@
 
       <el-card shadow="hover" class="medium-card">
         <template #header>
-          <div class="card-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
+          <div class="admin-card-title"><el-icon><SuccessFilled /></el-icon> Fault Resolution Status</div>
         </template>
         <p id="fault-resolution-desc" class="chart-a11y-desc">Pie chart comparing resolved and unresolved fault reports.</p>
         <div class="chart-accessible" role="img" aria-labelledby="fault-resolution-desc">
@@ -137,7 +140,7 @@
 
       <el-card shadow="hover" class="medium-card">
         <template #header>
-          <div class="card-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
+          <div class="admin-card-title"><el-icon><DataAnalysis /></el-icon> Fault Priority Distribution</div>
         </template>
         <p id="fault-priority-desc" class="chart-a11y-desc">Horizontal bar chart of fault counts by priority level.</p>
         <div class="chart-accessible" role="img" aria-labelledby="fault-priority-desc">
@@ -164,6 +167,12 @@
 import { ElMessage } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
 import { getDashboardOverview, getPopularRentalDates } from "@/api/admin";
+import {
+  ADMIN_CHART_COLOR_TOKENS,
+  getAdminPriorityTagType,
+  getScooterStatusTagType,
+  type AdminChartColorKey
+} from "@/adminStatus";
 import type { DashboardOverview } from "@/types/api";
 import type { PopularRentalDate } from "@/types/api";
 
@@ -232,6 +241,18 @@ const overview = reactive<DashboardOverview>({
 
 const usageRatePercent = computed(() => Number(((overview.vehicleStats.usageRate ?? 0) * 100).toFixed(2)));
 
+function uiColor(tokenName: string, fallback: string) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  return getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim() || fallback;
+}
+
+function chartColor(key: AdminChartColorKey) {
+  const color = ADMIN_CHART_COLOR_TOKENS[key];
+  return uiColor(color.token, color.fallback);
+}
+
 const averageDailyRides = computed(() => {
   if (overview.dailyTrend.length === 0) return 0;
   const sum = overview.dailyTrend.reduce((acc, curr) => acc + curr.orderCount, 0);
@@ -267,6 +288,8 @@ const trendChartOption = computed(() => {
   const dates = overview.dailyTrend.map(d => d.date);
   const orders = overview.dailyTrend.map(d => d.orderCount);
   const revenues = overview.dailyTrend.map(d => d.revenue);
+  const primary = chartColor("primary");
+  const success = chartColor("success");
 
   return {
     tooltip: { trigger: 'axis' },
@@ -285,14 +308,14 @@ const trendChartOption = computed(() => {
         name: 'Orders',
         type: 'bar',
         data: orders,
-        itemStyle: { color: '#409EFF', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: primary, borderRadius: [4, 4, 0, 0] },
         yAxisIndex: 0
       },
       {
         name: 'Revenue',
         type: 'line',
         data: revenues,
-        itemStyle: { color: '#67C23A' },
+        itemStyle: { color: success },
         areaStyle: { opacity: 0.1 },
         yAxisIndex: 1
       }
@@ -302,6 +325,11 @@ const trendChartOption = computed(() => {
 
 // 2. Vehicle Status Donut Chart Option
 const vehicleStatusOption = computed(() => {
+  const availableColor = chartColor(getScooterStatusTagType("AVAILABLE"));
+  const rentedColor = chartColor(getScooterStatusTagType("RENTED"));
+  const maintenanceColor = chartColor(getScooterStatusTagType("MAINTENANCE"));
+  const surface = uiColor("--ui-bg-surface", "#ffffff");
+
   return {
     tooltip: { trigger: 'item' },
     legend: { top: '5%', left: 'center' },
@@ -313,7 +341,7 @@ const vehicleStatusOption = computed(() => {
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 8,
-          borderColor: '#fff',
+          borderColor: surface,
           borderWidth: 2
         },
         label: { show: false, position: 'center' },
@@ -322,9 +350,9 @@ const vehicleStatusOption = computed(() => {
         },
         labelLine: { show: false },
         data: [
-          { value: overview.vehicleStats.availableScooters, name: 'Available', itemStyle: { color: '#409EFF' } },
-          { value: overview.vehicleStats.rentedScooters, name: 'Rented', itemStyle: { color: '#67C23A' } },
-          { value: overview.vehicleStats.maintenanceScooters, name: 'Maintenance', itemStyle: { color: '#F56C6C' } }
+          { value: overview.vehicleStats.availableScooters, name: 'Available', itemStyle: { color: availableColor } },
+          { value: overview.vehicleStats.rentedScooters, name: 'Rented', itemStyle: { color: rentedColor } },
+          { value: overview.vehicleStats.maintenanceScooters, name: 'Maintenance', itemStyle: { color: maintenanceColor } }
         ]
       }
     ]
@@ -333,6 +361,10 @@ const vehicleStatusOption = computed(() => {
 
 // 3. Fault Resolution Pie Chart Option
 const faultResolutionOption = computed(() => {
+  const success = chartColor("success");
+  const warning = chartColor("warning");
+  const shadow = uiColor("--ui-text-strong", "#0f172a");
+
   return {
     tooltip: { trigger: 'item' },
     legend: { top: '5%', left: 'center' },
@@ -342,14 +374,14 @@ const faultResolutionOption = computed(() => {
         type: 'pie',
         radius: '50%',
         data: [
-          { value: overview.faultStats.resolvedFeedbacks, name: 'Resolved', itemStyle: { color: '#67C23A' } },
-          { value: overview.faultStats.unresolvedFeedbacks, name: 'Unresolved', itemStyle: { color: '#E6A23C' } }
+          { value: overview.faultStats.resolvedFeedbacks, name: 'Resolved', itemStyle: { color: success } },
+          { value: overview.faultStats.unresolvedFeedbacks, name: 'Unresolved', itemStyle: { color: warning } }
         ],
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            shadowColor: shadow
           }
         }
       }
@@ -378,8 +410,10 @@ const faultPriorityOption = computed(() => {
       {
         name: 'Faults',
         type: 'bar',
-        data: counts,
-        itemStyle: { color: '#909399', borderRadius: [0, 4, 4, 0] }
+        data: counts.map((value, index) => ({
+          value,
+          itemStyle: { color: chartColor(getAdminPriorityTagType(priorities[index])), borderRadius: [0, 4, 4, 0] }
+        }))
       }
     ]
   };
@@ -388,6 +422,14 @@ const faultPriorityOption = computed(() => {
 // 5. Activity Heatmap Option
 const heatmapOption = computed(() => {
   const data = overview.dailyTrend.map(d => [d.date, d.orderCount]);
+  const surface = uiColor("--ui-bg-surface", "#ffffff");
+  const heatmapRange = [
+    uiColor("--ui-color-primary-50", "#eef4ff"),
+    uiColor("--ui-color-primary-100", "#dbe7ff"),
+    uiColor("--ui-color-primary-500", "#3b82f6"),
+    uiColor("--ui-color-primary-600", "#2563eb"),
+    uiColor("--ui-color-primary-700", "#1d4ed8")
+  ];
   
   let start = dateRange.value?.[0] ?? '2026-01-01';
   let end = dateRange.value?.[1] ?? '2026-12-31';
@@ -408,7 +450,7 @@ const heatmapOption = computed(() => {
       bottom: '5%',
       itemWidth: 15,
       inRange: {
-        color: ['#ecf5ff', '#b3d8ff', '#8cc5ff', '#66b1ff', '#409eff']
+        color: heatmapRange
       }
     },
     calendar: {
@@ -419,7 +461,7 @@ const heatmapOption = computed(() => {
       range: [start, end],
       itemStyle: {
         borderWidth: 1,
-        borderColor: '#fff'
+        borderColor: surface
       },
       splitLine: { show: false },
       yearLabel: { show: false }
@@ -508,22 +550,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 }
 
 .control-card {
-  border-radius: 10px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  white-space: nowrap;
+  border-radius: var(--ui-radius-lg);
 }
 
 .kpi-grid {
@@ -533,7 +560,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 }
 
 .kpi-card {
-  border-radius: 12px;
+  min-height: 120px;
 }
 
 .small-card :deep(.el-card__body) {
@@ -553,32 +580,27 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   margin-right: 16px;
 }
 
-.blue .stat-icon { background: #ecf5ff; color: #409EFF; }
-.green .stat-icon { background: #f0f9eb; color: #67C23A; }
-.purple .stat-icon { background: #f4f4f5; color: #909399; }
-.orange .stat-icon { background: #fdf6ec; color: #E6A23C; }
-
 .stat-info {
   flex: 1;
 }
 
 .stat-title {
   font-size: 14px;
-  color: #909399;
+  color: var(--ui-text-muted);
   margin-bottom: 8px;
 }
 
 .stat-value {
   font-size: 26px;
   font-weight: bold;
-  color: #303133;
+  color: var(--ui-text-strong);
   margin-bottom: 8px;
   line-height: 1;
 }
 
 .stat-desc {
   font-size: 13px;
-  color: #606266;
+  color: var(--ui-text-muted);
 }
 
 .analytics-grid {
@@ -589,20 +611,14 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 
 .big-card {
   grid-column: span 2;
-  border-radius: 12px;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border-soft);
 }
 
 .medium-card {
   grid-column: span 1;
-  border-radius: 12px;
-}
-
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #303133;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border-soft);
 }
 
 .hot-header {
@@ -630,7 +646,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 
 .chart-a11y-desc {
   margin: 0 0 8px;
-  color: #4b5563;
+  color: var(--ui-text-muted);
   font-size: 14px;
 }
 
@@ -645,7 +661,8 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 }
 
 .chart-summary-card {
-  border-radius: 10px;
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-border-soft);
 }
 
 @media (max-width: 1200px) {
@@ -668,10 +685,6 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
     grid-column: span 1;
   }
 
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 .chart-summary-card h2 {
@@ -682,6 +695,6 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 .chart-summary-card ul {
   margin: 0;
   padding-left: 20px;
-  color: #374151;
+  color: var(--ui-text-default);
 }
 </style>
