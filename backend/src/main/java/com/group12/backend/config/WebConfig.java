@@ -49,8 +49,10 @@ public class WebConfig implements WebMvcConfigurer {
                 // -------------------------------------------------------------------
                 .allowedOrigins( 
                     "http://localhost:5173", 
-                "http://localhost:5174", 
-                "http://localhost:8080")
+                    "http://localhost:5174", 
+                    "http://localhost:8080",
+                    "http://8.137.174.238",
+                    "http://8.137.174.238:80")
                 // 或者使用下面的通配符配置（开发阶段推荐，但生产环境不安全）：
                 // .allowedOriginPatterns("*")
 

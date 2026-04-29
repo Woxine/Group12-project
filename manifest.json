@@ -1,5 +1,5 @@
 {
-	"name": "demo",
+	"name": "rideNow",
 	"appid": "__UNI__E6393FD",
 	"description": "",
 	"versionName": "1.0.0",
@@ -32,10 +32,10 @@
 		"distribute": {
 			"icons": {
 				"android": {
-					"hdpi": "",
-					"xhdpi": "",
-					"xxhdpi": "",
-					"xxxhdpi": ""
+					"hdpi": "static/app-icon/icon-hdpi-72.png",
+					"xhdpi": "static/app-icon/icon-xhdpi-96.png",
+					"xxhdpi": "static/app-icon/icon-xxhdpi-144.png",
+					"xxxhdpi": "static/app-icon/icon-xxxhdpi-192.png"
 				}
 			}
 		}
@@ -55,13 +55,27 @@
 				}
 			},
 			"icons": {
-				"hdpi": "",
-				"xhdpi": "",
-				"xxhdpi": "",
-				"xxxhdpi": ""
+				"hdpi": "static/app-icon/icon-hdpi-72.png",
+				"xhdpi": "static/app-icon/icon-xhdpi-96.png",
+				"xxhdpi": "static/app-icon/icon-xxhdpi-144.png",
+				"xxxhdpi": "static/app-icon/icon-xxxhdpi-192.png"
 			},
 			"splashScreens": {
-				"default": {}
+				"xhdpi": "static/app-splash/splash-xhdpi.png",
+				"xxhdpi": "static/app-splash/splash-xxhdpi.png",
+				"xxxhdpi": "static/app-splash/splash-xxxhdpi.png",
+				"background": "#0C5AC4",
+				"background@night": "#0C5AC4",
+				"default": {
+					"xhdpi": "C:/Users/gjk20/Desktop/work/static/app-splash/splash-xhdpi.png",
+					"xxhdpi": "C:/Users/gjk20/Desktop/work/static/app-splash/splash-xxhdpi.png",
+					"xxxhdpi": "C:/Users/gjk20/Desktop/work/static/app-splash/splash-xxxhdpi.png"
+				},
+				"icon": {
+					"xhdpi": "",
+					"xxhdpi": "",
+					"xxxhdpi": ""
+				}
 			}
 		}
 	},
@@ -79,8 +93,33 @@
 					}
 				}
 			},
-			"icons": {},
-			"splashScreens": {}
+			"icons": {
+				"appstore": "static/app-icon-ios/appstore.png",
+				"iphone": {
+					"app@2x": "static/app-icon-ios/iphone-app@2x.png",
+					"app@3x": "static/app-icon-ios/iphone-app@3x.png",
+					"spotlight@2x": "static/app-icon-ios/iphone-spotlight@2x.png",
+					"spotlight@3x": "static/app-icon-ios/iphone-spotlight@3x.png",
+					"settings@2x": "static/app-icon-ios/iphone-settings@2x.png",
+					"settings@3x": "static/app-icon-ios/iphone-settings@3x.png",
+					"notification@2x": "static/app-icon-ios/iphone-notification@2x.png",
+					"notification@3x": "static/app-icon-ios/iphone-notification@3x.png"
+				},
+				"ipad": {
+					"app": "static/app-icon-ios/ipad-app.png",
+					"app@2x": "static/app-icon-ios/ipad-app@2x.png",
+					"proapp@2x": "static/app-icon-ios/ipad-proapp@2x.png",
+					"spotlight": "static/app-icon-ios/ipad-spotlight.png",
+					"spotlight@2x": "static/app-icon-ios/ipad-spotlight@2x.png",
+					"settings": "static/app-icon-ios/ipad-settings.png",
+					"settings@2x": "static/app-icon-ios/ipad-settings@2x.png",
+					"notification": "static/app-icon-ios/ipad-notification.png",
+					"notification@2x": "static/app-icon-ios/ipad-notification@2x.png"
+				}
+			},
+			"splashScreens": {
+				"customStoryboard": "static/dc_launchscreen/CustomStoryboard.zip"
+			}
 		}
 	},
 	"web": {

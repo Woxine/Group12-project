@@ -1,5 +1,6 @@
 # Build artifacts and generated caches
 unpackage/
+build/
 .cursor/
 *.env
 *.local
