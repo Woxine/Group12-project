@@ -106,6 +106,66 @@ class BookingPaymentGateTest {
     }
 
     @Test
+    @DisplayName("createBooking accepts custom minute duration")
+    void createBooking_acceptsCustomMinuteDuration() {
+        User user = buildUser(1L);
+        Scooter scooter = buildAvailableScooter(2L);
+        Booking[] persisted = new Booking[1];
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardRepository.existsByUser_Id(1L)).thenReturn(true);
+        when(bookingRepository.findByUser_IdAndStatus(1L, "CONFIRMED")).thenReturn(List.of());
+        when(bookingRepository.findByUser_IdAndStatus(1L, "PENDING_PAYMENT")).thenReturn(List.of());
+        when(scooterRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(scooter));
+        when(bookingRepository.findOverlappingBookings(eq(2L), any(), any())).thenReturn(List.of());
+        when(billingService.getCurrentRule()).thenReturn(defaultRule());
+        when(billingProperties.getPendingPaymentLockMinutes()).thenReturn(5);
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
+            Booking booking = invocation.getArgument(0);
+            booking.setId(89L);
+            persisted[0] = booking;
+            return booking;
+        });
+        when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setUser_id("1");
+        request.setScooter_id("2");
+        request.setDurationMinutes(1635);
+
+        BookingResponse response = (BookingResponse) bookingService.createBooking(request);
+
+        assertThat(response.getDuration()).isEqualTo("1D 3H 15M");
+        assertThat(response.getDurationMinutes()).isEqualTo(1635);
+        assertThat(response.getDurationCode()).isNull();
+        assertThat(persisted[0].getDurationHours()).isEqualTo(27.25);
+    }
+
+    @Test
+    @DisplayName("createBooking rejects a start time before today")
+    void createBooking_rejectsPastStartTime() {
+        User user = buildUser(1L);
+        Scooter scooter = buildAvailableScooter(2L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardRepository.existsByUser_Id(1L)).thenReturn(true);
+        when(bookingRepository.findByUser_IdAndStatus(1L, "CONFIRMED")).thenReturn(List.of());
+        when(bookingRepository.findByUser_IdAndStatus(1L, "PENDING_PAYMENT")).thenReturn(List.of());
+        when(scooterRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(scooter));
+
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setUser_id("1");
+        request.setScooter_id("2");
+        request.setDurationMinutes(60);
+        request.setStartTime(LocalDateTime.now().minusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+
+        assertThatThrownBy(() -> bookingService.createBooking(request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     @DisplayName("payBooking confirms booking and writes payment record")
     void payBooking_confirmsBookingAndWritesPaymentRecord() {
         User user = buildUser(3L);

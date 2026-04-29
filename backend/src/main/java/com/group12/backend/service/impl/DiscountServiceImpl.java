@@ -202,6 +202,10 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     private static double resolveDurationHours(String duration) {
+        if (duration == null || duration.isBlank()) {
+            return 1.0;
+        }
+        String normalized = duration.trim().toUpperCase();
         if ("10M".equalsIgnoreCase(duration)) {
             return 10.0 / 60.0;
         }
@@ -216,6 +220,16 @@ public class DiscountServiceImpl implements DiscountService {
         }
         if ("1W".equalsIgnoreCase(duration)) {
             return 168.0;
+        }
+        if (normalized.endsWith("M")) {
+            String raw = normalized.substring(0, normalized.length() - 1).trim();
+            try {
+                int minutes = Integer.parseInt(raw);
+                if (minutes > 0) {
+                    return minutes / 60.0;
+                }
+            } catch (NumberFormatException ignored) {
+            }
         }
         return 1.0;
     }

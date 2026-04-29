@@ -19,6 +19,33 @@
 					<text class="picker-value">{{ selectedDurationLabel }}</text>
 				</view>
 
+				<view class="picker wheel-picker">
+					<text class="picker-label">Start Time (today)</text>
+					<view class="stepper-row">
+						<button class="stepper-btn" @click="shiftStartMinutes(-5)">-5m</button>
+						<text class="picker-value">{{ startPickerValue }}</text>
+						<button class="stepper-btn" @click="shiftStartMinutes(5)">+5m</button>
+					</view>
+				</view>
+
+				<view class="duration-wheel-row">
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationDay(1)">+</button>
+						<text class="wheel-pill-text">{{ durationDayOptions[durationDayIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationDay(-1)">-</button>
+					</view>
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationHour(1)">+</button>
+						<text class="wheel-pill-text">{{ durationHourOptions[durationHourIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationHour(-1)">-</button>
+					</view>
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationMinute(1)">+</button>
+						<text class="wheel-pill-text">{{ durationMinuteOptions[durationMinuteIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationMinute(-1)">-</button>
+					</view>
+				</view>
+
 				<view class="card-section">
 					<text class="section-title">Bind Card For Guest</text>
 					<input v-model="cardForm.holderName" class="input" placeholder="Card holder name" />
@@ -44,6 +71,18 @@ import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL, GUEST_BOOKING_CREATE_URL, SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL, SCOOTER_LIST_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showError, showInfo, showSuccess, showThenNavigate } from '../../common/appToast.uts'
+import {
+	DURATION_PRESETS,
+	findPresetByMinutes,
+	formatDurationNatural,
+	formatDateTime,
+	formatTimeHHmm,
+	ensureSameDayFutureTime,
+	pad2,
+	durationToDayHourMinute,
+	dayHourMinuteToDuration,
+	normalizeToStepMinutes
+} from '../../common/bookingTime.uts'
 
 type ScooterOption = {
 	id: string
@@ -57,6 +96,8 @@ type GuestBookingForm = {
 	guestContact: string
 	scooterId: string
 	duration: string
+	durationMinutes: number
+	startTime: string
 }
 
 const form = reactive<GuestBookingForm>({
@@ -65,7 +106,9 @@ const form = reactive<GuestBookingForm>({
 	guestName: '',
 	guestContact: '',
 	scooterId: '',
-	duration: '1H'
+	duration: '1H',
+	durationMinutes: 60,
+	startTime: ''
 })
 
 const cardForm = reactive({
@@ -86,12 +129,59 @@ const selectedScooterLabel = computed((): string => {
 	return 'Select scooter'
 })
 
-const durationCodes = ['10M', '1H', '4H', '1D', '1W']
-const durationLabels = ['10 Minutes', '1 Hour', '4 Hours', '1 Day', '1 Week']
+const durationCodes = [
+	DURATION_PRESETS[0].code,
+	DURATION_PRESETS[1].code,
+	DURATION_PRESETS[2].code,
+	DURATION_PRESETS[3].code,
+	DURATION_PRESETS[4].code
+]
+const durationLabels = [
+	DURATION_PRESETS[0].label,
+	DURATION_PRESETS[1].label,
+	DURATION_PRESETS[2].label,
+	DURATION_PRESETS[3].label,
+	DURATION_PRESETS[4].label
+]
+const startPickerValue = ref<string>('00:00')
+const durationDayOptions = ref<string[]>(['0 Day', '1 Day', '2 Day', '3 Day', '4 Day', '5 Day', '6 Day', '7 Day'])
+const durationHourOptions = ref<string[]>(['0 Hour', '1 Hour', '2 Hour', '3 Hour', '4 Hour', '5 Hour', '6 Hour', '7 Hour', '8 Hour', '9 Hour', '10 Hour', '11 Hour', '12 Hour', '13 Hour', '14 Hour', '15 Hour', '16 Hour', '17 Hour', '18 Hour', '19 Hour', '20 Hour', '21 Hour', '22 Hour', '23 Hour'])
+const durationMinuteOptions = ref<string[]>(['00 Min', '05 Min', '10 Min', '15 Min', '20 Min', '25 Min', '30 Min', '35 Min', '40 Min', '45 Min', '50 Min', '55 Min'])
+const durationDayIndex = ref<number>(0)
+const durationHourIndex = ref<number>(1)
+const durationMinuteIndex = ref<number>(0)
+
+const buildWheelOptions = () => {
+	const dayArr: string[] = []
+	for (let d = 0; d <= 7; d++) dayArr.push(d + ' Day')
+	const hourArr: string[] = []
+	for (let h = 0; h <= 23; h++) hourArr.push(h + ' Hour')
+	const minuteArr: string[] = []
+	for (let m = 0; m <= 55; m += 5) minuteArr.push(pad2(m) + ' Min')
+	durationDayOptions.value = dayArr
+	durationHourOptions.value = hourArr
+	durationMinuteOptions.value = minuteArr
+}
+
+const syncDurationWheelByMinutes = (minutesRaw: number) => {
+	const parts = durationToDayHourMinute(minutesRaw)
+	durationDayIndex.value = parts[0]
+	durationHourIndex.value = parts[1]
+	durationMinuteIndex.value = Math.floor(parts[2] / 5)
+}
+
+const applyDurationMinutes = (minutesRaw: number) => {
+	const minutes = normalizeToStepMinutes(minutesRaw)
+	form.durationMinutes = minutes
+	const preset = findPresetByMinutes(minutes)
+	form.duration = preset != null ? preset.code : ''
+	syncDurationWheelByMinutes(minutes)
+}
 const selectedDurationLabel = computed((): string => {
 	for (let i = 0; i < durationCodes.length; i++) {
 		if (durationCodes[i] == form.duration) return durationLabels[i]
 	}
+	if (form.durationMinutes > 0) return formatDurationNatural(form.durationMinutes)
 	return 'Select duration'
 })
 
@@ -206,8 +296,12 @@ const validateGuestForm = (): boolean => {
 		showInfo(getAppMessage('guestBooking', 'scooterRequired', 'Please select scooter'))
 		return false
 	}
-	if (durationCodes.indexOf(duration) < 0) {
+	if (durationCodes.indexOf(duration) < 0 && form.durationMinutes < 5) {
 		showInfo(getAppMessage('guestBooking', 'durationRequired', 'Please select duration'))
+		return false
+	}
+	if (form.startTime.length < 1) {
+		showInfo(getAppMessage('guestBooking', 'startTimeRequired', 'Please select start time'))
 		return false
 	}
 	if (holderName.length < 2 || brand.length < 2 || !/^\d{13,19}$/.test(cardNumber) || isNaN(month) || isNaN(year)) {
@@ -283,13 +377,17 @@ const submitGuestBooking = () => {
 				isSubmitting.value = false
 				return
 			}
+			const codeToSend = ('' + form.duration).trim().toUpperCase()
 			const payload: UTSJSONObject = {
 				salespersonId: ('' + form.salespersonId).trim(),
 				guestId: guestId,
 				guestName: guestName,
 				guestContact: guestContact,
 				scooterId: ('' + form.scooterId).trim(),
-				duration: ('' + form.duration).trim().toUpperCase()
+				duration: codeToSend.length > 0 ? codeToSend : null,
+				durationCode: codeToSend.length > 0 ? codeToSend : null,
+				durationMinutes: form.durationMinutes,
+				startTime: form.startTime
 			}
 			uni.request({
 				url: BASE_URL + GUEST_BOOKING_CREATE_URL,
@@ -355,13 +453,98 @@ const pickDuration = () => {
 		success: (res) => {
 			const idx = res.tapIndex
 			if (idx >= 0 && idx < durationCodes.length) {
-				form.duration = durationCodes[idx]
+				applyDurationMinutes(DURATION_PRESETS[idx].minutes)
 			}
 		}
 	})
 }
 
+const onStartWheelChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	const hhmm = '' + detail['value']
+	const selected = ensureSameDayFutureTime(hhmm)
+	if (selected == null) {
+		showInfo(getAppMessage('guestBooking', 'startTimeTodayFutureOnly', 'Start time must be later than now and in today'))
+		return
+	}
+	startPickerValue.value = formatTimeHHmm(selected)
+	form.startTime = formatDateTime(selected)
+}
+
+const shiftStartMinutes = (deltaMinutes: number) => {
+	const base = form.startTime.length > 0 ? new Date(form.startTime) : new Date()
+	const selected = new Date(base.getTime() + deltaMinutes * 60 * 1000)
+	const checked = ensureSameDayFutureTime(formatTimeHHmm(selected))
+	if (checked == null) {
+		showInfo(getAppMessage('guestBooking', 'startTimeTodayFutureOnly', 'Start time must be later than now and in today'))
+		return
+	}
+	startPickerValue.value = formatTimeHHmm(checked)
+	form.startTime = formatDateTime(checked)
+}
+
+const syncDurationFromWheel = () => {
+	if (durationDayIndex.value == 7) {
+		durationHourIndex.value = 0
+		durationMinuteIndex.value = 0
+	}
+	const mins = durationMinuteIndex.value * 5
+	const total = dayHourMinuteToDuration(durationDayIndex.value, durationHourIndex.value, mins)
+	applyDurationMinutes(total)
+}
+
+const onDurationDayChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationDayIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const onDurationHourChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationHourIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const onDurationMinuteChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationMinuteIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const adjustDurationDay = (delta: number) => {
+	let next = durationDayIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 7) next = 7
+	durationDayIndex.value = next
+	syncDurationFromWheel()
+}
+
+const adjustDurationHour = (delta: number) => {
+	let next = durationHourIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 23) next = 23
+	durationHourIndex.value = next
+	syncDurationFromWheel()
+}
+
+const adjustDurationMinute = (delta: number) => {
+	let next = durationMinuteIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 11) next = 11
+	durationMinuteIndex.value = next
+	syncDurationFromWheel()
+}
+
 onShow(() => {
+	buildWheelOptions()
+	const now = new Date()
+	startPickerValue.value = formatTimeHHmm(now)
+	form.startTime = formatDateTime(now)
+	applyDurationMinutes(form.durationMinutes)
 	loadInitialData()
 })
 </script>
@@ -430,6 +613,53 @@ onShow(() => {
 	font-size: 14px;
 	color: #333;
 	font-weight: bold;
+}
+
+.wheel-picker {
+	background: #f3f7ff;
+	border-color: #d6e4ff;
+}
+
+.duration-wheel-row {
+	margin-top: 10px;
+	display: flex;
+	gap: 8px;
+	justify-content: space-between;
+}
+
+.wheel-pill {
+	background-color: #f3f7ff;
+	border: 1px solid #d6e4ff;
+	border-radius: 8px;
+	padding: 10px 8px;
+	min-width: 86px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.wheel-pill-text {
+	font-size: 12px;
+	font-weight: bold;
+	color: #2b3a55;
+}
+
+.wheel-btn,
+.stepper-btn {
+	font-size: 12px;
+	color: #2b3a55;
+	min-width: 44px;
+	height: 28px;
+	line-height: 28px;
+	padding: 0 8px;
+	margin: 2px;
+}
+
+.stepper-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
 }
 
 .card-section {

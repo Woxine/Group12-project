@@ -18,13 +18,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.group12.backend.dto.PaymentCardResponse;
+import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
 import com.group12.backend.entity.PaymentCard;
 import com.group12.backend.entity.User;
 import com.group12.backend.repository.PaymentCardRepository;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.impl.PaymentCardBinLookupService;
 import com.group12.backend.service.impl.PaymentCardServiceImpl;
 
 import jakarta.validation.ConstraintViolation;
@@ -45,11 +48,15 @@ class PaymentCardServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PaymentCardBinLookupService paymentCardBinLookupService;
+
     @InjectMocks
     private PaymentCardServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(service, "paymentCardBinLookupService", paymentCardBinLookupService);
     }
 
     @Test
@@ -122,6 +129,23 @@ class PaymentCardServiceTest {
         assertThat(r).isNotNull();
         assertThat(r.getId()).isEqualTo("401");
         assertThat(r.getIsDefault()).isTrue();
+    }
+
+    @Test
+    @DisplayName("lookupCardBin：服务可用时返回查询结果")
+    void lookupCardBin_returnsProviderResult_whenLookupServiceAvailable() {
+        User user = buildUser(1L);
+        BinLookupResponse lookup = new BinLookupResponse();
+        lookup.setBrand("VISA");
+        lookup.setStatus("MATCHED");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardBinLookupService.lookup("411111", "1:127.0.0.1")).thenReturn(lookup);
+
+        BinLookupResponse response = service.lookupCardBin("1", "411111", "1:127.0.0.1");
+        assertThat(response).isNotNull();
+        assertThat(response.getBrand()).isEqualTo("VISA");
+        assertThat(response.getStatus()).isEqualTo("MATCHED");
     }
 
     @Nested

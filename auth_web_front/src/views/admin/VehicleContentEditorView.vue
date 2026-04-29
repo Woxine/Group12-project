@@ -3,7 +3,7 @@
     <template #header>
       <div class="admin-page-header">
         <div>
-          <span class="admin-page-title">Vehicle Content Editor</span>
+          <h1 class="admin-page-title">Vehicle Content Editor</h1>
           <div class="admin-page-subtitle">Edit model descriptions and preview content in real time.</div>
         </div>
         <el-space class="admin-page-toolbar">
@@ -25,7 +25,7 @@
       <el-col :xs="24" :lg="14">
         <el-card shadow="never" class="admin-panel">
           <template #header>
-            <strong>Editable Content</strong>
+            <div class="admin-section-title">Editable Content</div>
           </template>
 
           <el-tabs v-model="activeKey">
@@ -58,7 +58,7 @@
       <el-col :xs="24" :lg="10">
         <el-card shadow="never" class="admin-panel">
           <template #header>
-            <strong>Live Preview</strong>
+            <div class="admin-section-title">Live Preview</div>
           </template>
           <el-space direction="vertical" fill :size="12">
             <div v-for="item in models" :key="item.key" class="preview-item">
@@ -168,18 +168,18 @@ function resetDefaults() {
 }
 
 .content-row {
-  margin-top: 4px;
+  margin-top: var(--ui-space-2);
   row-gap: var(--ui-space-4);
 }
 
 .form {
-  margin-top: 8px;
+  margin-top: var(--ui-space-2);
 }
 
 .preview-item {
   border: 1px solid var(--ui-border-soft);
   border-radius: var(--ui-radius-sm);
-  padding: 10px 12px;
+  padding: var(--ui-space-3);
   background: var(--ui-bg-surface-soft);
 }
 

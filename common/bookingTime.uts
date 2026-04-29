@@ -1,0 +1,96 @@
+export type DurationPreset = {
+	code: string
+	label: string
+	minutes: number
+}
+
+export const DURATION_PRESETS: DurationPreset[] = [
+	{ code: '10M', label: '10 Minutes', minutes: 10 } as DurationPreset,
+	{ code: '1H', label: '1 Hour', minutes: 60 } as DurationPreset,
+	{ code: '4H', label: '4 Hours', minutes: 240 } as DurationPreset,
+	{ code: '1D', label: '1 Day', minutes: 1440 } as DurationPreset,
+	{ code: '1W', label: '1 Week', minutes: 10080 } as DurationPreset
+]
+
+export const DURATION_MINUTES_MIN = 5
+export const DURATION_MINUTES_MAX = 10080
+export const DURATION_STEP_MINUTES = 5
+
+export const pad2 = (n: number): string => {
+	return n < 10 ? ('0' + n) : ('' + n)
+}
+
+export const formatDateTime = (d: Date): string => {
+	return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+}
+
+export const formatTimeHHmm = (d: Date): string => {
+	return pad2(d.getHours()) + ':' + pad2(d.getMinutes())
+}
+
+export const parseDateTime = (raw: string): Date => {
+	const normalized = raw.replace(' ', 'T')
+	return new Date(normalized)
+}
+
+export const normalizeToStepMinutes = (minutes: number): number => {
+	let m = Math.round(minutes / DURATION_STEP_MINUTES) * DURATION_STEP_MINUTES
+	if (m < DURATION_MINUTES_MIN) m = DURATION_MINUTES_MIN
+	if (m > DURATION_MINUTES_MAX) m = DURATION_MINUTES_MAX
+	return m
+}
+
+export const findPresetByCode = (code: string): DurationPreset | null => {
+	const target = ('' + code).trim().toUpperCase()
+	for (let i = 0; i < DURATION_PRESETS.length; i++) {
+		if (DURATION_PRESETS[i].code == target) return DURATION_PRESETS[i]
+	}
+	return null
+}
+
+export const findPresetByMinutes = (minutes: number): DurationPreset | null => {
+	for (let i = 0; i < DURATION_PRESETS.length; i++) {
+		if (DURATION_PRESETS[i].minutes == minutes) return DURATION_PRESETS[i]
+	}
+	return null
+}
+
+export const formatDurationNatural = (minutesRaw: number): string => {
+	const minutes = normalizeToStepMinutes(minutesRaw)
+	const preset = findPresetByMinutes(minutes)
+	if (preset != null) return preset.label
+	const days = Math.floor(minutes / 1440)
+	const remain = minutes % 1440
+	const hours = Math.floor(remain / 60)
+	const mins = remain % 60
+	const parts: string[] = []
+	if (days > 0) parts.push(days + (days > 1 ? ' Days' : ' Day'))
+	if (hours > 0) parts.push(hours + (hours > 1 ? ' Hours' : ' Hour'))
+	if (mins > 0 || parts.length < 1) parts.push(mins + (mins > 1 ? ' Minutes' : ' Minute'))
+	return parts.join(' ')
+}
+
+export const durationToDayHourMinute = (minutesRaw: number): number[] => {
+	const minutes = normalizeToStepMinutes(minutesRaw)
+	const days = Math.floor(minutes / 1440)
+	const remain = minutes % 1440
+	const hours = Math.floor(remain / 60)
+	const mins = remain % 60
+	return [days, hours, mins] as number[]
+}
+
+export const dayHourMinuteToDuration = (days: number, hours: number, mins: number): number => {
+	return normalizeToStepMinutes(days * 1440 + hours * 60 + mins)
+}
+
+export const ensureSameDayFutureTime = (timeHHmm: string): Date | null => {
+	const now = new Date()
+	const parts = timeHHmm.split(':')
+	if (parts.length < 2) return null
+	const hour = parseInt(parts[0])
+	const minute = parseInt(parts[1])
+	if (isNaN(hour) || isNaN(minute)) return null
+	const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0)
+	if (d.getTime() < now.getTime()) return null
+	return d
+}

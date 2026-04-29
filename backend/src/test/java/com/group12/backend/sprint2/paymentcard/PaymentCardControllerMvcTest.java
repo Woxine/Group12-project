@@ -21,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.group12.backend.controller.PaymentCardController;
+import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.PaymentCardResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
 import com.group12.backend.service.PaymentCardService;
@@ -50,9 +51,13 @@ class PaymentCardControllerMvcTest {
         when(jwtUtil.extractUserId(anyString())).thenReturn(1L);
         when(jwtUtil.extractEmail(anyString())).thenReturn("tester@example.com");
         PaymentCardResponse stub = new PaymentCardResponse();
+        BinLookupResponse lookupStub = new BinLookupResponse();
+        lookupStub.setBrand("VISA");
+        lookupStub.setStatus("MATCHED");
         when(paymentCardService.createCard(anyString(), any(StorePaymentCardRequest.class))).thenReturn(stub);
         when(paymentCardService.listCards(anyString())).thenReturn(java.util.List.of());
         when(paymentCardService.setDefaultCard(anyString(), anyString())).thenReturn(stub);
+        when(paymentCardService.lookupCardBin(anyString(), anyString(), anyString())).thenReturn(lookupStub);
     }
 
     @Test
@@ -96,5 +101,18 @@ class PaymentCardControllerMvcTest {
                         .requestAttr("userId", 1L))
                 .andExpect(status().is2xxSuccessful());
         verify(paymentCardService).setDefaultCard("1", "1");
+    }
+
+    @Test
+    @DisplayName("POST BIN 查询：2xx 且委托 PaymentCardService#lookupCardBin")
+    void lookupBin_delegatesToService() throws Exception {
+        String body = "{\"prefix\":\"411111\"}";
+        mockMvc.perform(post("/api/v1/users/1/payment-cards/bin-lookup")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L)
+                        .contentType(APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().is2xxSuccessful());
+        verify(paymentCardService).lookupCardBin(eq("1"), eq("411111"), anyString());
     }
 }

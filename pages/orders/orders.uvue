@@ -69,6 +69,33 @@
 							<text class="label">Total</text>
 							<text class="value">£{{ booking.price }}</text>
 						</view>
+						<view v-if="activeExtendBookingId == booking.id" class="extend-wheel-panel">
+							<view class="detail-row">
+								<text class="label">Custom Extend Duration</text>
+								<text class="value">{{ extendDurationLabel }}</text>
+							</view>
+							<view class="duration-wheel-row">
+								<view class="wheel-pill">
+									<button class="wheel-btn" @click="adjustDurationDay(1)">+</button>
+									<text class="wheel-pill-text">{{ durationDayOptions[durationDayIndex] }}</text>
+									<button class="wheel-btn" @click="adjustDurationDay(-1)">-</button>
+								</view>
+								<view class="wheel-pill">
+									<button class="wheel-btn" @click="adjustDurationHour(1)">+</button>
+									<text class="wheel-pill-text">{{ durationHourOptions[durationHourIndex] }}</text>
+									<button class="wheel-btn" @click="adjustDurationHour(-1)">-</button>
+								</view>
+								<view class="wheel-pill">
+									<button class="wheel-btn" @click="adjustDurationMinute(1)">+</button>
+									<text class="wheel-pill-text">{{ durationMinuteOptions[durationMinuteIndex] }}</text>
+									<button class="wheel-btn" @click="adjustDurationMinute(-1)">-</button>
+								</view>
+							</view>
+							<view class="custom-extend-actions">
+								<button class="extend-booking-btn" @click="confirmCustomExtend(booking)">Apply Custom Extension</button>
+								<button class="view-route-btn" @click="activeExtendBookingId = ''">Hide</button>
+							</view>
+						</view>
 						<view v-if="getOrderActions(booking).length > 0" class="card-actions">
 							<button v-if="hasAction(booking, 'endRide')" class="end-ride-btn" @click="endRide(booking)">End Ride</button>
 							<button v-if="hasAction(booking, 'extendBooking')" class="extend-booking-btn" @click="onExtendBooking(booking)">Extend</button>
@@ -98,6 +125,15 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
+import {
+	DURATION_PRESETS,
+	findPresetByMinutes,
+	formatDurationNatural,
+	pad2,
+	durationToDayHourMinute,
+	dayHourMinuteToDuration,
+	normalizeToStepMinutes
+} from '../../common/bookingTime.uts'
 
 const PAGE_SIZE = 10
 const authMessage = (key: string, fallback: string): string => getAppMessage('auth', key, fallback)
@@ -152,6 +188,42 @@ const scrollViewHeight = ref(560)
 const isRefreshing = ref(false)
 let autoRefreshTimer: number | null = null
 const fetchBookingsRef = ref<((fromPull: boolean) => void) | null>(null)
+const activeExtendBookingId = ref<string>('')
+const extendDurationMinutes = ref<number>(60)
+const extendDurationLabel = ref<string>('1 Hour')
+const durationDayOptions = ref<string[]>(['0 Day', '1 Day', '2 Day', '3 Day', '4 Day', '5 Day', '6 Day', '7 Day'])
+const durationHourOptions = ref<string[]>(['0 Hour', '1 Hour', '2 Hour', '3 Hour', '4 Hour', '5 Hour', '6 Hour', '7 Hour', '8 Hour', '9 Hour', '10 Hour', '11 Hour', '12 Hour', '13 Hour', '14 Hour', '15 Hour', '16 Hour', '17 Hour', '18 Hour', '19 Hour', '20 Hour', '21 Hour', '22 Hour', '23 Hour'])
+const durationMinuteOptions = ref<string[]>(['00 Min', '05 Min', '10 Min', '15 Min', '20 Min', '25 Min', '30 Min', '35 Min', '40 Min', '45 Min', '50 Min', '55 Min'])
+const durationDayIndex = ref<number>(0)
+const durationHourIndex = ref<number>(1)
+const durationMinuteIndex = ref<number>(0)
+
+const buildDurationWheelOptions = () => {
+	const dayArr: string[] = []
+	for (let d = 0; d <= 7; d++) dayArr.push(d + ' Day')
+	const hourArr: string[] = []
+	for (let h = 0; h <= 23; h++) hourArr.push(h + ' Hour')
+	const minuteArr: string[] = []
+	for (let m = 0; m <= 55; m += 5) minuteArr.push(pad2(m) + ' Min')
+	durationDayOptions.value = dayArr
+	durationHourOptions.value = hourArr
+	durationMinuteOptions.value = minuteArr
+}
+
+const syncDurationWheelByMinutes = (minutesRaw: number) => {
+	const parts = durationToDayHourMinute(minutesRaw)
+	durationDayIndex.value = parts[0]
+	durationHourIndex.value = parts[1]
+	durationMinuteIndex.value = Math.floor(parts[2] / 5)
+}
+
+const updateExtendDuration = (minutesRaw: number) => {
+	const minutes = normalizeToStepMinutes(minutesRaw)
+	extendDurationMinutes.value = minutes
+	const preset = findPresetByMinutes(minutes)
+	extendDurationLabel.value = preset != null ? preset.label : formatDurationNatural(minutes)
+	syncDurationWheelByMinutes(minutes)
+}
 
 const hasMore = computed(() => bookings.value.length < total.value)
 
@@ -434,16 +506,17 @@ const continuePayment = (booking: Booking) => {
 	})
 }
 
-const submitExtendBooking = (bid: string, duration: string) => {
+const submitExtendBooking = (bid: string, durationCode: string, durationMinutes: number) => {
 	const token = readStorageString('token')
 	if (token == '') {
 		showInfo(authMessage('loginAgain', 'Please log in again'))
 		return
 	}
+	const codeToSend = durationCode.length > 0 ? durationCode : null
 	uni.request({
 		url: BASE_URL + '/api/v1/bookings/' + bid + '/extend',
 		method: 'PATCH',
-		data: { duration: duration },
+		data: { duration: codeToSend, durationCode: codeToSend, durationMinutes: durationMinutes },
 		header: {
 			'Content-Type': 'application/json',
 			'Authorization': 'Bearer ' + token
@@ -463,13 +536,59 @@ const submitExtendBooking = (bid: string, duration: string) => {
 	})
 }
 
-const extraHoursForDuration = (duration: string): number => {
-	if (duration == '10M') return 10.0 / 60.0
-	if (duration == '1H') return 1.0
-	if (duration == '4H') return 4.0
-	if (duration == '1D') return 24.0
-	if (duration == '1W') return 168.0
-	return 1.0
+const syncDurationFromWheel = () => {
+	if (durationDayIndex.value == 7) {
+		durationHourIndex.value = 0
+		durationMinuteIndex.value = 0
+	}
+	const mins = durationMinuteIndex.value * 5
+	const totalMinutes = dayHourMinuteToDuration(durationDayIndex.value, durationHourIndex.value, mins)
+	updateExtendDuration(totalMinutes)
+}
+
+const onDurationDayChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationDayIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const onDurationHourChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationHourIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const onDurationMinuteChange = (event: any) => {
+	const eventObj = event as UTSJSONObject
+	const detail = eventObj['detail'] as UTSJSONObject
+	durationMinuteIndex.value = parseInt('' + detail['value'])
+	syncDurationFromWheel()
+}
+
+const adjustDurationDay = (delta: number) => {
+	let next = durationDayIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 7) next = 7
+	durationDayIndex.value = next
+	syncDurationFromWheel()
+}
+
+const adjustDurationHour = (delta: number) => {
+	let next = durationHourIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 23) next = 23
+	durationHourIndex.value = next
+	syncDurationFromWheel()
+}
+
+const adjustDurationMinute = (delta: number) => {
+	let next = durationMinuteIndex.value + delta
+	if (next < 0) next = 0
+	if (next > 11) next = 11
+	durationMinuteIndex.value = next
+	syncDurationFromWheel()
 }
 
 const parseDurationToHours = (duration: string): number | null => {
@@ -515,6 +634,56 @@ const computeSegmentedTotal = (rate: number, hours: number, t1: number, t2: numb
 	return rate * t1 + rate * m1 * (t2 - t1) + rate * m2 * (hours - t2)
 }
 
+const confirmExtendBooking = (booking: Booking, bid: string, duration: string, durationMinutes: number, durationLabel: string) => {
+	const hourRate = booking.hourRate
+	let confirmContent = ''
+	if (hourRate != null && !isNaN(hourRate) && hourRate >= 0) {
+		const extraHours = durationMinutes / 60.0
+		const currentHours = parseDurationToHours(booking.duration)
+		const t1 = booking.longRentThresholdHours != null ? booking.longRentThresholdHours : 24.0
+		const t2 = booking.extraLongRentThresholdHours != null ? booking.extraLongRentThresholdHours : 72.0
+		const m1 = booking.longRentHourRateMultiplier != null ? booking.longRentHourRateMultiplier : 1.0
+		const m2 = booking.extraLongRentHourRateMultiplier != null ? booking.extraLongRentHourRateMultiplier : 1.0
+		let newTotal = booking.price + extraHours * hourRate
+		if (currentHours != null && !isNaN(currentHours) && currentHours > 0) {
+			newTotal = computeSegmentedTotal(hourRate, currentHours + extraHours, t1, t2, m1, m2)
+		}
+		const extraPrice = newTotal - booking.price
+		confirmContent = bookingMessage('extendBookingConfirmWithQuotePrefix', 'Extend by ')
+			+ durationLabel
+			+ bookingMessage('extendBookingConfirmWithQuoteMiddle', '? Additional fee: £')
+			+ extraPrice.toFixed(2)
+			+ bookingMessage('extendBookingConfirmWithQuoteSuffix', ', estimated new total: £')
+			+ newTotal.toFixed(2)
+			+ '.'
+	} else {
+		confirmContent = bookingMessage('extendBookingConfirmNoQuote', 'Extend by ')
+			+ durationLabel
+			+ bookingMessage('extendBookingConfirmNoQuoteSuffix', '? Additional fee cannot be estimated now. Continue?')
+	}
+	uni.showModal({
+		title: bookingMessage('extendBookingTitle', 'Extend Booking'),
+		content: confirmContent,
+		success: (modalRes) => {
+			if (!!modalRes.confirm) {
+				submitExtendBooking(bid, duration, durationMinutes)
+				activeExtendBookingId.value = ''
+			}
+		}
+	})
+}
+
+const confirmCustomExtend = (booking: Booking) => {
+	const bid = booking.id
+	if (bid == null || bid.length < 1) {
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
+		return
+	}
+	const preset = findPresetByMinutes(extendDurationMinutes.value)
+	const duration = preset != null ? preset.code : ''
+	confirmExtendBooking(booking, bid, duration, extendDurationMinutes.value, extendDurationLabel.value)
+}
+
 const onExtendBooking = (booking: Booking) => {
 	const bid = booking.id
 	if (bid == null || bid.length < 1) {
@@ -527,50 +696,26 @@ const onExtendBooking = (booking: Booking) => {
 		return
 	}
 	
+	const itemList = ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week', 'Custom Duration']
 	uni.showActionSheet({
-		itemList: ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week'],
+		itemList: itemList,
 		success: (res) => {
 			const durArr = ['10M', '1H', '4H', '1D', '1W']
 			const idx = res.tapIndex
-			if (idx < 0 || idx >= durArr.length) return
-			const durationLabelArr = ['10 Mins', '1 Hour', '4 Hours', '1 Day', '1 Week']
-			const durationLabel = durationLabelArr[idx]
-			const duration = durArr[idx]
-			const hourRate = booking.hourRate
-			let confirmContent = ''
-			if (hourRate != null && !isNaN(hourRate) && hourRate >= 0) {
-				const extraHours = extraHoursForDuration(duration)
-				const currentHours = parseDurationToHours(booking.duration)
-				const t1 = booking.longRentThresholdHours != null ? booking.longRentThresholdHours : 24.0
-				const t2 = booking.extraLongRentThresholdHours != null ? booking.extraLongRentThresholdHours : 72.0
-				const m1 = booking.longRentHourRateMultiplier != null ? booking.longRentHourRateMultiplier : 1.0
-				const m2 = booking.extraLongRentHourRateMultiplier != null ? booking.extraLongRentHourRateMultiplier : 1.0
-				let newTotal = booking.price + extraHours * hourRate
-				if (currentHours != null && !isNaN(currentHours) && currentHours > 0) {
-					newTotal = computeSegmentedTotal(hourRate, currentHours + extraHours, t1, t2, m1, m2)
-				}
-				const extraPrice = newTotal - booking.price
-				confirmContent = bookingMessage('extendBookingConfirmWithQuotePrefix', 'Extend by ')
-					+ durationLabel
-					+ bookingMessage('extendBookingConfirmWithQuoteMiddle', '? Additional fee: £')
-					+ extraPrice.toFixed(2)
-					+ bookingMessage('extendBookingConfirmWithQuoteSuffix', ', estimated new total: £')
-					+ newTotal.toFixed(2)
-					+ '.'
+			if (idx < 0 || idx >= itemList.length) return
+			let duration = ''
+			let durationMinutes = 0
+			let durationLabel = ''
+			if (idx < durArr.length) {
+				duration = durArr[idx]
+				durationMinutes = DURATION_PRESETS[idx].minutes
+				durationLabel = itemList[idx]
 			} else {
-				confirmContent = bookingMessage('extendBookingConfirmNoQuote', 'Extend by ')
-					+ durationLabel
-					+ bookingMessage('extendBookingConfirmNoQuoteSuffix', '? Additional fee cannot be estimated now. Continue?')
+				activeExtendBookingId.value = bid
+				showInfo(bookingMessage('customExtendHint', 'Adjust the custom duration on this booking card, then apply it.'))
+				return
 			}
-			uni.showModal({
-				title: bookingMessage('extendBookingTitle', 'Extend Booking'),
-				content: confirmContent,
-				success: (modalRes) => {
-					if (!!modalRes.confirm) {
-						submitExtendBooking(bid, duration)
-					}
-				}
-			})
+			confirmExtendBooking(booking, bid, duration, durationMinutes, durationLabel)
 		}
 	})
 }
@@ -703,6 +848,8 @@ const setScrollHeight = () => {
 }
 
 onMounted(() => {
+	buildDurationWheelOptions()
+	updateExtendDuration(extendDurationMinutes.value)
 	setScrollHeight()
 	const userId = viewingUserId.value != null ? viewingUserId.value : (uni.getStorageSync('userId') as string | null)
 	const hasUser = userId != null && userId != '' && typeof userId == 'string'
@@ -733,6 +880,8 @@ onLoad((options) => {
 })
 
 onShow(() => {
+	buildDurationWheelOptions()
+	updateExtendDuration(extendDurationMinutes.value)
 	setScrollHeight()
 	const userId = viewingUserId.value != null ? viewingUserId.value : (uni.getStorageSync('userId') as string | null)
 	const hasUser = userId != null && userId != '' && typeof userId == 'string'
@@ -1069,5 +1218,54 @@ onHide(() => {
 	font-size: 14px;
 	color: #333;
 	font-weight: 400;
+}
+
+.extend-wheel-panel {
+	background-color: #fff;
+	border-radius: 12px;
+	padding: 12px;
+	margin-bottom: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.duration-wheel-row {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: row;
+	gap: 8px;
+	justify-content: space-between;
+}
+
+.custom-extend-actions {
+	margin-top: 10px;
+	display: flex;
+	flex-direction: row;
+}
+
+.wheel-pill {
+	background-color: #f3f7ff;
+	border: 1px solid #d6e4ff;
+	border-radius: 8px;
+	padding: 10px 8px;
+	min-width: 86px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.wheel-pill-text {
+	font-size: 12px;
+	font-weight: bold;
+	color: #2b3a55;
+}
+
+.wheel-btn {
+	font-size: 12px;
+	color: #2b3a55;
+	min-width: 44px;
+	height: 28px;
+	line-height: 28px;
+	padding: 0 8px;
+	margin: 2px;
 }
 </style>

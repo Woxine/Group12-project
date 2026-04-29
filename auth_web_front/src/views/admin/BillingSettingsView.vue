@@ -3,16 +3,16 @@
     <template #header>
       <div class="admin-page-header">
         <div>
-          <span class="admin-page-title">Billing Discount Hub</span>
+          <h1 class="admin-page-title">Billing Discount Hub</h1>
           <div class="admin-page-subtitle">Manage pricing multipliers and discount rates in one place.</div>
         </div>
         <div class="admin-page-toolbar">
-          <el-button :icon="Refresh" :loading="loading" @click="load">Reload</el-button>
+          <el-button :icon="Refresh" :loading="loading" aria-label="Refresh billing settings" @click="load">Refresh</el-button>
         </div>
       </div>
     </template>
 
-    <el-row :gutter="16" v-loading="loading" class="billing-grid">
+    <el-row :gutter="16" v-loading="loading" class="billing-grid admin-loading-section" :aria-busy="loading">
       <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
           title="Long-Rent Discount"
@@ -225,7 +225,7 @@ onMounted(async () => {
 }
 
 .billing-grid {
-  row-gap: 12px;
+  row-gap: var(--ui-space-4);
 }
 
 .billing-grid-item {

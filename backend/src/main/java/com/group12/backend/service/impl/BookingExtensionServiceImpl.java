@@ -21,6 +21,7 @@ import com.group12.backend.service.BillingRule;
 import com.group12.backend.service.BillingService;
 import com.group12.backend.service.BookingExtensionService;
 import com.group12.backend.service.pricing.RentalPricing;
+import com.group12.backend.util.BookingTimeSupport;
 
 /**
  * TODO(ID10&11): 预订延长实现骨架（仅 TODO，不含业务实现）。
@@ -48,29 +49,11 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
 
-        String durationRequest = request.getDuration();
+        int extraDurationMinutes = resolveDurationMinutes(request);
         double extraDurationHours;
         LocalDateTime newEndTime = booking.getEndTime();
-
-        if ("10M".equalsIgnoreCase(durationRequest)) {
-            extraDurationHours = 10.0 / 60.0;
-            newEndTime = newEndTime.plusMinutes(10);
-        } else if ("1H".equalsIgnoreCase(durationRequest)) {
-            extraDurationHours = 1.0;
-            newEndTime = newEndTime.plusHours(1);
-        } else if ("4H".equalsIgnoreCase(durationRequest)) {
-            extraDurationHours = 4.0;
-            newEndTime = newEndTime.plusHours(4);
-        } else if ("1D".equalsIgnoreCase(durationRequest)) {
-            extraDurationHours = 24.0;
-            newEndTime = newEndTime.plusHours(24);
-        } else if ("1W".equalsIgnoreCase(durationRequest)) {
-            extraDurationHours = 168.0;
-            newEndTime = newEndTime.plusHours(168);
-        } else {
-            extraDurationHours = 1.0;
-            newEndTime = newEndTime.plusHours(1);
-        }
+        extraDurationHours = extraDurationMinutes / 60.0;
+        newEndTime = newEndTime.plusMinutes(extraDurationMinutes);
 
         // Check for overlap excluding current booking
         List<Booking> overlapping = bookingRepository.findOverlappingBookings(booking.getScooter().getId(), booking.getStartTime(), newEndTime);
@@ -110,7 +93,10 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
         );
         response.setStartTime(savedBooking.getStartTime() == null ? null : savedBooking.getStartTime().format(fmt));
         response.setEndTime(savedBooking.getEndTime() == null ? null : savedBooking.getEndTime().format(fmt));
-        response.setDuration(savedBooking.getDurationHours() == null ? null : savedBooking.getDurationHours() + " hours");
+        int totalMinutes = savedBooking.getDurationHours() == null ? 0 : (int) Math.round(savedBooking.getDurationHours() * 60.0);
+        response.setDuration(totalMinutes > 0 ? BookingTimeSupport.formatDurationLabel(totalMinutes) : null);
+        response.setDurationMinutes(totalMinutes > 0 ? totalMinutes : null);
+        response.setDurationCode(totalMinutes > 0 ? BookingTimeSupport.presetCodeByMinutes(totalMinutes) : null);
         response.setTotalPrice(savedBooking.getTotalPrice() == null ? null : savedBooking.getTotalPrice().doubleValue());
         response.setOriginalPrice(savedBooking.getOriginalPrice() == null ? null : savedBooking.getOriginalPrice().doubleValue());
         response.setDiscountAmount(savedBooking.getDiscountAmount() == null ? null : savedBooking.getDiscountAmount().doubleValue());
@@ -122,5 +108,27 @@ public class BookingExtensionServiceImpl implements BookingExtensionService {
         response.setEndLng(savedBooking.getEndLng());
 
         return response;
+    }
+
+    private int resolveDurationMinutes(ExtendBookingRequest request) {
+        if (request.getDurationMinutes() == null
+                && (request.getDurationCode() == null || request.getDurationCode().isBlank())
+                && (request.getDuration() == null || request.getDuration().isBlank())) {
+            throw new BusinessException("duration is required", HttpStatus.BAD_REQUEST);
+        }
+        int resolved = BookingTimeSupport.resolveDurationMinutes(
+                request.getDurationMinutes(),
+                request.getDurationCode(),
+                request.getDuration());
+        try {
+            BookingTimeSupport.validateDurationMinutes(resolved);
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException(ex.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+        Integer fromCode = BookingTimeSupport.presetMinutesByCode(request.getDurationCode());
+        if (fromCode != null && fromCode.intValue() != resolved) {
+            throw new BusinessException("durationCode does not match durationMinutes", HttpStatus.BAD_REQUEST);
+        }
+        return resolved;
     }
 }

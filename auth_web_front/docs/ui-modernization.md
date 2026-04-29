@@ -24,6 +24,7 @@ For admin pages, reuse shared classes from `styles.css`.
 - Subtitle: `admin-page-subtitle`
 - Toolbar: `admin-page-toolbar`
 - Filter select width: `admin-filter-select`
+- Section title/subtitle: `admin-section-title` and `admin-section-subtitle` for page-local subsection headings below card titles.
 
 For table/list pages:
 
@@ -40,6 +41,8 @@ For hints and lightweight panels:
 - Use `admin-hint` and `admin-panel`
 - Use `admin-inline-notice` with semantic modifiers for inline info, warning, or risk messages.
 - Use `admin-table-empty-state`, `admin-table-empty-title`, and `admin-table-empty-text` for custom table empty slots.
+- Use `admin-chart-card`, `admin-chart-description`, and `admin-chart-frame` for admin chart sections that need consistent header/body spacing and accessible chart descriptions.
+- Use `admin-loading-section` on `v-loading` containers and `admin-skeleton-card` on Element Plus skeletons so loading surfaces share radius, minimum height, and visible loading affordances.
 
 For status mapping:
 
@@ -51,6 +54,7 @@ For status mapping:
 
 - Every page should expose one primary title and one short subtitle.
 - Toolbars should keep core actions on the right and avoid mixed visual weight.
+- Use `Refresh` for plain reload actions and `Search` when filters are being applied.
 
 ### Table
 
@@ -80,8 +84,10 @@ Status mapping audit:
 ### Card + KPI
 
 - KPI cards use token color accents and consistent icon container sizing.
+- Static KPI cards use `admin-kpi-card` with `admin-kpi-content`, `admin-kpi-title`, `admin-kpi-value`, and optional `admin-kpi-desc`; keep them non-clickable and avoid hover affordances.
 - Do not mix multiple shadow strengths in the same section.
 - Clickable cards use `admin-clickable-card`, expose button semantics, and support activation with both `Enter` and `Space`.
+- Admin routes should prefer route-level dynamic imports for heavier views, especially chart-heavy pages, while preserving route paths, guards, and default redirects.
 
 ## 4. Allowed Local Overrides
 
@@ -115,6 +121,8 @@ Before merge, verify:
 12. Clickable cards support keyboard activation (`Enter`/`Space`) and use shared `admin-clickable-card` interaction styles.
 13. Status mapping audit covers Admin tables and charts that encode state, priority, or risk.
 14. Clickable card accessibility audit confirms hover, focus-visible, active, pointer, role, label, and keyboard activation.
+15. Loading containers expose `admin-loading-section` and keep `aria-busy` in sync with loading state where practical.
+16. Admin section headings use `admin-section-title`/`admin-section-subtitle` before adding page-local title classes.
 
 ## 6. Visual Regression Baseline
 

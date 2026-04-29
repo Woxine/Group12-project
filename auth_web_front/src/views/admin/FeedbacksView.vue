@@ -1,9 +1,9 @@
 <template>
   <el-card shadow="never" class="feedbacks-container admin-page-card" role="region" aria-labelledby="feedback-management-heading">
     <template #header>
-      <div class="header admin-page-header">
+      <div class="admin-page-header">
         <div>
-          <h1 id="feedback-management-heading" class="page-title admin-page-title">Feedback Management</h1>
+          <h1 id="feedback-management-heading" class="admin-page-title">Feedback Management</h1>
           <div class="admin-page-subtitle">Track issue priority, escalation status, and close the resolution loop.</div>
         </div>
         <div class="toolbar admin-page-toolbar">
@@ -54,7 +54,8 @@
       :data="rows"
       stripe
       v-loading="loading"
-      class="data-table admin-data-table"
+      class="data-table admin-data-table admin-loading-section"
+      :aria-busy="loading"
       aria-label="Feedback records"
       aria-describedby="feedback-table-help"
       :row-class-name="() => 'clickable-row'"
@@ -149,6 +150,12 @@
           </span>
         </template>
       </el-table-column>
+      <template #empty>
+        <div class="admin-table-empty-state">
+          <p class="admin-table-empty-title">No feedback records found</p>
+          <p class="admin-table-empty-text">Try adjusting the priority or resolution filters, then search again.</p>
+        </div>
+      </template>
     </el-table>
 
     <div class="admin-pagination-footer">

@@ -9,9 +9,17 @@
 				<view class="section-title">
 					<text class="section-title-text">Start Time</text>
 				</view>
-				<view class="time-input" @click="selectStartTime">
+				<view class="time-input" @click="selectStartPreset">
 					<text class="time-label">Select Start Time</text>
 					<text class="time-value">{{ startTime.length > 0 ? startTime : 'Not Selected' }}</text>
+				</view>
+				<view class="picker-inline">
+					<text class="picker-inline-label">Wheel (same day)</text>
+					<view class="stepper-row">
+						<button class="stepper-btn" @click="shiftStartMinutes(-5)">-5m</button>
+						<text class="picker-inline-value">{{ startPickerValue }}</text>
+						<button class="stepper-btn" @click="shiftStartMinutes(5)">+5m</button>
+					</view>
 				</view>
 			</view>
 
@@ -19,9 +27,26 @@
 				<view class="section-title">
 					<text class="section-title-text">Duration</text>
 				</view>
-				<view class="time-input" @click="selectEndTime">
+				<view class="time-input" @click="selectDurationPreset">
 					<text class="time-label">Select Duration</text>
 					<text class="time-value">{{ durationLabel.length > 0 ? durationLabel : 'Not Selected' }}</text>
+				</view>
+				<view class="duration-wheel-row">
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationDay(1)">+</button>
+						<text class="wheel-pill-text">{{ durationDayOptions[durationDayIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationDay(-1)">-</button>
+					</view>
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationHour(1)">+</button>
+						<text class="wheel-pill-text">{{ durationHourOptions[durationHourIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationHour(-1)">-</button>
+					</view>
+					<view class="wheel-pill">
+						<button class="wheel-btn" @click="adjustDurationMinute(1)">+</button>
+						<text class="wheel-pill-text">{{ durationMinuteOptions[durationMinuteIndex] }}</text>
+						<button class="wheel-btn" @click="adjustDurationMinute(-1)">-</button>
+					</view>
 				</view>
 			</view>
 
@@ -66,6 +91,18 @@ import { onShow } from '@dcloudio/uni-app';
 import { BASE_URL } from '../../common/api.uts';
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts';
 import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts';
+import {
+	DURATION_PRESETS,
+	formatDateTime,
+	formatDurationNatural,
+	formatTimeHHmm,
+	pad2,
+	findPresetByMinutes,
+	ensureSameDayFutureTime,
+	normalizeToStepMinutes,
+	durationToDayHourMinute,
+	dayHourMinuteToDuration
+} from '../../common/bookingTime.uts';
 
 type DurationItem = {
 	time: string;
@@ -121,11 +158,11 @@ const computeSegmentedTotal = (rate: number, hours: number): number => {
 const updateDurations = () => {
 	const rate = hourRate.value;
 	const items: DurationItem[] = [
-		{ time: '10 Minutes', price: formatPrice(computeSegmentedTotal(rate, 10 / 60)) } as DurationItem,
-		{ time: '1 Hour', price: formatPrice(computeSegmentedTotal(rate, 1)) } as DurationItem,
-		{ time: '4 Hours', price: formatPrice(computeSegmentedTotal(rate, 4)) } as DurationItem,
-		{ time: '1 Day', price: formatPrice(computeSegmentedTotal(rate, 24)) } as DurationItem,
-		{ time: '1 Week', price: formatPrice(computeSegmentedTotal(rate, 168)) } as DurationItem
+		{ time: DURATION_PRESETS[0].label, price: formatPrice(computeSegmentedTotal(rate, DURATION_PRESETS[0].minutes / 60)) } as DurationItem,
+		{ time: DURATION_PRESETS[1].label, price: formatPrice(computeSegmentedTotal(rate, DURATION_PRESETS[1].minutes / 60)) } as DurationItem,
+		{ time: DURATION_PRESETS[2].label, price: formatPrice(computeSegmentedTotal(rate, DURATION_PRESETS[2].minutes / 60)) } as DurationItem,
+		{ time: DURATION_PRESETS[3].label, price: formatPrice(computeSegmentedTotal(rate, DURATION_PRESETS[3].minutes / 60)) } as DurationItem,
+		{ time: DURATION_PRESETS[4].label, price: formatPrice(computeSegmentedTotal(rate, DURATION_PRESETS[4].minutes / 60)) } as DurationItem
 	];
 	durations.value = items;
 };
@@ -134,8 +171,35 @@ const startTime = ref<string>('');
 const endTime = ref<string>('');
 const durationCode = ref<string>('');
 const durationLabel = ref<string>('');
+const selectedDurationMinutes = ref<number>(60);
 const estimatedTotalDisplay = ref<string>('0.00');
 const isStaffRole = ref<boolean>(false);
+const startPickerValue = ref<string>('00:00');
+const durationDayOptions = ref<string[]>(['0 Day', '1 Day', '2 Day', '3 Day', '4 Day', '5 Day', '6 Day', '7 Day']);
+const durationHourOptions = ref<string[]>(['0 Hour', '1 Hour', '2 Hour', '3 Hour', '4 Hour', '5 Hour', '6 Hour', '7 Hour', '8 Hour', '9 Hour', '10 Hour', '11 Hour', '12 Hour', '13 Hour', '14 Hour', '15 Hour', '16 Hour', '17 Hour', '18 Hour', '19 Hour', '20 Hour', '21 Hour', '22 Hour', '23 Hour']);
+const durationMinuteOptions = ref<string[]>(['00 Min', '05 Min', '10 Min', '15 Min', '20 Min', '25 Min', '30 Min', '35 Min', '40 Min', '45 Min', '50 Min', '55 Min']);
+const durationDayIndex = ref<number>(0);
+const durationHourIndex = ref<number>(0);
+const durationMinuteIndex = ref<number>(0);
+
+const buildWheelOptions = () => {
+	const dayArr: string[] = [];
+	for (let d = 0; d <= 7; d++) dayArr.push(d + ' Day');
+	const hourArr: string[] = [];
+	for (let h = 0; h <= 23; h++) hourArr.push(h + ' Hour');
+	const minuteArr: string[] = [];
+	for (let m = 0; m <= 55; m += 5) minuteArr.push(pad2(m) + ' Min');
+	durationDayOptions.value = dayArr;
+	durationHourOptions.value = hourArr;
+	durationMinuteOptions.value = minuteArr;
+};
+
+const syncDurationWheelByMinutes = (minutesRaw: number) => {
+	const parts = durationToDayHourMinute(minutesRaw);
+	durationDayIndex.value = parts[0];
+	durationHourIndex.value = parts[1];
+	durationMinuteIndex.value = Math.floor(parts[2] / 5);
+};
 
 const updateEstimatedTotal = () => {
 	if (startTime.value.length > 0 && endTime.value.length > 0) {
@@ -146,6 +210,30 @@ const updateEstimatedTotal = () => {
 		const total = computeSegmentedTotal(hourRate.value, durationHours);
 		estimatedTotalDisplay.value = formatPrice(total);
 	}
+};
+
+const applyDurationMinutes = (minutesRaw: number) => {
+	if (startTime.value == '') {
+		showInfo(bookingMessage('selectStartTimeFirst', 'Please select start time first'));
+		return;
+	}
+	const minutes = normalizeToStepMinutes(minutesRaw);
+	selectedDurationMinutes.value = minutes;
+	const preset = findPresetByMinutes(minutes);
+	durationCode.value = preset != null ? preset.code : '';
+	durationLabel.value = preset != null ? preset.label : formatDurationNatural(minutes);
+	syncDurationWheelByMinutes(minutes);
+	const startDate = new Date(startTime.value);
+	const endDateTime = new Date(startDate.getTime() + minutes * 60 * 1000);
+	endTime.value = formatDateTime(endDateTime);
+	updateEstimatedTotal();
+};
+
+const clearDurationSelection = () => {
+	endTime.value = '';
+	durationCode.value = '';
+	durationLabel.value = '';
+	estimatedTotalDisplay.value = '0.00';
 };
 
 const fetchHourRate = () => {
@@ -206,76 +294,141 @@ const fetchHourRate = () => {
 };
 
 onMounted(() => {
+	buildWheelOptions();
 	fetchHourRate();
 });
 
 onShow(() => {
+	buildWheelOptions();
 	fetchHourRate();
 	const roleRaw = uni.getStorageSync('role');
 	const role = roleRaw != null ? ('' + roleRaw).trim().toUpperCase() : '';
 	isStaffRole.value = role == 'STAFF' || role == 'ADMIN';
+	const now = new Date();
+	startPickerValue.value = formatTimeHHmm(now);
+	if (startTime.value == '') {
+		startTime.value = formatDateTime(now);
+	}
+	syncDurationWheelByMinutes(selectedDurationMinutes.value);
+	clearDurationSelection();
 });
 
-const selectStartTime = () => {
+const selectStartPreset = () => {
 	const now = new Date();
-	const currentHour = now.getHours().toString().padStart(2, '0');
-	const currentMinute = now.getMinutes().toString().padStart(2, '0');
-	const currentDate = now.getFullYear() + '-' +
-		(now.getMonth() + 1).toString().padStart(2, '0') + '-' +
-		now.getDate().toString().padStart(2, '0');
-
 	uni.showActionSheet({
 		itemList: ['Start Now', '1 Hour Later', '2 Hours Later', '3 Hours Later'],
 		success: (res) => {
-			if (res.tapIndex == 0) {
-				startTime.value = currentDate + ' ' + currentHour + ':' + currentMinute;
-			} else if (res.tapIndex == 1) {
-				const time1 = new Date(now.getTime() + 60 * 60 * 1000);
-				startTime.value = currentDate + ' ' + time1.getHours().toString().padStart(2, '0') + ':' + time1.getMinutes().toString().padStart(2, '0');
-			} else if (res.tapIndex == 2) {
-				const time2 = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-				startTime.value = currentDate + ' ' + time2.getHours().toString().padStart(2, '0') + ':' + time2.getMinutes().toString().padStart(2, '0');
-			} else if (res.tapIndex == 3) {
-				const time3 = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-				startTime.value = currentDate + ' ' + time3.getHours().toString().padStart(2, '0') + ':' + time3.getMinutes().toString().padStart(2, '0');
-			}
-			endTime.value = '';
-			durationCode.value = '';
-			durationLabel.value = '';
-			estimatedTotalDisplay.value = '0.00';
+			const plusHours = res.tapIndex >= 0 ? res.tapIndex : 0;
+			const selected = new Date(now.getTime() + plusHours * 60 * 60 * 1000);
+			startTime.value = formatDateTime(selected);
+			startPickerValue.value = formatTimeHHmm(selected);
+			clearDurationSelection();
 		}
 	});
 };
 
-const selectEndTime = () => {
+const onStartWheelChange = (event: any) => {
+	const eventObj = event as UTSJSONObject;
+	const detail = eventObj['detail'] as UTSJSONObject;
+	const hhmm = '' + detail['value'];
+	const selected = ensureSameDayFutureTime(hhmm);
+	if (selected == null) {
+		showInfo(bookingMessage('startTimeTodayFutureOnly', 'Start time must be later than now and in today'));
+		return;
+	}
+	startPickerValue.value = formatTimeHHmm(selected);
+	startTime.value = formatDateTime(selected);
+	clearDurationSelection();
+};
+
+const shiftStartMinutes = (deltaMinutes: number) => {
+	const base = startTime.value.length > 0 ? new Date(startTime.value) : new Date();
+	const selected = new Date(base.getTime() + deltaMinutes * 60 * 1000);
+	const checked = ensureSameDayFutureTime(formatTimeHHmm(selected));
+	if (checked == null) {
+		showInfo(bookingMessage('startTimeTodayFutureOnly', 'Start time must be later than now and in today'));
+		return;
+	}
+	startPickerValue.value = formatTimeHHmm(checked);
+	startTime.value = formatDateTime(checked);
+	clearDurationSelection();
+};
+
+const selectDurationPreset = () => {
 	if (startTime.value == '') {
 		showInfo(bookingMessage('selectStartTimeFirst', 'Please select start time first'));
 		return;
 	}
-
-	const startDate = new Date(startTime.value);
-
-	const durationOptions = ['10 Minutes', '1 Hour', '4 Hours', '1 Day', '1 Week'];
-	const durationCodes  = ['10M', '1H', '4H', '1D', '1W'];
-	const durationMs     = [10 * 60 * 1000, 1 * 60 * 60 * 1000, 4 * 60 * 60 * 1000, 24 * 60 * 60 * 1000, 7 * 24 * 60 * 60 * 1000];
-
+	const durationOptions = [
+		DURATION_PRESETS[0].label,
+		DURATION_PRESETS[1].label,
+		DURATION_PRESETS[2].label,
+		DURATION_PRESETS[3].label,
+		DURATION_PRESETS[4].label
+	];
 	uni.showActionSheet({
 		itemList: durationOptions,
 		success: (res) => {
-			const idx = res.tapIndex;
-			if (idx >= 0 && idx < durationOptions.length) {
-				const endDateTime = new Date(startDate.getTime() + durationMs[idx]);
-				const ed = endDateTime;
-				const endDateStr = ed.getFullYear() + '-' +
-					(ed.getMonth() + 1).toString().padStart(2, '0') + '-' +
-					ed.getDate().toString().padStart(2, '0');
-				endTime.value = endDateStr + ' ' + ed.getHours().toString().padStart(2, '0') + ':' + ed.getMinutes().toString().padStart(2, '0');
-				durationCode.value = durationCodes[idx];
-				durationLabel.value = durationOptions[idx];
-				updateEstimatedTotal();
+			if (res.tapIndex >= 0 && res.tapIndex < DURATION_PRESETS.length) {
+				applyDurationMinutes(DURATION_PRESETS[res.tapIndex].minutes);
 			}
 		}
 	});
+};
+
+const syncDurationFromWheel = () => {
+	if (durationDayIndex.value == 7) {
+		durationHourIndex.value = 0;
+		durationMinuteIndex.value = 0;
+	}
+	const mins = durationMinuteIndex.value * 5;
+	const totalMinutes = dayHourMinuteToDuration(durationDayIndex.value, durationHourIndex.value, mins);
+	applyDurationMinutes(totalMinutes);
+};
+
+const onDurationDayChange = (event: any) => {
+	const eventObj = event as UTSJSONObject;
+	const detail = eventObj['detail'] as UTSJSONObject;
+	durationDayIndex.value = parseInt('' + detail['value']);
+	syncDurationFromWheel();
+};
+
+const onDurationHourChange = (event: any) => {
+	const eventObj = event as UTSJSONObject;
+	const detail = eventObj['detail'] as UTSJSONObject;
+	durationHourIndex.value = parseInt('' + detail['value']);
+	syncDurationFromWheel();
+};
+
+const onDurationMinuteChange = (event: any) => {
+	const eventObj = event as UTSJSONObject;
+	const detail = eventObj['detail'] as UTSJSONObject;
+	durationMinuteIndex.value = parseInt('' + detail['value']);
+	syncDurationFromWheel();
+};
+
+const adjustDurationDay = (delta: number) => {
+	let next = durationDayIndex.value + delta;
+	if (next < 0) next = 0;
+	if (next > 7) next = 7;
+	durationDayIndex.value = next;
+	syncDurationFromWheel();
+};
+
+const adjustDurationHour = (delta: number) => {
+	let next = durationHourIndex.value + delta;
+	if (next < 0) next = 0;
+	if (next > 23) next = 23;
+	durationHourIndex.value = next;
+	syncDurationFromWheel();
+};
+
+const adjustDurationMinute = (delta: number) => {
+	let next = durationMinuteIndex.value + delta;
+	if (next < 0) next = 0;
+	if (next > 11) next = 11;
+	durationMinuteIndex.value = next;
+	syncDurationFromWheel();
 };
 
 const pendingScooterId = ref<string>('');
@@ -285,13 +438,15 @@ const pendingTotalPrice = ref<number>(0);
 
 const stepSendBooking = () => {
 	const token = pendingToken.value;
+	const codeToSend = durationCode.value.length > 0 ? durationCode.value : null;
 	const bookingData: UTSJSONObject = {
 		'user_id': pendingUserId.value,
 		'userId': pendingUserId.value,
 		'scooter_id': pendingScooterId.value,
-		'start_time': startTime.value,
-		'end_time': endTime.value,
-		'duration': durationCode.value,
+		'startTime': startTime.value,
+		'duration': codeToSend,
+		'durationCode': codeToSend,
+		'durationMinutes': selectedDurationMinutes.value,
 		'total_price': pendingTotalPrice.value
 	};
 	uni.request({
@@ -622,6 +777,71 @@ const goGuestBooking = () => {
 		font-size: 14px;
 		color: #333;
 		font-weight: bold;
+	}
+
+	.picker-inline {
+		margin-top: 10px;
+		background-color: #f3f7ff;
+		border: 1px solid #d6e4ff;
+		border-radius: 8px;
+		padding: 10px 12px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.picker-inline-label {
+		font-size: 12px;
+		color: #5c6f8a;
+	}
+
+	.picker-inline-value {
+		font-size: 14px;
+		font-weight: bold;
+		color: #2b3a55;
+	}
+
+	.duration-wheel-row {
+		margin-top: 10px;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		gap: 8px;
+	}
+
+	.wheel-pill {
+		background-color: #f3f7ff;
+		border: 1px solid #d6e4ff;
+		border-radius: 8px;
+		padding: 10px 8px;
+		min-width: 86px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.wheel-pill-text {
+		font-size: 12px;
+		font-weight: bold;
+		color: #2b3a55;
+	}
+
+	.wheel-btn,
+	.stepper-btn {
+		font-size: 12px;
+		color: #2b3a55;
+		min-width: 44px;
+		height: 28px;
+		line-height: 28px;
+		padding: 0 8px;
+		margin: 2px;
+	}
+
+	.stepper-row {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
 	}
 
 	.estimated-total-section {

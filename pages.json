@@ -121,6 +121,12 @@
 			}
 		},
 		{
+			"path": "pages/payment-card/payment-card-add",
+			"style": {
+				"navigationBarTitleText": "Add Card"
+			}
+		},
+		{
 			"path": "pages/discount-verification/discount-verification",
 			"style": {
 				"navigationBarTitleText": "Discount Verification"

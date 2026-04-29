@@ -1,38 +1,43 @@
 <template>
 	<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
 	<view class="back">
-		
-		<view class="login_title">
-			<text class="title_text">log in</text>
+		<view v-if="showCredentialForm" class="login_container">
+			<view class="credential-form">
+				<view class="field-group">
+					<text class="field-label">Email</text>
+					<input
+						v-model="userInfo.email"
+						type="text"
+						placeholder="please enter your email"
+						placeholder-class="input-placeholder"
+						confirm-type="next"
+						class="input"
+					/>
+				</view>
+				<view class="field-group">
+					<text class="field-label">Password</text>
+					<input
+						v-model="userInfo.password"
+						type="password"
+						placeholder="please enter your password"
+						placeholder-class="input-placeholder"
+						class="input"
+					/>
+				</view>
+				<button
+					@click="onSubmit"
+					size="default"
+					:disabled="isSubmitting"
+					class="primary-button">
+					{{ isSubmitting ? 'Logging in...' : 'log in' }}
+				</button>
+				<button @click="closeCredentialForm" size="default" class="text-button">back</button>
+			</view>
 		</view>
-		
-		<view class="login_container">
-			<input 
-        v-model="userInfo.email" 
-        type="text" 
-        placeholder="please enter your email" 
-        confirm-type="next" 
-        class="input"
-      />
-			<view class="span1"></view>
-			<input 
-        v-model="userInfo.password" 
-        type="password" 
-        placeholder="please enter your password" 
-        class="input"
-      />
-			<view class="span2"></view>
-			<button 
-        @click="onSubmit" 
-        size="default" 
-        :disabled="isSubmitting" 
-        style="color: white;background-color: rgba(60, 60, 60, 0.7);">
-				{{ isSubmitting ? 'Logging in...' : 'log in' }}
-			</button>
-			<view class="span3"></view>
-			<navigator url="/pages/register/register" open-type="reLaunch">
-				<button size="default" style="color: white;background-color: rgba(60, 60, 60, 0.7);">sign up</button>
-			</navigator>
+
+		<view v-if="!showCredentialForm" class="login-actions">
+			<button @click="openCredentialForm" size="default" class="primary-button login-action-button">Log In</button>
+			<button @click="goToRegister" size="default" class="secondary-button login-action-button signup-action-button">Sign Up</button>
 		</view>
 	</view>
 	
@@ -58,6 +63,22 @@ const userInfo = reactive<UserInfo>({
 
 // 控制提交状态，防止重复提交
 const isSubmitting = ref(false);
+const showCredentialForm = ref(false);
+
+const openCredentialForm = () => {
+	showCredentialForm.value = true;
+};
+
+const goToRegister = () => {
+	uni.reLaunch({
+		url: '/pages/register/register'
+	});
+};
+
+const closeCredentialForm = () => {
+	showCredentialForm.value = false;
+	userInfo.password = '';
+};
 
 // 定义提交方法
 const onSubmit = () => {
@@ -209,93 +230,124 @@ const onSubmit = () => {
 </script>
 
 <style lang="scss">
-/* 登录页样式：背景图、标题定位、输入容器、按钮间距 */
-	.backpic{
-		width: 100%;
-		height: 100%;
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 0;
-	}
-	.back{
-		width: 100%;
-		min-height: 100%;
-		padding: 48px 24px 88px;
-		box-sizing: border-box;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		position: relative;
-		//background-color: aqua;
-		
-		// 登录标题样式
-		.login_title {
-			position: relative;
-			margin-bottom: 22px;
-			z-index: 10;
-			padding: 10px;
-			background-color: rgba(0, 0, 0, 0.35);
-			border: 1px solid rgba(255, 255, 255, 0.14);
-			border-radius: 12px;
-			box-sizing: border-box;
-			.title_text {
-				height: 100%;
-				font-size: 32px;
-				font-weight: bold;
-				color: white;
-				text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-			}
-		}
-		.login_container{
-			position: relative;
-			z-index: 1;
-			width: 100%;
-			max-width: 320px;
-			padding: 28px 24px;
-			background-color: rgba(227, 225, 225, 0.46);
-			border-radius: 14px;
-			box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-			box-sizing: border-box;
-			.input{
-				width: 100%;
-				min-height: 44px;
-				padding: 12px 16px;
-				border: 1px solid rgba(255, 255, 255, 0.12);
-				border-radius: 8px;
-				background-color: rgba(60, 60, 60, 0.65);
-				color: white;
-				font-size: 16px;
-				box-sizing: border-box; /* 确保padding不会增加总宽度 */
-			}
-			.span1{
-				width: 100%;
-				height: 10px;
-				/* background-color: aqua; */
-			}
-			/*.input2{
-				width: 100%;
-				padding: 12px;
-				border: none;
-				border-radius: 8px;
-				background-color: rgba(60, 60, 60, 0.7);
-				color: white;
-				font-size: 16px;
-			}*/
-			.span2{
-				width: 100%;
-				height: 10px;
-				/* background-color: aqua; */
-			}
-			.span3{
-				width: 100%;
-				height: 10px;
-				/* background-color: aqua; */
-			}
-		}
-	}
-	
+/* 登录页样式：背景图、标题定位、输入容器、底部按钮间距 */
+.backpic{
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 0;
+}
+
+.back{
+	width: 100%;
+	height: 100%;
+	padding: 48px 24px 112px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	position: relative;
+}
+
+.login_container{
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	max-width: 320px;
+	padding: 28px 24px;
+	background-color: rgba(255, 255, 255, 0.92);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	border-radius: 14px;
+	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+	box-sizing: border-box;
+}
+
+.credential-form {
+	width: 100%;
+}
+
+.field-group {
+	width: 100%;
+	margin-bottom: 14px;
+}
+
+.field-label {
+	margin-bottom: 6px;
+	color: #1f2937;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.input{
+	width: 100%;
+	min-height: 46px;
+	padding: 12px 14px;
+	border: 1px solid rgba(0, 0, 0, 0.14);
+	border-radius: 8px;
+	background-color: #ffffff;
+	color: #111827;
+	font-size: 16px;
+	box-sizing: border-box;
+}
+
+.input-placeholder {
+	color: #6b7280;
+}
+
+.login-actions {
+	position: absolute;
+	left: 24px;
+	right: 24px;
+	bottom: 112px;
+	z-index: 10;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.primary-button,
+.secondary-button,
+.text-button {
+	width: 100%;
+	font-size: 16px;
+	font-weight: 600;
+	border-radius: 8px;
+	box-sizing: border-box;
+}
+
+.login-action-button {
+	flex: 1;
+	width: 0;
+	height: 58px;
+	margin-left: 0;
+	margin-right: 0;
+	font-weight: 700;
+}
+
+.signup-action-button {
+	margin-left: 24px;
+}
+
+.primary-button {
+	color: #ffffff;
+	background-color: #1f2937;
+}
+
+.secondary-button {
+	color: #1f2937;
+	background-color: #ffffff;
+	border: 1px solid rgba(31, 41, 55, 0.28);
+}
+
+.text-button {
+	margin-top: 10px;
+	color: #374151;
+	background-color: rgba(31, 41, 55, 0.08);
+}
 </style>

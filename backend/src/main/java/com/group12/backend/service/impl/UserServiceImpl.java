@@ -29,6 +29,7 @@ import com.group12.backend.service.BillingRule;
 import com.group12.backend.service.BillingService;
 import com.group12.backend.service.DiscountService;
 import com.group12.backend.service.UserService;
+import com.group12.backend.util.BookingTimeSupport;
 
 /**
  * 实现用户注册、资料查询和预约历史查询相关的业务逻辑。
@@ -266,7 +267,8 @@ public class UserServiceImpl implements UserService {
         String startStr = booking.getStartTime() == null ? "" : booking.getStartTime().format(fmt);
         String endStr = booking.getEndTime() == null ? "" : booking.getEndTime().format(fmt);
         String paymentDeadlineStr = booking.getPaymentDeadline() == null ? null : booking.getPaymentDeadline().format(fmt);
-        String durationStr = formatDuration(booking.getDurationHours());
+        int durationMinutes = booking.getDurationHours() == null ? 0 : (int) Math.round(booking.getDurationHours() * 60.0);
+        String durationStr = formatDuration(durationMinutes);
         Double price = booking.getTotalPrice() == null ? 0.0 : booking.getTotalPrice().doubleValue();
         Double originalPrice = booking.getOriginalPrice() == null ? null : booking.getOriginalPrice().doubleValue();
         Double discountAmount = booking.getDiscountAmount() == null ? null : booking.getDiscountAmount().doubleValue();
@@ -279,6 +281,8 @@ public class UserServiceImpl implements UserService {
         m.put("startTime", startStr);
         m.put("endTime", endStr);
         m.put("duration", durationStr);
+        m.put("durationMinutes", durationMinutes > 0 ? durationMinutes : null);
+        m.put("durationCode", durationMinutes > 0 ? BookingTimeSupport.presetCodeByMinutes(durationMinutes) : null);
         m.put("total_price", price);
         m.put("price", price);
         m.put("original_price", originalPrice);
@@ -307,37 +311,11 @@ public class UserServiceImpl implements UserService {
      * 根据预约时长小时数映射为前端展示文案。
      * 先匹配单次预订档位（10M/1H/…）；延长后总时长多为非档位组合，改为按分钟或「Xh Ym」展示，避免把 20 分钟误标成 1H。
      */
-    private static String formatDuration(Double hours) {
-        if (hours == null || hours <= 0) {
+    private static String formatDuration(int minutes) {
+        if (minutes <= 0) {
             return "-";
         }
-        final double eps = 0.01;
-        double h = hours;
-        if (Math.abs(h - 10.0 / 60.0) < eps) {
-            return "10M";
-        }
-        if (Math.abs(h - 1.0) < eps) {
-            return "1H";
-        }
-        if (Math.abs(h - 4.0) < eps) {
-            return "4H";
-        }
-        if (Math.abs(h - 24.0) < eps) {
-            return "1D";
-        }
-        if (Math.abs(h - 168.0) < eps) {
-            return "1W";
-        }
-        long totalMinutes = Math.round(h * 60.0);
-        if (totalMinutes < 60) {
-            return totalMinutes + " min";
-        }
-        long wholeHours = totalMinutes / 60;
-        long remainderMin = totalMinutes % 60;
-        if (remainderMin == 0) {
-            return wholeHours + "h";
-        }
-        return wholeHours + "h " + remainderMin + "m";
+        return BookingTimeSupport.formatDurationLabel(minutes);
     }
 
     private Long resolveGuestUserId(String guestId) {

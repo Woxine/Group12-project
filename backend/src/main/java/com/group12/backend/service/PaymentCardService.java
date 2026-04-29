@@ -2,6 +2,7 @@ package com.group12.backend.service;
 
 import java.util.List;
 
+import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.PaymentCardResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
 
@@ -26,5 +27,9 @@ public interface PaymentCardService {
      */
     default List<PaymentCardResponse> listCardsForGuest(String guestId, String salespersonId) {
         throw new UnsupportedOperationException("TODO(ID9): listCardsForGuest not implemented yet");
+    }
+
+    default BinLookupResponse lookupCardBin(String userId, String prefix, String clientKey) {
+        throw new UnsupportedOperationException("TODO: lookupCardBin not implemented yet");
     }
 }

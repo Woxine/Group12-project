@@ -1,33 +1,26 @@
 <template>
 	<!-- 个人中心：未登录提示，或已登录时展示用户信息、骑行热力图与菜单 -->
 	<view class="container">
-		<!-- Not Logged In State -->
-		<view v-if="!isLoggedIn" class="login-prompt-section">
-			<view class="not-logged-wrapper">
-				<image src="/static/me.png" mode="aspectFill" class="large-icon"></image>
-				<text class="welcome-text">Welcome to e-Scooter Sharing</text>
-				<text class="login-hint-text">Please log in to view your profile and bookings</text>
-				
-				<navigator url="/pages/login/login" open-type="navigate">
-					<button class="login-btn">Go to Login</button>
-				</navigator>
-				
-				<text class="divider-text">Don't have an account?</text>
-				
-				<navigator url="/pages/register/register" open-type="navigate">
-					<button class="register-btn">Create Account</button>
-				</navigator>
-
-				<navigator url="/pages/about/about" open-type="navigate">
-					<button class="about-btn">About Us</button>
-				</navigator>
+		<scroll-view class="logged-in-container" scroll-y="true">
+			<!-- Guest Profile Section -->
+			<view v-if="!isLoggedIn" class="profile-section profile-section-guest">
+				<view class="profile-header guest-profile-header" @click="goToLogin">
+					<image src="/static/me.png" mode="scaleToFill" class="avatar guest-avatar"></image>
+					<view class="user-info">
+						<text class="user-name">Guest</text>
+						<text class="user-email">Sign in to view your profile and bookings</text>
+					</view>
+				</view>
+				<view class="guest-actions">
+					<button class="login-btn" @click="goToLogin">Go to Login</button>
+					<navigator url="/pages/register/register" open-type="navigate" class="signup-link">
+						<text class="signup-link-text">No account? Sign up</text>
+					</navigator>
+				</view>
 			</view>
-		</view>
 
-		<!-- Logged In State -->
-		<scroll-view v-else class="logged-in-container" scroll-y="true">
 			<!-- User Profile Section -->
-			<view class="profile-section" :class="getDiscountCardClass()">
+			<view v-else class="profile-section" :class="getDiscountCardClass()">
 				<view v-if="hasDiscountBadge()" class="profile-discount-logo" :class="getDiscountToneClass()">
 					<text class="discount-logo-text">{{ getDiscountLogoText() }}</text>
 				</view>
@@ -62,28 +55,38 @@
 				<view class="stats-grid">
 					<view class="stats-row">
 						<view class="stat-item">
-							<text class="stat-value">{{ totalRides }}</text>
+							<text v-if="isLoggedIn" class="stat-value">{{ totalRides }}</text>
+							<text v-else class="stat-value">-</text>
 							<text class="stat-label">Total Rides</text>
 						</view>
 						<view class="stat-item">
-							<text class="stat-value">£{{ totalSpent }}</text>
+							<text v-if="isLoggedIn" class="stat-value">£{{ totalSpent }}</text>
+							<text v-else class="stat-value">-</text>
 							<text class="stat-label">Total Spent</text>
 						</view>
 					</view>
 					<view class="stats-row">
 						<view class="stat-item">
-							<text class="stat-value">{{ mostActiveDay }}</text>
+							<text v-if="isLoggedIn" class="stat-value">{{ mostActiveDay }}</text>
+							<text v-else class="stat-value">-</text>
 							<text class="stat-label">Most Active</text>
 						</view>
 						<view class="stat-item">
-							<text class="stat-value">{{ activeDays }}</text>
+							<text v-if="isLoggedIn" class="stat-value">{{ activeDays }}</text>
+							<text v-else class="stat-value">-</text>
 							<text class="stat-label">Active Days</text>
 						</view>
 					</view>
 				</view>
 
+				<!-- Guest Placeholder -->
+				<view v-if="!isLoggedIn" class="heatmap-empty guest-activity-empty">
+					<text class="heatmap-empty-text">Sign in to see your activity</text>
+					<text class="heatmap-empty-hint">Your rides, spending and active days will appear here.</text>
+				</view>
+
 				<!-- Loading State -->
-				<view v-if="heatmapLoading" class="heatmap-loading">
+				<view v-else-if="heatmapLoading" class="heatmap-loading">
 					<text class="heatmap-loading-text">Loading activity data...</text>
 				</view>
 
@@ -91,15 +94,15 @@
 				<view v-else-if="heatmapWeeks.length > 0" class="heatmap-container">
 					<!-- Weekday Labels -->
 					<view class="heatmap-body">
-					<view class="weekday-labels">
-						<text class="weekday-label">Mon</text>
-						<text class="weekday-label">Tue</text>
-						<text class="weekday-label">Wed</text>
-						<text class="weekday-label">Thu</text>
-						<text class="weekday-label">Fri</text>
-						<text class="weekday-label">Sat</text>
-						<text class="weekday-label">Sun</text>
-					</view>
+						<view class="weekday-labels">
+							<text class="weekday-label">Mon</text>
+							<text class="weekday-label">Tue</text>
+							<text class="weekday-label">Wed</text>
+							<text class="weekday-label">Thu</text>
+							<text class="weekday-label">Fri</text>
+							<text class="weekday-label">Sat</text>
+							<text class="weekday-label">Sun</text>
+						</view>
 						<scroll-view class="heatmap-scroll" scroll-x="true" direction="horizontal">
 							<view class="heatmap-grid">
 								<view v-for="(week, wi) in heatmapWeeks" :key="wi" class="heatmap-col">
@@ -132,34 +135,74 @@
 
 			<!-- Menu List -->
 			<view class="menu-list">
-				<navigator url="/pages/orders/orders" open-type="navigate" class="menu-item">
-					<text class="menu-text">My Orders</text>
+				<view v-if="!isLoggedIn" class="menu-item menu-item-locked" @click="goToLogin">
+					<view class="menu-copy">
+						<text class="menu-text menu-text-muted">My Orders</text>
+						<text class="menu-hint">Sign in to access</text>
+					</view>
+					<text class="menu-lock">Locked</text>
+				</view>
+				<navigator v-else url="/pages/orders/orders" open-type="navigate" class="menu-item">
+					<view class="menu-copy">
+						<text class="menu-text">My Orders</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
-				<navigator url="/pages/account/account" open-type="navigate" class="menu-item">
-					<text class="menu-text">Account Management</text>
+				<view v-if="!isLoggedIn" class="menu-item menu-item-locked" @click="goToLogin">
+					<view class="menu-copy">
+						<text class="menu-text menu-text-muted">Account Management</text>
+						<text class="menu-hint">Sign in to manage profile details</text>
+					</view>
+					<text class="menu-lock">Locked</text>
+				</view>
+				<navigator v-else url="/pages/account/account" open-type="navigate" class="menu-item">
+					<view class="menu-copy">
+						<text class="menu-text">Account Management</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
-				<navigator url="/pages/feedback/feedback" open-type="navigate" class="menu-item">
-					<text class="menu-text">Feedback</text>
+				<view v-if="!isLoggedIn" class="menu-item menu-item-locked" @click="goToLogin">
+					<view class="menu-copy">
+						<text class="menu-text menu-text-muted">Feedback</text>
+						<text class="menu-hint">Sign in before sending feedback</text>
+					</view>
+					<text class="menu-lock">Locked</text>
+				</view>
+				<navigator v-else url="/pages/feedback/feedback" open-type="navigate" class="menu-item">
+					<view class="menu-copy">
+						<text class="menu-text">Feedback</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
-				<navigator url="/pages/payment-card/payment-card" open-type="navigate" class="menu-item">
-					<text class="menu-text">Payment Cards</text>
+				<view v-if="!isLoggedIn" class="menu-item menu-item-locked" @click="goToLogin">
+					<view class="menu-copy">
+						<text class="menu-text menu-text-muted">Payment Cards</text>
+						<text class="menu-hint">Sign in to view saved cards</text>
+					</view>
+					<text class="menu-lock">Locked</text>
+				</view>
+				<navigator v-else url="/pages/payment-card/payment-card" open-type="navigate" class="menu-item">
+					<view class="menu-copy">
+						<text class="menu-text">Payment Cards</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
 				<navigator v-if="isStaffRole" url="/pages/guest-profile/guest-profile" open-type="navigate" class="menu-item">
-					<text class="menu-text">Guest Profile</text>
+					<view class="menu-copy">
+						<text class="menu-text">Guest Profile</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
 				<navigator url="/pages/about/about" open-type="navigate" class="menu-item">
-					<text class="menu-text">About Us</text>
+					<view class="menu-copy">
+						<text class="menu-text">About Us</text>
+					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
 			</view>
 
 			<!-- Logout Button -->
-			<view class="action-section">
+			<view v-if="isLoggedIn" class="action-section">
 				<button class="logout-btn" @click="handleLogout">Logout</button>
 			</view>
 		</scroll-view>
@@ -253,6 +296,15 @@ const resetDiscountState = () => {
 	hasFrequentDiscount.value = false
 	hasStudentDiscount.value = false
 	hasSeniorDiscount.value = false
+}
+
+const resetHeatmapState = () => {
+	heatmapLoading.value = false
+	heatmapWeeks.value = []
+	totalRides.value = 0
+	totalSpent.value = '0.00'
+	mostActiveDay.value = '-'
+	activeDays.value = 0
 }
 
 const getVisualDiscountType = (): string => {
@@ -479,6 +531,7 @@ const fetchBookingsForHeatmap = () => {
 	const token = readStorageStringOrNull('token')
 
 	if (userId == null || userId.length == 0 || token == null || token.length == 0) {
+		resetHeatmapState()
 		return
 	}
 
@@ -542,7 +595,7 @@ const fetchBookingsForHeatmap = () => {
 				uni.removeStorageSync('token')
 				uni.removeStorageSync('userId')
 				isLoggedIn.value = false
-				buildHeatmap({} as UTSJSONObject, [])
+				resetHeatmapState()
 			} else {
 				console.error('Failed to fetch bookings for heatmap:', res.statusCode)
 				buildHeatmap({} as UTSJSONObject, [])
@@ -574,11 +627,7 @@ const handleLogout = () => {
 				userEmail.value = ''
 				avatarUrl.value = DEFAULT_AVATAR
 				resetDiscountState()
-				heatmapWeeks.value = []
-				totalRides.value = 0
-				totalSpent.value = '0.00'
-				mostActiveDay.value = '-'
-				activeDays.value = 0
+				resetHeatmapState()
 
 				showThenNavigate('Logged out successfully', '/pages/me/me', true, 800, 'reLaunch')
 			}
@@ -592,6 +641,12 @@ const goToAccountManagement = () => {
 	})
 }
 
+const goToLogin = () => {
+	uni.navigateTo({
+		url: '/pages/login/login'
+	})
+}
+
 onMounted(() => {
 	loadAvatar()
 	getUserInfo()
@@ -600,6 +655,7 @@ onMounted(() => {
 		fetchBookingsForHeatmap()
 	} else {
 		resetDiscountState()
+		resetHeatmapState()
 	}
 })
 
@@ -611,6 +667,7 @@ onShow(() => {
 		fetchBookingsForHeatmap()
 	} else {
 		resetDiscountState()
+		resetHeatmapState()
 	}
 })
 </script>
@@ -626,51 +683,7 @@ onShow(() => {
 	flex-direction: column;
 }
 
-/* ── Not Logged In ── */
-
-.login-prompt-section {
-	width: 100%;
-	flex: 1;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	padding: 16px 16px 96px;
-	box-sizing: border-box;
-}
-
-.not-logged-wrapper {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 40px 24px;
-	background-color: white;
-	border-radius: 12px;
-	margin: 16px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.large-icon {
-	width: 80px;
-	height: 80px;
-	margin-bottom: 24px;
-	opacity: 0.7;
-}
-
-.welcome-text {
-	font-size: 24px;
-	font-weight: bold;
-	color: #333;
-	margin-bottom: 8px;
-	text-align: center;
-}
-
-.login-hint-text {
-	font-size: 14px;
-	color: #999;
-	text-align: center;
-	margin-bottom: 24px;
-}
+/* ── Guest Actions ── */
 
 .login-btn {
 	width: 100%;
@@ -681,35 +694,7 @@ onShow(() => {
 	border-radius: 8px;
 	font-size: 16px;
 	font-weight: bold;
-	margin-bottom: 16px;
-}
-
-.divider-text {
-	font-size: 12px;
-	color: #999;
-	margin-bottom: 16px;
-}
-
-.register-btn {
-	width: 100%;
-	height: 48px;
-	background-color: rgba(76, 175, 80, 0.2);
-	color: #4CAF50;
-	border: 1px solid #4CAF50;
-	border-radius: 8px;
-	font-size: 16px;
-	font-weight: bold;
-}
-
-.about-btn {
-	width: 100%;
-	height: 44px;
-	margin-top: 12px;
-	background-color: transparent;
-	color: #666;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	font-size: 14px;
+	margin-bottom: 10px;
 }
 
 /* ── Logged In Container ── */
@@ -736,11 +721,20 @@ onShow(() => {
 	position: relative;
 }
 
+.profile-section-guest {
+	background-color: #fbfbfb;
+	border-color: #e6e6e6;
+}
+
 .profile-header {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+}
+
+.guest-profile-header {
+	padding-top: 4px;
 }
 
 .avatar {
@@ -750,6 +744,28 @@ onShow(() => {
 	background-color: #e0e0e0;
 	margin-right: 0;
 	margin-bottom: 12px;
+}
+
+.guest-avatar {
+	opacity: 0.75;
+}
+
+.guest-actions {
+	margin-top: 20px;
+}
+
+.signup-link {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 4px 0;
+}
+
+.signup-link-text {
+	font-size: 13px;
+	color: #4CAF50;
+	text-align: center;
 }
 
 .student-card {
@@ -1010,6 +1026,11 @@ onShow(() => {
 	color: #999;
 }
 
+.guest-activity-empty {
+	padding-top: 16px;
+	padding-bottom: 20px;
+}
+
 /* ── Menu List (continues card group) ── */
 
 .menu-list {
@@ -1045,9 +1066,35 @@ onShow(() => {
 	color: #333;
 }
 
+.menu-copy {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.menu-text-muted {
+	color: #999;
+}
+
+.menu-hint {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #b0b0b0;
+}
+
 .menu-arrow {
 	font-size: 18px;
 	color: #ccc;
+}
+
+.menu-item-locked {
+	background-color: #fafafa;
+}
+
+.menu-lock {
+	font-size: 12px;
+	color: #b0b0b0;
+	margin-left: 16px;
 }
 
 /* ── Logout Button ── */
