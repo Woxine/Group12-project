@@ -9,6 +9,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import com.group12.backend.controller.PaymentCardController;
 import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.PaymentCardResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.PaymentCardService;
 import com.group12.backend.utils.JwtUtil;
 
@@ -71,6 +73,19 @@ class PaymentCardControllerMvcTest {
                         .content(body))
                 .andExpect(status().is2xxSuccessful());
         verify(paymentCardService).createCard(eq("1"), any(StorePaymentCardRequest.class));
+    }
+
+    @Test
+    @DisplayName("POST 创建卡片：卡号格式错误时返回具体 message")
+    void createCard_returnsValidationMessage_whenCardNumberMalformed() throws Exception {
+        String body = "{\"holderName\":\"Alice\",\"cardNumber\":\"12345\",\"brand\":\"VISA\",\"expiryMonth\":12,\"expiryYear\":2030}";
+        mockMvc.perform(post("/api/v1/users/1/payment-cards")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH)
+                        .requestAttr("userId", 1L)
+                        .contentType(APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(ErrorMessages.PAYMENT_CARD_NUMBER_FORMAT_INVALID));
     }
 
     @Test

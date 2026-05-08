@@ -1,0 +1,320 @@
+<template>
+	<view class="vehicle-intro-overlay" v-if="visible">
+		<view class="vehicle-intro-card">
+			<view class="intro-header">
+				<text class="intro-title">Our Vehicles</text>
+				<text class="close-btn" @click="close">✕</text>
+			</view>
+			<scroll-view class="intro-scroll" scroll-y="true">
+				<view class="intro-item" v-for="(v, idx) in vehicles" :key="v.vehicleType">
+					<view class="intro-img-row">
+						<image :src="mainImages[idx]" mode="aspectFill" class="intro-img"></image>
+						<image :src="sideImages[idx]" mode="aspectFill" class="intro-img intro-img-spaced"></image>
+					</view>
+					<view class="intro-text-box">
+						<text class="intro-name">{{ v.displayName }}</text>
+						<text class="intro-subtitle">{{ v.subtitle }}</text>
+						<view class="intro-meta-row">
+							<view class="meta-chip">
+								<text class="meta-label">Range</text>
+								<text class="meta-value">{{ v.rangeText }}</text>
+							</view>
+							<view class="meta-chip meta-chip-spaced">
+								<text class="meta-label">Top Speed</text>
+								<text class="meta-value">{{ v.speedText }}</text>
+							</view>
+							<view class="meta-chip meta-chip-spaced">
+								<text class="meta-label">Motor</text>
+								<text class="meta-value">{{ v.motorText }}</text>
+							</view>
+						</view>
+						<view class="intro-advice">
+							<text class="intro-advice-text">{{ v.advice }}</text>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+import { BASE_URL } from '../../common/api.uts'
+
+type VehicleInfo = {
+	vehicleType: string
+	displayName: string
+	subtitle: string
+	description: string
+	rangeText: string
+	speedText: string
+	motorText: string
+	advice: string
+}
+
+const props = defineProps<{
+	visible: boolean
+}>()
+
+const emit = defineEmits<{
+	(e: 'close'): void
+}>()
+
+const close = () => {
+	emit('close')
+}
+
+const defaultVehicles: VehicleInfo[] = [
+	{ vehicleType: 'GEN1', displayName: 'GEN1', subtitle: 'Ninebot Fz3', description: 'Best for beginners and short daily trips.', rangeText: '115km/92km', speedText: '25km/h', motorText: '400W', advice: 'Best for beginners and short daily trips.' },
+	{ vehicleType: 'GEN2', displayName: 'GEN2', subtitle: 'Ninebot V70', description: 'Balanced choice for mid-range commuting.', rangeText: '70km', speedText: '47km/h', motorText: '800W', advice: 'Balanced choice for mid-range commuting.' },
+	{ vehicleType: 'GEN3', displayName: 'GEN3', subtitle: 'Ninebot M95C', description: 'Long-range flagship for heavy usage scenarios.', rangeText: '145km max', speedText: '55km/h', motorText: '1500W/2600W', advice: 'Long-range flagship for heavy usage scenarios.' },
+	{ vehicleType: 'GEN3PRO', displayName: 'GEN3 PRO', subtitle: 'Ninebot E300P MK2', description: 'Performance-first choice for advanced riders.', rangeText: '125km', speedText: '135km/h', motorText: '29kW peak', advice: 'Performance-first choice for advanced riders.' }
+]
+
+const vehicles = ref<VehicleInfo[]>(defaultVehicles)
+
+const mainImages = ref<string[]>([
+	'/static/vehicles/gen1_escooter_Fz3_liangziyin.png',
+	'/static/vehicles/gen2_eScooter_V70_GardeniaGreen_005.png',
+	'/static/vehicles/gen3_eScooter-M95C_MK2-jingyahui.png',
+	'/static/vehicles/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
+])
+
+const sideImages = ref<string[]>([
+	'/static/vehicles/gen1_left_side.png',
+	'/static/vehicles/gen2_left_side.png',
+	'/static/vehicles/gen3_left_side.png',
+	'/static/vehicles/gen3_pro_left_side.png'
+])
+
+const TYPE_ORDER = ['GEN1', 'GEN2', 'GEN3', 'GEN3PRO']
+
+const getMainImage = (type: string): string => {
+	if (type == 'GEN1') return '/static/vehicles/gen1_escooter_Fz3_liangziyin.png'
+	if (type == 'GEN2') return '/static/vehicles/gen2_eScooter_V70_GardeniaGreen_005.png'
+	if (type == 'GEN3') return '/static/vehicles/gen3_eScooter-M95C_MK2-jingyahui.png'
+	if (type == 'GEN3PRO') return '/static/vehicles/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
+	return '/static/vehicles/gen1_escooter_Fz3_liangziyin.png'
+}
+
+const getSideImage = (type: string): string => {
+	if (type == 'GEN1') return '/static/vehicles/gen1_left_side.png'
+	if (type == 'GEN2') return '/static/vehicles/gen2_left_side.png'
+	if (type == 'GEN3') return '/static/vehicles/gen3_left_side.png'
+	if (type == 'GEN3PRO') return '/static/vehicles/gen3_pro_left_side.png'
+	return '/static/vehicles/gen1_left_side.png'
+}
+
+const getTypeOrder = (type: string): number => {
+	for (let i = 0; i < TYPE_ORDER.length; i++) {
+		if (TYPE_ORDER[i] == type) return i
+	}
+	return 99
+}
+
+const sortByType = (list: VehicleInfo[]): VehicleInfo[] => {
+	const sorted = list.slice()
+	sorted.sort((a: VehicleInfo, b: VehicleInfo) => {
+		return getTypeOrder(a.vehicleType) - getTypeOrder(b.vehicleType)
+	})
+	return sorted
+}
+
+const fetchVehicleDescriptions = () => {
+	uni.request({
+		url: BASE_URL + '/api/v1/vehicles',
+		method: 'GET',
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null) {
+				const raw = res.data as UTSJSONObject
+				let arr: UTSJSONObject[] = []
+				const dataArr = raw.getArray<UTSJSONObject>('data')
+				if (dataArr != null) {
+					arr = dataArr
+				}
+				if (arr.length > 0) {
+					const parsed: VehicleInfo[] = []
+					for (let i = 0; i < arr.length; i++) {
+						const item = arr[i]
+						const rawType = item['vehicleType']
+						const vt = rawType != null ? ('' + rawType) : ''
+						parsed.push({
+							vehicleType: vt,
+							displayName: item['displayName'] != null ? ('' + item['displayName']) : vt,
+							subtitle: item['subtitle'] != null ? ('' + item['subtitle']) : '',
+							description: item['description'] != null ? ('' + item['description']) : '',
+							rangeText: item['rangeText'] != null ? ('' + item['rangeText']) : '',
+							speedText: item['speedText'] != null ? ('' + item['speedText']) : '',
+							motorText: item['motorText'] != null ? ('' + item['motorText']) : '',
+							advice: item['advice'] != null ? ('' + item['advice']) : ''
+						})
+					}
+					const sorted = sortByType(parsed)
+					vehicles.value = sorted
+					const mains: string[] = []
+					const sides: string[] = []
+					for (let i = 0; i < sorted.length; i++) {
+						const t = sorted[i].vehicleType
+						mains.push(getMainImage(t))
+						sides.push(getSideImage(t))
+					}
+					mainImages.value = mains
+					sideImages.value = sides
+				}
+			}
+		},
+		fail: () => {
+			// keep defaults
+		}
+	})
+}
+
+onMounted(() => {
+	fetchVehicleDescriptions()
+})
+</script>
+
+<style lang="scss">
+	.vehicle-intro-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.vehicle-intro-card {
+		width: 86%;
+		height: 68%;
+		background-color: #f6f7fb;
+		border-radius: 24px;
+		padding: 18px;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		box-shadow: $shadow-elevated;
+	}
+
+	.intro-header {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+	}
+
+	.intro-title {
+		font-size: $font-title-sm;
+		font-weight: 700;
+		color: $text-primary;
+	}
+
+	.close-btn {
+		font-size: 20px;
+		color: $text-placeholder;
+		padding: 4px;
+	}
+
+	.intro-scroll {
+		flex: 1;
+		width: 100%;
+	}
+
+	.intro-item {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 12px;
+		background-color: $bg-card;
+		border-radius: 16px;
+		overflow: hidden;
+		border: 1px solid $border-light;
+		box-shadow: $shadow-card;
+	}
+
+	.intro-img-row {
+		display: flex;
+		flex-direction: row;
+	}
+
+	.intro-img {
+		flex: 1;
+		height: 118px;
+	}
+
+	.intro-img-spaced {
+		margin-left: 2px;
+	}
+
+	.intro-text-box {
+		padding: 10px 12px 12px;
+	}
+
+	.intro-name {
+		font-size: $font-micro;
+		font-weight: 700;
+		color: $text-secondary;
+		letter-spacing: 0.8px;
+		margin-bottom: 2px;
+	}
+
+	.intro-subtitle {
+		font-size: $font-section;
+		font-weight: 700;
+		color: $text-primary;
+		margin-bottom: 8px;
+	}
+
+	.intro-meta-row {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		margin-bottom: 8px;
+	}
+
+	.meta-chip {
+		flex: 1;
+		background-color: #f8fafc;
+		border: 1px solid $border-light;
+		border-radius: 10px;
+		padding: 7px 6px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.meta-chip-spaced {
+		margin-left: 10px;
+	}
+
+	.meta-label {
+		font-size: $font-micro;
+		font-weight: bold;
+		color: $text-secondary;
+		margin-bottom: 3px;
+	}
+
+	.meta-value {
+		font-size: $font-micro;
+		font-weight: 700;
+		color: $text-primary;
+	}
+
+	.intro-advice {
+		padding: 7px 9px;
+		background: #f8fafc;
+		border-radius: 8px;
+	}
+
+	.intro-advice-text {
+		font-size: $font-micro;
+		color: $text-primary;
+		line-height: 1.3;
+	}
+</style>

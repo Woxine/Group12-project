@@ -1,3 +1,11 @@
+# JWT signing key — MUST be provided via env var in production
+jwt:
+  secret: ${JWT_SECRET:}
+
+# Initial admin password — generated randomly if not provided
+admin:
+  initial-password: ${ADMIN_INITIAL_PASSWORD:}
+
 spring:
   application:
     name: backend
@@ -27,14 +35,14 @@ spring:
 
   h2:
     console:
-      enabled: ${SPRING_H2_CONSOLE_ENABLED:true}
+      enabled: ${SPRING_H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
   mail:
     host: ${SPRING_MAIL_HOST:smtp.qq.com}
     port: ${SPRING_MAIL_PORT:465}
-    username: ${SPRING_MAIL_USERNAME:920267651@qq.com}
-    password: ${SPRING_MAIL_PASSWORD:ssxamgalscgsbcbi}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -70,12 +78,5 @@ discount-verification:
 
 payment-card:
   bin-lookup:
-    enabled: ${PAYMENT_CARD_BIN_LOOKUP_ENABLED:false}
-    endpoint: ${PAYMENT_CARD_BIN_LOOKUP_ENDPOINT:}
-    api-key: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY:}
-    api-key-header: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY_HEADER:Authorization}
-    api-key-prefix: ${PAYMENT_CARD_BIN_LOOKUP_API_KEY_PREFIX:Bearer }
-    connect-timeout-ms: ${PAYMENT_CARD_BIN_LOOKUP_CONNECT_TIMEOUT_MS:1200}
-    read-timeout-ms: ${PAYMENT_CARD_BIN_LOOKUP_READ_TIMEOUT_MS:1200}
     cache-ttl-seconds: ${PAYMENT_CARD_BIN_LOOKUP_CACHE_TTL_SECONDS:900}
     rate-limit-per-minute: ${PAYMENT_CARD_BIN_LOOKUP_RATE_LIMIT_PER_MINUTE:30}

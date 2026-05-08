@@ -111,6 +111,13 @@ public class DiscountVerificationServiceImpl implements DiscountVerificationServ
     }
 
     @Override
+    public Object getSubmissionById(Long submissionId) {
+        return submissionRepository.findById(submissionId)
+                .map(this::toResponse)
+                .orElse(null);
+    }
+
+    @Override
     @Transactional
     public Object reject(Long submissionId, Long reviewerUserId, String reason) {
         DiscountVerificationSubmission submission = findPendingSubmission(submissionId);

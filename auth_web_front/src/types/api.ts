@@ -181,3 +181,15 @@ export interface DashboardOverview {
   faultStats: FaultStats;
   dailyTrend: DailyTrendPoint[];
 }
+
+export interface VehicleDescription {
+  id: number;
+  vehicleType: string;
+  displayName: string;
+  subtitle: string;
+  description: string;
+  rangeText: string;
+  speedText: string;
+  motorText: string;
+  advice: string;
+}

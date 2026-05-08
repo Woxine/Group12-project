@@ -111,6 +111,17 @@
       <div class="admin-detail-field"><span class="admin-detail-label">File</span><span>{{ detailRow.originalFilename }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">MIME</span><span>{{ detailRow.mimeType }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Size</span><span>{{ formatBytes(detailRow.sizeBytes) }}</span></div>
+      <div v-if="fileLoading" class="admin-detail-field admin-detail-field--full">
+        <span class="admin-detail-label">Preview</span><span>Loading...</span>
+      </div>
+      <div v-else-if="filePreviewUrl && detailRow.mimeType?.startsWith('image/')" class="admin-detail-field admin-detail-field--full">
+        <span class="admin-detail-label">Preview</span>
+        <img :src="filePreviewUrl" alt="Verification document" class="file-preview-image" />
+      </div>
+      <div v-else-if="filePreviewUrl && detailRow.mimeType === 'application/pdf'" class="admin-detail-field admin-detail-field--full">
+        <span class="admin-detail-label">Document</span>
+        <a :href="filePreviewUrl" target="_blank" rel="noopener" class="file-download-link">Open PDF</a>
+      </div>
       <div class="admin-detail-field"><span class="admin-detail-label">Submitted</span><span>{{ detailRow.submittedAt }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Reviewed</span><span>{{ detailRow.reviewedAt || "-" }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Reviewer</span><span>{{ detailRow.reviewerUserId ?? "-" }}</span></div>
@@ -118,7 +129,7 @@
       <div class="admin-detail-field admin-detail-field--full"><span class="admin-detail-label">Reject Reason</span><span>{{ detailRow.rejectReason || "-" }}</span></div>
     </div>
     <template #footer>
-      <el-button @click="detailDialogVisible = false">Close</el-button>
+      <el-button @click="closeDetailDialog">Close</el-button>
     </template>
   </el-dialog>
 
@@ -145,6 +156,7 @@ import { Check, Close, Search } from "@element-plus/icons-vue";
 
 import {
   approveDiscountVerification,
+  getDiscountVerificationFileUrl,
   getDiscountVerifications,
   rejectDiscountVerification
 } from "@/api/admin";
@@ -166,6 +178,8 @@ const rejectDialogVisible = ref(false);
 const rejecting = ref(false);
 const rejectTargetId = ref<number | null>(null);
 const rejectReason = ref("");
+const filePreviewUrl = ref<string | null>(null);
+const fileLoading = ref(false);
 
 async function load() {
   loading.value = true;
@@ -214,9 +228,28 @@ function formatBytes(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function openDetailDialog(row: DiscountVerificationSubmission) {
+async function openDetailDialog(row: DiscountVerificationSubmission) {
   detailRow.value = row;
   detailDialogVisible.value = true;
+  filePreviewUrl.value = null;
+  if (row.mimeType && (row.mimeType.startsWith("image/") || row.mimeType === "application/pdf")) {
+    fileLoading.value = true;
+    try {
+      filePreviewUrl.value = await getDiscountVerificationFileUrl(row.id);
+    } catch {
+      filePreviewUrl.value = null;
+    } finally {
+      fileLoading.value = false;
+    }
+  }
+}
+
+function closeDetailDialog() {
+  detailDialogVisible.value = false;
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value);
+    filePreviewUrl.value = null;
+  }
 }
 
 async function approve(id: number) {
@@ -264,5 +297,29 @@ onMounted(load);
 
 :deep(.clickable-row) {
   cursor: pointer;
+}
+
+.file-preview-image {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.file-download-link {
+  color: var(--el-color-primary);
+  text-decoration: underline;
+}
+
+:deep(.el-dialog) {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.el-dialog__body) {
+  overflow-y: auto;
+  flex: 1;
 }
 </style>

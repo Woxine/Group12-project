@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,12 +32,14 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     private final PaymentCardRepository paymentCardRepository;
     private final UserRepository userRepository;
-    @Autowired(required = false)
-    private PaymentCardBinLookupService paymentCardBinLookupService;
+    private final PaymentCardBinLookupService paymentCardBinLookupService;
 
-    public PaymentCardServiceImpl(PaymentCardRepository paymentCardRepository, UserRepository userRepository) {
+    public PaymentCardServiceImpl(PaymentCardRepository paymentCardRepository,
+                                  UserRepository userRepository,
+                                  PaymentCardBinLookupService paymentCardBinLookupService) {
         this.paymentCardRepository = paymentCardRepository;
         this.userRepository = userRepository;
+        this.paymentCardBinLookupService = paymentCardBinLookupService;
     }
 
     @Override
@@ -51,9 +52,9 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         String cardNumber = normalizeCardNumber(request.getCardNumber());
         validateCardNumber(cardNumber);
         validateExpiry(request.getExpiryMonth(), request.getExpiryYear());
+        String normalizedBrand = validateIssuerBrand(cardNumber, request.getBrand(), "bind:" + parsedUserId);
 
         String last4 = cardNumber.substring(cardNumber.length() - 4);
-        String normalizedBrand = normalizeBrand(request.getBrand());
 
         boolean duplicate = paymentCardRepository.existsByUser_IdAndBrandIgnoreCaseAndLast4AndExpiryMonthAndExpiryYear(
                 parsedUserId,
@@ -153,6 +154,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         String cardNumber = normalizeCardNumber(request.getCardNumber());
         validateCardNumber(cardNumber);
         validateExpiry(request.getExpiryMonth(), request.getExpiryYear());
+        String normalizedBrand = validateIssuerBrand(cardNumber, request.getBrand(), "guest-bind:" + parsedSalespersonId);
 
         User owner = resolveUserSafely(guestUserId);
         if (owner == null) {
@@ -185,7 +187,6 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         }
         Long effectiveOwnerId = owner.getId() != null ? owner.getId() : guestUserId;
 
-        String normalizedBrand = normalizeBrand(request.getBrand());
         String last4 = cardNumber.substring(cardNumber.length() - 4);
         boolean duplicate = false;
         if (paymentCardRepository != null) {
@@ -246,15 +247,6 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         Long parsedUserId = parseId(userId, "userId");
         ensureUserExists(parsedUserId);
         String normalizedPrefix = normalizeBinPrefix(prefix);
-        if (paymentCardBinLookupService == null) {
-            BinLookupResponse response = new BinLookupResponse();
-            response.setBrand("UNKNOWN");
-            response.setIssuerBank("");
-            response.setCardType("");
-            response.setCountryCode("");
-            response.setStatus("DEGRADED");
-            return response;
-        }
         return paymentCardBinLookupService.lookup(normalizedPrefix, clientKey);
     }
 
@@ -291,14 +283,20 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     }
 
     private void validateCardNumber(String cardNumber) {
-        if (!cardNumber.matches("\\d{13,19}") || !isLuhnValid(cardNumber)) {
-            throw new BusinessException(ErrorMessages.INVALID_CARD_NUMBER, HttpStatus.BAD_REQUEST);
+        if (!cardNumber.matches("\\d{13,19}")) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_NUMBER_FORMAT_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (!isLuhnValid(cardNumber)) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_LUHN_INVALID, HttpStatus.BAD_REQUEST);
         }
     }
 
     private void validateExpiry(Integer month, Integer year) {
-        if (month == null || year == null) {
-            throw new BusinessException(ErrorMessages.PAYMENT_CARD_EXPIRED, HttpStatus.BAD_REQUEST);
+        if (month == null || month < 1 || month > 12) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_EXPIRY_MONTH_INVALID, HttpStatus.BAD_REQUEST);
+        }
+        if (year == null) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_EXPIRY_YEAR_INVALID, HttpStatus.BAD_REQUEST);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -307,8 +305,35 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         }
     }
 
+    private String validateIssuerBrand(String cardNumber, String requestedBrand, String clientKey) {
+        String normalizedBrand = normalizeBrand(requestedBrand);
+        String prefix = cardNumber.substring(0, Math.min(8, cardNumber.length()));
+        BinLookupResponse lookup = paymentCardBinLookupService.lookup(prefix, clientKey);
+        String lookupStatus = normalizeLookupValue(lookup == null ? null : lookup.getStatus());
+        String lookupBrand = normalizeBrand(lookup == null ? null : lookup.getBrand());
+        if (!"MATCHED".equals(lookupStatus) || lookupBrand.isEmpty() || "UNKNOWN".equals(lookupBrand)) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_BIN_UNSUPPORTED, HttpStatus.BAD_REQUEST);
+        }
+        if (!lookupBrand.equals(normalizedBrand)) {
+            throw new BusinessException(ErrorMessages.PAYMENT_CARD_BRAND_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+        return normalizedBrand;
+    }
+
     private String normalizeBrand(String brand) {
-        return brand == null ? "" : brand.trim();
+        String value = normalizeLookupValue(brand);
+        String compact = value.replace(" ", "");
+        if ("MASTER CARD".equals(value) || "MC".equals(compact)) {
+            return "MASTERCARD";
+        }
+        if ("AMERICANEXPRESS".equals(compact)) {
+            return "AMEX";
+        }
+        return compact;
+    }
+
+    private String normalizeLookupValue(String value) {
+        return value == null ? "" : value.trim().toUpperCase();
     }
 
     private User resolveUserSafely(Long userId) {

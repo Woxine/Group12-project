@@ -5,7 +5,7 @@
 			<!-- Guest Profile Section -->
 			<view v-if="!isLoggedIn" class="profile-section profile-section-guest">
 				<view class="profile-header guest-profile-header" @click="goToLogin">
-					<image src="/static/me.png" mode="scaleToFill" class="avatar guest-avatar"></image>
+					<image src="/static/icons/me.png" mode="scaleToFill" class="avatar guest-avatar"></image>
 					<view class="user-info">
 						<text class="user-name">Guest</text>
 						<text class="user-email">Sign in to view your profile and bookings</text>
@@ -233,7 +233,7 @@ const isLoggedIn = ref<boolean>(false)
 const isStaffRole = ref(false)
 const userName = ref<string>('')
 const userEmail = ref<string>('')
-const DEFAULT_AVATAR = '/static/me.png'
+const DEFAULT_AVATAR = '/static/icons/me.png'
 const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
 const LEGACY_AVATAR_STORAGE_KEY = 'userAvatar'
 const avatarUrl = ref(DEFAULT_AVATAR)
@@ -677,7 +677,7 @@ onShow(() => {
 .container {
 	width: 100%;
 	height: 100%;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
@@ -687,12 +687,12 @@ onShow(() => {
 
 .login-btn {
 	width: 100%;
-	height: 48px;
-	background-color: #4CAF50;
+	height: 44px;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
 	margin-bottom: 10px;
 }
@@ -722,8 +722,8 @@ onShow(() => {
 }
 
 .profile-section-guest {
-	background-color: #fbfbfb;
-	border-color: #e6e6e6;
+	background-color: $bg-input;
+	border-color: $border-base;
 }
 
 .profile-header {
@@ -741,7 +741,7 @@ onShow(() => {
 	width: 72px;
 	height: 72px;
 	border-radius: 36px;
-	background-color: #e0e0e0;
+	background-color: $bg-disabled;
 	margin-right: 0;
 	margin-bottom: 12px;
 }
@@ -763,21 +763,21 @@ onShow(() => {
 }
 
 .signup-link-text {
-	font-size: 13px;
-	color: #4CAF50;
+	font-size: $font-caption;
+	color: $brand-green;
 	text-align: center;
 }
 
 .student-card {
-	border-color: #409EFF;
+	border-color: $color-info;
 }
 
 .senior-card {
-	border-color: #E6A23C;
+	border-color: $color-warning;
 }
 
 .frequent-card {
-	border-color: #67C23A;
+	border-color: $brand-green-light;
 }
 
 .profile-discount-logo {
@@ -794,11 +794,11 @@ onShow(() => {
 	box-sizing: border-box;
 	border-width: 2px;
 	border-style: solid;
-	border-color: #ffffff;
+	border-color: $bg-card;
 }
 
 .discount-logo-text {
-	font-size: 13px;
+	font-size: $font-caption;
 	font-weight: bold;
 	color: #ffffff;
 }
@@ -810,16 +810,16 @@ onShow(() => {
 }
 
 .user-name {
-	font-size: 18px;
+	font-size: $font-title-sm;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 6px;
 	text-align: center;
 }
 
 .user-email {
-	font-size: 13px;
-	color: #999;
+	font-size: $font-caption;
+	color: $text-placeholder;
 	text-align: center;
 }
 
@@ -838,14 +838,14 @@ onShow(() => {
 }
 
 .discount-pill-text {
-	font-size: 12px;
+	font-size: $font-hint;
 	font-weight: bold;
 	color: #ffffff;
 }
 
 .frequent-pill-text {
-	font-weight: 800;
-	font-size: 13px;
+	font-weight: 700;
+	font-size: $font-caption;
 	letter-spacing: 0.4px;
 }
 
@@ -854,21 +854,21 @@ onShow(() => {
 }
 
 .discount-status-text {
-	font-size: 12px;
-	color: #666;
+	font-size: $font-hint;
+	color: $text-secondary;
 	text-align: center;
 }
 
 .student-tone {
-	background-color: #409EFF;
+	background-color: $color-info;
 }
 
 .senior-tone {
-	background-color: #E6A23C;
+	background-color: $color-warning;
 }
 
 .frequent-tone {
-	background-color: #67C23A;
+	background-color: $brand-green-light;
 }
 
 /* ── Heatmap Section (continues card group) ── */
@@ -880,13 +880,13 @@ onShow(() => {
 	box-sizing: border-box;
 	border-top-width: 1px;
 	border-top-style: solid;
-	border-top-color: #f0f0f0;
+	border-top-color: $border-light;
 }
 
 .heatmap-title {
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 16px;
 }
 
@@ -911,13 +911,13 @@ onShow(() => {
 .stat-value {
 	font-size: 20px;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 4px;
 }
 
 .stat-label {
-	font-size: 12px;
-	color: #999;
+	font-size: $font-hint;
+	color: $text-placeholder;
 }
 
 .heatmap-loading {
@@ -928,8 +928,8 @@ onShow(() => {
 }
 
 .heatmap-loading-text {
-	font-size: 13px;
-	color: #999;
+	font-size: $font-caption;
+	color: $text-placeholder;
 }
 
 .heatmap-container {
@@ -953,8 +953,8 @@ onShow(() => {
 	width: 26px;
 	height: 11px;
 	line-height: 11px;
-	font-size: 9px;
-	color: #999;
+	font-size: $font-micro;
+	color: $text-placeholder;
 	text-align: right;
 	margin-bottom: 2px;
 }
@@ -995,8 +995,8 @@ onShow(() => {
 }
 
 .legend-text {
-	font-size: 10px;
-	color: #999;
+	font-size: $font-micro;
+	color: $text-placeholder;
 	margin-left: 4px;
 	margin-right: 4px;
 }
@@ -1016,14 +1016,14 @@ onShow(() => {
 }
 
 .heatmap-empty-text {
-	font-size: 14px;
-	color: #666;
+	font-size: $font-body;
+	color: $text-secondary;
 	margin-bottom: 4px;
 }
 
 .heatmap-empty-hint {
-	font-size: 12px;
-	color: #999;
+	font-size: $font-hint;
+	color: $text-placeholder;
 }
 
 .guest-activity-empty {
@@ -1041,7 +1041,7 @@ onShow(() => {
 	border-bottom-right-radius: 12px;
 	border-top-width: 1px;
 	border-top-style: solid;
-	border-top-color: #f0f0f0;
+	border-top-color: $border-light;
 }
 
 .menu-item {
@@ -1054,7 +1054,7 @@ onShow(() => {
 	justify-content: space-between;
 	border-top-width: 1px;
 	border-top-style: solid;
-	border-top-color: #f0f0f0;
+	border-top-color: $border-light;
 }
 
 .menu-item:first-child {
@@ -1062,8 +1062,8 @@ onShow(() => {
 }
 
 .menu-text {
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 }
 
 .menu-copy {
@@ -1073,27 +1073,27 @@ onShow(() => {
 }
 
 .menu-text-muted {
-	color: #999;
+	color: $text-placeholder;
 }
 
 .menu-hint {
 	margin-top: 4px;
-	font-size: 12px;
-	color: #b0b0b0;
+	font-size: $font-hint;
+	color: $text-placeholder;
 }
 
 .menu-arrow {
-	font-size: 18px;
-	color: #ccc;
+	font-size: $font-title-sm;
+	color: $bg-disabled;
 }
 
 .menu-item-locked {
-	background-color: #fafafa;
+	background-color: $bg-input;
 }
 
 .menu-lock {
-	font-size: 12px;
-	color: #b0b0b0;
+	font-size: $font-hint;
+	color: $text-placeholder;
 	margin-left: 16px;
 }
 
@@ -1111,9 +1111,9 @@ onShow(() => {
 	padding: 12px;
 	background-color: rgba(60, 60, 60, 0.7);
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 }
 

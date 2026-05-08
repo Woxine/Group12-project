@@ -14,6 +14,7 @@ public final class BookingTimeSupport {
     public static final int MIN_DURATION_MINUTES = 5;
     public static final int MAX_DURATION_MINUTES = 7 * 24 * 60;
     public static final int DURATION_STEP_MINUTES = 5;
+    private static final int START_NOW_GRACE_MINUTES = DURATION_STEP_MINUTES;
 
     private static final DateTimeFormatter SPACE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter ISO_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
@@ -86,7 +87,11 @@ public final class BookingTimeSupport {
         if (!parsed.toLocalDate().equals(today)) {
             throw new IllegalArgumentException("startTime must be in the same day");
         }
-        if (parsed.isBefore(now)) {
+        LocalDateTime nowTruncated = now.withSecond(0).withNano(0);
+        if (parsed.isBefore(nowTruncated)) {
+            if (!parsed.isBefore(nowTruncated.minusMinutes(START_NOW_GRACE_MINUTES))) {
+                return nowTruncated;
+            }
             throw new IllegalArgumentException("startTime cannot be earlier than current time");
         }
         return parsed;

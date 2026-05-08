@@ -1,7 +1,7 @@
 <template>
 	<!-- 支付页：展示订单金额，选择支付方式并填写信息，完成付款后跳转首页 -->
 	<view class="back">
-		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
+		<image src="/static/backgrounds/login_back1.jpg" mode="" class="backpic"></image>
 		
 		<!-- 支付页面标题 -->
 		<view class="payment_title">
@@ -68,7 +68,7 @@
 							:class="selectedCardId == ('' + card['id']) ? 'saved_card_item_active' : ''"
 							@click="selectSavedCard('' + card['id'])">
 							<text class="saved_card_main">{{ card['brand'] }} {{ card['maskedNumber'] }}</text>
-							<text class="saved_card_sub">{{ card['holderName'] }} · {{ card['expiryMonth'] }}/{{ card['expiryYear'] }}</text>
+							<text class="saved_card_sub">{{ card['holderName'] }} · {{ formatExpiryMonth(card['expiryMonth']) }}/{{ card['expiryYear'] }}</text>
 						</view>
 					</view>
 					<view class="form_group" v-else>
@@ -126,7 +126,7 @@
 				<view v-else-if="paymentMethodIndex == 1" class="payment_form">
 					<view class="form_section_title">
 						<view class="payment_method_heading">
-							<image src="/static/alipay-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
+							<image src="/static/payment/alipay-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
 							<text class="section_title_text">Alipay Account</text>
 						</view>
 					</view>
@@ -158,7 +158,7 @@
 				<view v-else-if="paymentMethodIndex == 2" class="payment_form">
 					<view class="info_box">
 						<view class="payment_method_heading">
-							<image src="/static/wechat-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
+							<image src="/static/payment/wechat-logo.svg" mode="aspectFit" class="payment_section_logo"></image>
 							<text class="info_text">WeChat Pay</text>
 						</view>
 						<view class="qr_code_placeholder">
@@ -172,7 +172,7 @@
 				<view v-else-if="paymentMethodIndex == 3" class="payment_form">
 					<view class="info_box">
 						<view class="payment_method_heading">
-							<image src="/static/yunshanfu_02.png" mode="aspectFit" class="payment_section_logo"></image>
+							<image src="/static/payment/yunshanfu_02.png" mode="aspectFit" class="payment_section_logo"></image>
 							<text class="info_text">Cloud QuickPass</text>
 						</view>
 						<view class="qr_code_placeholder">
@@ -190,7 +190,7 @@
 					size="default" 
 					hover-class="payment_button_hover"
 					:class="['payment_button', isPaymentProcessing ? 'processing' : '']"
-					style="background-color: #4CAF50; color: white; border: none;"
+					style="background-color: #4CAF50; color: white; border-width: 0;"
 				>
 					{{ isPaymentProcessing ? 'Processing...' : `Pay £${orderAmount.toFixed(2)}` }}
 				</button>
@@ -220,7 +220,7 @@ import { showSuccess, showError, showInfo, showThenNavigate } from '../../common
 
 // 支付方式列表
 const paymentMethods = ['Bank Card', 'Alipay', 'WeChat Pay', 'Cloud QuickPass'];
-const paymentMethodLogos = ['', '/static/alipay-logo.svg', '/static/wechat-logo.svg', '/static/yunshanfu_02.png'];
+const paymentMethodLogos = ['', '/static/payment/alipay-logo.svg', '/static/payment/wechat-logo.svg', '/static/payment/yunshanfu_02.png'];
 const paymentMethodIndex = ref(0);
 
 // 银行列表
@@ -245,6 +245,12 @@ function readStorageStringOrNull(key: string): string | null {
 	if (raw == null) return null;
 	const value = ('' + raw).trim();
 	return value.length < 1 ? null : value;
+}
+
+function formatExpiryMonth(value: any | null): string {
+	const month = value != null ? parseInt('' + value) : 0;
+	if (month > 0 && month < 10) return '0' + month;
+	return '' + month;
 }
 
 function loadBookingDetails() {
@@ -633,13 +639,13 @@ onShow(() => {
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 /* 支付页样式：背景图、订单摘要卡片、支付表单、确认与取消按钮 */
 .back {
 	position: relative;
 	width: 100%;
 	height: 100%;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
@@ -669,7 +675,7 @@ onShow(() => {
 }
 
 .title_text {
-	font-size: 24px;
+	font-size: $font-title-lg;
 	font-weight: bold;
 	color: rgba(60, 60, 60, 0.95);
 	font-family: Arial, sans-serif;
@@ -684,7 +690,7 @@ onShow(() => {
 	padding: 12px 15px;
 	background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
 	border-radius: 8px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 	border: 1px solid rgba(255, 255, 255, 0.8);
 	flex-shrink: 0;
 }
@@ -696,8 +702,8 @@ onShow(() => {
 }
 
 .order_label {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 	font-weight: bold;
 	letter-spacing: 0.3px;
 }
@@ -709,14 +715,14 @@ onShow(() => {
 }
 
 .order_item .label {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 	font-weight: bold;
 }
 
 .order_item .amount {
-	font-size: 22px;
-	color: #4CAF50;
+	font-size: $font-title;
+	color: $brand-green;
 	font-weight: bold;
 	letter-spacing: 0.3px;
 }
@@ -736,14 +742,14 @@ onShow(() => {
 }
 
 .discount_summary_text {
-	font-size: 13px;
-	color: #4CAF50;
+	font-size: $font-caption;
+	color: $brand-green;
 	font-weight: bold;
 }
 
 .discount_arrow {
-	font-size: 10px;
-	color: #4CAF50;
+	font-size: $font-micro;
+	color: $brand-green;
 }
 
 .discount_details {
@@ -761,18 +767,18 @@ onShow(() => {
 }
 
 .detail_label {
-	font-size: 12px;
-	color: #666;
+	font-size: $font-hint;
+	color: $text-secondary;
 }
 
 .detail_value {
-	font-size: 12px;
-	color: #333;
+	font-size: $font-hint;
+	color: $text-primary;
 	font-weight: bold;
 }
 
 .discount_negative {
-	color: #f44336 !important;
+	color: $color-danger !important;
 }
 
 .order_divider {
@@ -792,11 +798,10 @@ onShow(() => {
 
 .payment_container {
 	margin: 0 20px;
-	padding: 20px;
-	padding-bottom: 500px;
+	padding: 0 $page-padding-h $page-padding-bottom;
 	background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%);
 	border-radius: 12px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	box-shadow: $shadow-card-hover;
 	border: 1px solid rgba(255, 255, 255, 0.8);
 	box-sizing: border-box;
 }
@@ -808,8 +813,8 @@ onShow(() => {
 .form_group .label {
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 	font-weight: bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
@@ -835,8 +840,8 @@ onShow(() => {
 }
 
 .section_title_text {
-	font-size: 16px;
-	color: #4CAF50;
+	font-size: $font-section;
+	color: $brand-green;
 	font-weight: bold;
 	letter-spacing: 0.5px;
 }
@@ -853,8 +858,8 @@ onShow(() => {
 .form_group_half .label {
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 	font-weight: bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
@@ -862,18 +867,20 @@ onShow(() => {
 
 .input {
 	width: 100%;
-	padding: 12px 15px;
-	border: 2px solid #e0e0e0;
+	height: 44px;
+	padding: 0 12px;
+	border: 1px solid $border-input;
 	border-radius: 8px;
-	font-size: 15px;
+	font-size: $font-body;
 	box-sizing: border-box;
-	background-color: #fafafa;
+	background-color: $bg-card;
+	color: $text-primary;
 	transition: all 0.3s ease;
 }
 
 .input:focus {
-	border-color: #4CAF50;
-	background-color: #fff;
+	border-color: $brand-green;
+	background-color: $bg-card;
 	box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
@@ -891,7 +898,7 @@ onShow(() => {
 
 .picker_view:active {
 	background-color: #f0f0f0;
-	border-color: #4CAF50;
+	border-color: $brand-green;
 }
 
 .payment_method_display {
@@ -907,8 +914,8 @@ onShow(() => {
 }
 
 .picker_text {
-	font-size: 13px;
-	color: #333;
+	font-size: $font-caption;
+	color: $text-primary;
 	font-weight: 400;
 }
 
@@ -921,8 +928,8 @@ onShow(() => {
 }
 
 .manage_cards_link {
-	font-size: 14px;
-	color: #4CAF50;
+	font-size: $font-body;
+	color: $brand-green;
 }
 
 .saved_card_item {
@@ -934,25 +941,25 @@ onShow(() => {
 }
 
 .saved_card_item_active {
-	border-color: #4CAF50;
+	border-color: $brand-green;
 	background-color: #eef8ef;
 }
 
 .saved_card_main {
-	font-size: 13px;
-	color: #333;
+	font-size: $font-caption;
+	color: $text-primary;
 	font-weight: bold;
 }
 
 .saved_card_sub {
-	font-size: 12px;
+	font-size: $font-hint;
 	color: #777;
 	margin-top: 2px;
 }
 
 .arrow_text {
-	font-size: 10px;
-	color: #999;
+	font-size: $font-micro;
+	color: $text-placeholder;
 }
 
 .payment_form {
@@ -974,7 +981,7 @@ onShow(() => {
 
 .info_text {
 	font-size: 20px;
-	color: #4CAF50;
+	color: $brand-green;
 	font-weight: bold;
 	letter-spacing: 0.5px;
 }
@@ -987,7 +994,7 @@ onShow(() => {
 	width: 180px;
 	height: 180px;
 	background-color: #f0f0f0;
-	border: 2px dashed #ccc;
+	border: 2px dashed $bg-disabled;
 	border-radius: 12px;
 	display: flex;
 	align-items: center;
@@ -996,13 +1003,13 @@ onShow(() => {
 }
 
 .qr_hint {
-	font-size: 14px;
-	color: #999;
+	font-size: $font-body;
+	color: $text-placeholder;
 }
 
 .info_desc {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 	text-align: center;
 	line-height: 1.6;
 }
@@ -1021,12 +1028,12 @@ onShow(() => {
 
 .payment_button {
 	width: 100%;
-	height: 50px;
-	background-color: #4CAF50 !important;
+	height: 44px;
+	background-color: $brand-green !important;
 	color: white !important;
-	border: none !important;
+	border-width: 0 !important;
 	border-radius: 10px;
-	font-size: 17px;
+	font-size: $font-section;
 	font-weight: bold;
 	letter-spacing: 0.5px;
 	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
@@ -1053,12 +1060,12 @@ onShow(() => {
 
 .cancel_button {
 	width: 100%;
-	height: 50px;
-	background-color: #f44336;
+	height: 44px;
+	background-color: $color-danger;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 10px;
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
 	letter-spacing: 0.3px;
 	transition: all 0.3s ease;

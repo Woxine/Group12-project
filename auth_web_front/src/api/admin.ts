@@ -15,7 +15,8 @@ import type {
   RevenueStats,
   Scooter,
   ScooterBulkApplyResult,
-  ScooterBulkPreview
+  ScooterBulkPreview,
+  VehicleDescription
 } from "@/types/api";
 
 export async function getRevenueStats(params: { start_date?: string; end_date?: string }) {
@@ -151,6 +152,13 @@ export async function rejectDiscountVerification(id: number, reason: string) {
   return response.data.data;
 }
 
+export async function getDiscountVerificationFileUrl(id: number): Promise<string> {
+  const response = await http.get(`/api/v1/admin/discount-verifications/${id}/file`, {
+    responseType: "blob"
+  });
+  return URL.createObjectURL(response.data);
+}
+
 export async function fetchBillingSettings() {
   const response = await http.get<ApiEnvelope<BillingSettings>>("/api/v1/admin/billing-settings");
   return response.data.data;
@@ -181,5 +189,26 @@ export async function getPopularRentalDatesThisWeek() {
 
 export async function getPopularRentalDates(params: { start_date?: string; end_date?: string }) {
   const response = await http.get<ApiEnvelope<PopularRentalDate[]>>("/api/v1/admin/revenue/popular-dates", { params });
+  return response.data.data;
+}
+
+export async function getVehicleDescriptions() {
+  const response = await http.get<ApiEnvelope<VehicleDescription[]>>("/api/v1/vehicles");
+  return response.data.data;
+}
+
+export async function updateVehicleDescription(
+  type: string,
+  payload: {
+    display_name?: string;
+    subtitle?: string;
+    description?: string;
+    range_text?: string;
+    speed_text?: string;
+    motor_text?: string;
+    advice?: string;
+  }
+) {
+  const response = await http.put<ApiEnvelope<VehicleDescription>>(`/api/v1/vehicles/${type}`, payload);
   return response.data.data;
 }

@@ -71,10 +71,12 @@ public class BookingController {
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<Map<String, Object>> cancel(
             @PathVariable String bookingId,
-            @RequestBody(required = false) Map<String, Object> body) {
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest httpRequest) {
+        Long authUserId = extractAuthUserId(httpRequest);
         Double endLat = body != null && body.get("endLat") != null ? ((Number) body.get("endLat")).doubleValue() : null;
         Double endLng = body != null && body.get("endLng") != null ? ((Number) body.get("endLng")).doubleValue() : null;
-        Object result = bookingService.cancelBooking(bookingId, endLat, endLng);
+        Object result = bookingService.cancelBooking(bookingId, authUserId, endLat, endLng);
         Map<String, Object> resp = new HashMap<>();
         resp.put("data", result);
         return ResponseEntity.ok(resp);
@@ -86,12 +88,22 @@ public class BookingController {
     @PatchMapping("/{bookingId}/complete")
     public ResponseEntity<Map<String, Object>> complete(
             @PathVariable String bookingId,
-            @RequestBody(required = false) Map<String, Object> body) {
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest httpRequest) {
+        Long authUserId = extractAuthUserId(httpRequest);
         Double endLat = body != null && body.get("endLat") != null ? ((Number) body.get("endLat")).doubleValue() : null;
         Double endLng = body != null && body.get("endLng") != null ? ((Number) body.get("endLng")).doubleValue() : null;
-        Object result = bookingService.completeBooking(bookingId, endLat, endLng);
+        Object result = bookingService.completeBooking(bookingId, authUserId, endLat, endLng);
         Map<String, Object> res = new HashMap<>();
         res.put("data", result);
         return ResponseEntity.ok(res);
+    }
+
+    private Long extractAuthUserId(HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        return Long.parseLong(String.valueOf(authUserId));
     }
 }

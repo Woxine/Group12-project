@@ -12,4 +12,7 @@ public interface DiscountVerificationService {
     Object approve(Long submissionId, Long reviewerUserId);
 
     Object reject(Long submissionId, Long reviewerUserId, String reason);
+
+    /** Get submission by ID (admin use). Returns null if not found. */
+    Object getSubmissionById(Long submissionId);
 }

@@ -1,0 +1,124 @@
+<template>
+	<view v-if="visible" :class="['toast-container']">
+		<view :class="['toast-card', 'toast-card-' + toastType]">
+			<view :class="['toast-icon', 'toast-icon-' + toastType]">
+				<text class="toast-icon-text">{{ iconSymbol }}</text>
+			</view>
+			<text class="toast-message">{{ toastMessage }}</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+
+const visible = ref(false)
+const toastType = ref('info')
+const toastMessage = ref('')
+let dismissTimer: number = 0
+
+const queueType: string[] = []
+const queueMessage: string[] = []
+const queueDuration: number[] = []
+let isProcessing = false
+
+const iconSymbol = computed(() => {
+	if (toastType.value == 'success') return '✓'
+	if (toastType.value == 'error') return '✕'
+	return 'ℹ'
+})
+
+function processQueue() {
+	if (isProcessing || queueType.length == 0) return
+	isProcessing = true
+	const t = queueType.shift()!
+	const m = queueMessage.shift()!
+	const d = queueDuration.shift()!
+	toastType.value = t
+	toastMessage.value = m
+	visible.value = true
+	dismissTimer = setTimeout(() => {
+		visible.value = false
+		isProcessing = false
+		setTimeout(() => {
+			processQueue()
+		}, 300)
+	}, d) as number
+}
+
+function onToastEvent(data: any) {
+	if (UTSAndroid.typeof(data) == 'object') {
+		const obj = data as UTSJSONObject
+		queueType.push(obj['type'] as string ?? 'info')
+		queueMessage.push(obj['message'] as string ?? '')
+		queueDuration.push(obj['duration'] as number ?? 2500)
+		processQueue()
+	}
+}
+
+onMounted(() => {
+	uni.$on('app:toast', onToastEvent)
+})
+
+onUnmounted(() => {
+	uni.$off('app:toast', onToastEvent)
+	if (dismissTimer > 0) clearTimeout(dismissTimer)
+})
+</script>
+
+<style lang="scss">
+	.toast-container {
+		position: fixed;
+		top: 48px;
+		left: 16px;
+		right: 16px;
+		z-index: 9999;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+	}
+
+	.toast-card {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		background-color: $bg-card;
+		border-radius: 12px;
+		padding: 12px 16px;
+		box-shadow: $shadow-card;
+	}
+
+	.toast-icon {
+		width: 24px;
+		height: 24px;
+		border-radius: 6px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 10px;
+	}
+
+	.toast-icon-success {
+		background-color: $brand-green;
+	}
+
+	.toast-icon-error {
+		background-color: $color-danger;
+	}
+
+	.toast-icon-info {
+		background-color: $color-info;
+	}
+
+	.toast-icon-text {
+		color: $text-inverse;
+		font-size: 14px;
+		font-weight: 700;
+	}
+
+	.toast-message {
+		font-size: $font-body;
+		color: $text-primary;
+		flex: 1;
+	}
+</style>

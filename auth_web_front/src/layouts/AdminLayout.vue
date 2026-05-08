@@ -1,6 +1,12 @@
 <template>
   <el-container class="layout">
-    <el-aside width="248px" class="aside" aria-label="Admin sidebar">
+    <div
+      v-if="sidebarOpen"
+      class="aside-backdrop"
+      @click="sidebarOpen = false"
+      aria-hidden="true"
+    />
+    <el-aside width="248px" :class="['aside', { 'aside--open': sidebarOpen }]" aria-label="Admin sidebar">
       <div class="brand">
         <el-icon class="brand-icon"><Platform /></el-icon>
         <div class="brand-text-wrap">
@@ -9,7 +15,7 @@
         </div>
       </div>
       <nav aria-label="Admin primary navigation">
-        <el-menu :default-active="route.path" router class="menu">
+        <el-menu :default-active="route.path" router class="menu" @select="sidebarOpen = false">
           <el-menu-item index="/admin/analytics">
             <el-icon><DataLine /></el-icon>
             <span>Analytics</span>
@@ -49,6 +55,14 @@
     <el-container class="layout-main-shell">
       <el-header class="header" role="banner">
         <div class="header-left">
+          <button
+            class="sidebar-toggle"
+            @click="sidebarOpen = !sidebarOpen"
+            :aria-label="sidebarOpen ? 'Close navigation menu' : 'Open navigation menu'"
+            :aria-expanded="sidebarOpen"
+          >
+            <el-icon :size="20"><Close v-if="sidebarOpen" /><Expand v-else /></el-icon>
+          </button>
           <span class="header-title">Management Workspace</span>
         </div>
         <div class="header-right">
@@ -88,7 +102,9 @@ import {
   Setting,
   EditPen,
   Platform,
-  SwitchButton
+  SwitchButton,
+  Expand,
+  Close
 } from '@element-plus/icons-vue';
 
 import { useAuthStore } from "@/stores/auth";
@@ -97,6 +113,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const mainContentRef = ref<HTMLElement | null>(null);
+const sidebarOpen = ref(false);
 
 function logout() {
   authStore.signOut();
@@ -107,7 +124,7 @@ watch(
   () => route.fullPath,
   async () => {
     await nextTick();
-    mainContentRef.value?.focus();
+    document.getElementById("main-content")?.focus();
   }
 );
 </script>
@@ -130,12 +147,19 @@ watch(
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: var(--ui-space-3);
   padding: 0 18px;
   border-bottom: 1px solid var(--ui-border-soft);
 }
 
 .brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-color-primary-50);
   font-size: 22px;
   color: var(--ui-color-primary-600);
 }
@@ -164,24 +188,34 @@ watch(
 }
 
 :deep(.menu .el-menu-item) {
-  margin: 4px 12px;
-  border-radius: 10px;
+  margin: 4px var(--ui-space-3);
+  border-radius: var(--ui-radius-md);
   height: 48px;
   line-height: 48px;
+  border: 1px solid transparent;
   color: var(--ui-text-muted);
   font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
-:deep(.menu .el-menu-item:hover) {
+:deep(.menu .el-menu-item:hover),
+:deep(.menu .el-menu-item:focus-visible) {
   background: var(--ui-color-primary-50);
+  border-color: var(--ui-color-primary-100);
   color: var(--ui-color-primary-700);
+}
+
+:deep(.menu .el-menu-item:focus-visible) {
+  outline: 3px solid var(--ui-color-primary-600);
+  outline-offset: 2px;
 }
 
 :deep(.menu .el-menu-item.is-active) {
   background-color: var(--ui-color-primary-50);
+  border-color: var(--ui-color-primary-100);
   color: var(--ui-color-primary-700);
   font-weight: 600;
-  border-left: 4px solid var(--ui-color-primary-700);
+  box-shadow: inset 4px 0 0 var(--ui-color-primary-700);
 }
 
 :deep(.menu .el-menu-item.is-active::after) {
@@ -196,7 +230,7 @@ watch(
 }
 
 .header {
-  background: var(--ui-bg-surface);
+  background: linear-gradient(180deg, var(--ui-bg-surface) 0%, var(--ui-bg-surface-soft) 100%);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--ui-border-soft);
   display: flex;
@@ -222,12 +256,16 @@ watch(
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ui-space-2);
+  border: 1px solid var(--ui-border-soft);
+  border-radius: 999px;
+  background: var(--ui-bg-surface);
+  padding: 4px 10px 4px 4px;
 }
 
 .avatar {
   background: var(--ui-color-primary-600);
-  color: white;
+  color: #ffffff;
   font-weight: bold;
   box-shadow: var(--ui-shadow-sm);
 }
@@ -248,6 +286,59 @@ watch(
   margin: 0 auto;
 }
 
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ui-border-default);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-bg-surface);
+  color: var(--ui-text-default);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--ui-color-primary-50);
+  border-color: var(--ui-color-primary-100);
+}
+
+.aside-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .aside {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 260px !important;
+  }
+
+  .aside--open {
+    transform: translateX(0);
+  }
+
+  .aside-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+  }
+}
+
 @media (max-width: 1080px) {
   .aside {
     width: 220px !important;
@@ -257,6 +348,17 @@ watch(
 @media (max-width: 880px) {
   .header-title {
     display: none;
+  }
+
+  .header {
+    padding: 0 var(--ui-space-4);
+  }
+
+  .greeting {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

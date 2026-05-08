@@ -1,7 +1,7 @@
 <template>
   <el-dialog :model-value="visible" title="Long-Rent Discount Adjustment" width="1080px" @close="handleClose">
     <el-row :gutter="24">
-      <el-col :span="10">
+      <el-col :xs="24" :sm="10">
         <el-form label-position="top" class="form-panel admin-dialog-form">
           <el-form-item label="Threshold T1 (hours)">
             <el-input-number v-model="state.longRentThresholdHours" :min="1" :max="200" :precision="0" disabled class="full-width" />
@@ -46,7 +46,7 @@
         </el-form>
       </el-col>
 
-      <el-col :span="14">
+      <el-col :xs="24" :sm="14">
         <v-chart ref="chartRef" class="chart" :option="chartOption" autoresize />
       </el-col>
     </el-row>
@@ -554,5 +554,21 @@ onUnmounted(() => {
 
 :deep(.el-divider--horizontal) {
   margin: var(--ui-space-5) 0 var(--ui-space-4);
+}
+
+@media (max-width: 768px) {
+  .chart {
+    height: 300px;
+    margin-top: var(--ui-space-3);
+  }
+
+  .form-panel {
+    padding: var(--ui-space-2);
+  }
+
+  .log-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

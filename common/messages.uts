@@ -1,6 +1,7 @@
 /**
  * 统一的文案管理文件
  */
+import { UTSAndroid } from 'io.dcloud.uts'
 export const APP_MESSAGES = {
 	// 认证相关文案
 	auth: {
@@ -98,18 +99,29 @@ export const APP_MESSAGES = {
 	paymentCard: {
 		loadFailed: 'Failed to load cards',
 		addSuccess: 'Card added',
-		addFailed: 'Failed to add card',
+		addFailed: 'Card binding failed. Please check the card details and try again.',
 		deleteSuccess: 'Card deleted',
 		deleteFailed: 'Failed to delete card',
 		setDefaultSuccess: 'Default card updated',
 		setDefaultFailed: 'Failed to set default card',
 		deleteConfirmTitle: 'Delete Card',
 		deleteConfirmContent: 'Are you sure to delete this card?',
-		holderNameInvalid: 'Invalid holder name',
-		brandInvalid: 'Invalid brand',
-		cardNumberInvalid: 'Invalid card number',
-		expiryMonthInvalid: 'Invalid expiry month',
-		expiryYearInvalid: 'Invalid expiry year'
+		holderNameInvalid: 'Card holder name must contain 2-50 letters and spaces.',
+		brandInvalid: 'Please select a supported card brand.',
+		cardNumberInvalid: 'Invalid card number.',
+		cardNumberFormatInvalid: 'Card number must be 13-19 digits.',
+		cardNumberLuhnInvalid: 'Card number failed Luhn check. Please check the digits and try again.',
+		expiryMonthInvalid: 'Expiry month must be between 1 and 12.',
+		expiryYearInvalid: 'Expiry year is invalid.',
+		expiryExpired: 'Payment card has expired. Please use a valid future expiry date.',
+		binLookupInputHint: 'Type at least 6 digits for simulated issuer validation.',
+		binLookupChecking: 'Checking simulated issuer validation...',
+		binUnsupported: 'Card issuer is not supported by this simulated project. Use a supported test card BIN.',
+		binLookupFailed: 'Simulated issuer validation failed. Please check the card number or try again later.',
+		binLookupNetworkFailed: 'Cannot reach simulated issuer validation right now. Please try again later.',
+		binRateLimited: 'Too many issuer validation requests. Please try again later.',
+		brandMismatch: 'Detected brand is {brand}. Select the detected brand or this card cannot be bound.',
+		duplicateCard: 'This payment card is already bound.'
 	},
 	// ID9 guest booking / profile
 	guestBooking: {
@@ -120,7 +132,7 @@ export const APP_MESSAGES = {
 		scooterRequired: 'Please select scooter',
 		durationRequired: 'Please select duration',
 		cardFormInvalid: 'Please complete valid card info for guest',
-		bindCardFailed: 'Failed to bind card for guest',
+		bindCardFailed: 'Guest card binding failed. Please check the card details and try again.',
 		noScooterAvailable: 'No available scooters',
 		submitSuccess: 'Guest booking created',
 		submitFailed: 'Failed to create guest booking',
@@ -138,7 +150,7 @@ export const APP_MESSAGES = {
 		contactMaskedPlaceholder: 'Hidden for privacy',
 		cardFormInvalid: 'Please complete valid card info',
 		bindCardSuccess: 'Card binding request completed',
-		bindCardFailed: 'Failed to bind card for guest'
+		bindCardFailed: 'Guest card binding failed. Please check the card details and try again.'
 	}
 }
 
@@ -191,7 +203,7 @@ export const getAppMessage = (group: string, key: string, fallback: string): str
 // 获取响应文案
 export const getResponseMessage = (data: any | null, fallback: string): string => {
 	let message = fallback
-	if (data != null && typeof data == 'object') {
+	if (data != null && UTSAndroid.typeof(data) == 'object') {
 		const obj = data as UTSJSONObject
 		const msg = obj['message']
 		const error = obj['error']

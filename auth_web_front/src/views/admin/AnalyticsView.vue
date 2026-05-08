@@ -76,10 +76,10 @@
               size="small"
               @change="onHotRangeChange"
             >
-              <el-radio-button label="WEEK">Last 7 Days</el-radio-button>
-              <el-radio-button label="HALF_MONTH">Last 15 Days</el-radio-button>
-              <el-radio-button label="MONTH">Last 30 Days</el-radio-button>
-              <el-radio-button label="QUARTER">Last 90 Days</el-radio-button>
+              <el-radio-button value="WEEK">Last 7 Days</el-radio-button>
+              <el-radio-button value="HALF_MONTH">Last 15 Days</el-radio-button>
+              <el-radio-button value="MONTH">Last 30 Days</el-radio-button>
+              <el-radio-button value="QUARTER">Last 90 Days</el-radio-button>
             </el-radio-group>
           </div>
         </template>
@@ -87,7 +87,10 @@
         <el-skeleton :loading="hotDatesLoading" animated :rows="5" class="admin-skeleton-card">
           <template #default>
             <div class="hot-summary">
-              <el-statistic title="Top Date" :value="topHotDateLabel" />
+              <div class="stat-custom">
+                <div class="stat-title">Top Date</div>
+                <div class="stat-value">{{ topHotDateLabel }}</div>
+              </div>
               <el-statistic title="Top Orders" :value="topHotOrders" />
             </div>
             <el-table :data="hotDates" size="small" max-height="270" class="admin-data-table">
@@ -627,6 +630,22 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   justify-content: space-between;
   gap: var(--ui-space-4);
   margin-bottom: var(--ui-space-3);
+}
+
+.stat-custom {
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 12px;
+  color: var(--ui-text-muted);
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ui-text-strong);
 }
 
 .chart {

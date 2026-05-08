@@ -1,6 +1,7 @@
 package com.group12.backend.sprint2.paymentcard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,13 +19,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import com.group12.backend.dto.PaymentCardResponse;
 import com.group12.backend.dto.BinLookupResponse;
 import com.group12.backend.dto.StorePaymentCardRequest;
 import com.group12.backend.entity.PaymentCard;
 import com.group12.backend.entity.User;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.PaymentCardRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.impl.PaymentCardBinLookupService;
@@ -54,11 +56,6 @@ class PaymentCardServiceTest {
     @InjectMocks
     private PaymentCardServiceImpl service;
 
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(service, "paymentCardBinLookupService", paymentCardBinLookupService);
-    }
-
     @Test
     @DisplayName("createCard：成功时返回非空响应且不抛异常")
     void createCard_returnsResponse_whenValidInput() {
@@ -67,6 +64,7 @@ class PaymentCardServiceTest {
         PaymentCard saved = buildCard(101L, user, true, LocalDateTime.now());
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardBinLookupService.lookup("41111111", "bind:1")).thenReturn(buildLookup("VISA", "MATCHED"));
         when(paymentCardRepository.existsByUser_IdAndBrandIgnoreCaseAndLast4AndExpiryMonthAndExpiryYear(
                 1L, "VISA", "1111", 12, 2030)).thenReturn(false);
         when(paymentCardRepository.findByUser_IdAndIsDefaultTrue(1L)).thenReturn(Optional.empty());
@@ -77,6 +75,64 @@ class PaymentCardServiceTest {
         assertThat(r.getId()).isEqualTo("101");
         assertThat(r.getMaskedNumber()).isEqualTo("**** **** **** 1111");
         assertThat(r.getIsDefault()).isTrue();
+    }
+
+    @Test
+    @DisplayName("createCard：本地 BIN 未匹配时拒绝绑卡")
+    void createCard_rejectsUnsupportedLocalBin() {
+        StorePaymentCardRequest req = buildValidRequest();
+        req.setCardNumber("6011111111111117");
+        User user = buildUser(1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardBinLookupService.lookup("60111111", "bind:1")).thenReturn(buildLookup("UNKNOWN", "UNKNOWN"));
+
+        assertThatThrownBy(() -> service.createCard("1", req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorMessages.PAYMENT_CARD_BIN_UNSUPPORTED);
+    }
+
+    @Test
+    @DisplayName("createCard：用户选择品牌与本地 BIN 品牌不一致时拒绝绑卡")
+    void createCard_rejectsBrandMismatch() {
+        StorePaymentCardRequest req = buildValidRequest();
+        req.setBrand("MASTERCARD");
+        User user = buildUser(1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentCardBinLookupService.lookup("41111111", "bind:1")).thenReturn(buildLookup("VISA", "MATCHED"));
+
+        assertThatThrownBy(() -> service.createCard("1", req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorMessages.PAYMENT_CARD_BRAND_MISMATCH);
+    }
+
+    @Test
+    @DisplayName("createCard：卡号不是 13-19 位数字时返回格式错误")
+    void createCard_rejectsMalformedCardNumberWithSpecificMessage() {
+        StorePaymentCardRequest req = buildValidRequest();
+        req.setCardNumber("12345");
+        User user = buildUser(1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.createCard("1", req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorMessages.PAYMENT_CARD_NUMBER_FORMAT_INVALID);
+    }
+
+    @Test
+    @DisplayName("createCard：Luhn 校验失败时返回校验位错误")
+    void createCard_rejectsLuhnInvalidCardNumberWithSpecificMessage() {
+        StorePaymentCardRequest req = buildValidRequest();
+        req.setCardNumber("6212260012345678904");
+        User user = buildUser(1L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.createCard("1", req))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorMessages.PAYMENT_CARD_LUHN_INVALID);
     }
 
     @Test
@@ -191,6 +247,16 @@ class PaymentCardServiceTest {
         req.setExpiryMonth(12);
         req.setExpiryYear(2030);
         return req;
+    }
+
+    private BinLookupResponse buildLookup(String brand, String status) {
+        BinLookupResponse response = new BinLookupResponse();
+        response.setBrand(brand);
+        response.setIssuerBank("SIMULATED TEST ISSUER");
+        response.setCardType("CREDIT");
+        response.setCountryCode("GB");
+        response.setStatus(status);
+        return response;
     }
 
     private User buildUser(Long id) {

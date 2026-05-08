@@ -91,6 +91,7 @@ export const ensureSameDayFutureTime = (timeHHmm: string): Date | null => {
 	const minute = parseInt(parts[1])
 	if (isNaN(hour) || isNaN(minute)) return null
 	const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0)
-	if (d.getTime() < now.getTime()) return null
+	const nowTruncated = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0)
+	if (d.getTime() < nowTruncated.getTime()) return null
 	return d
 }

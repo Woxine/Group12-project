@@ -5,8 +5,12 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -17,10 +21,23 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    // 固定密钥，避免每次重启生成新 key 导致旧 token 全部 401（生产环境应从 application.yaml 读取）
-    private static final byte[] SECRET_BYTES = "Group12BackendJwtSecretKey2024!!".getBytes(StandardCharsets.UTF_8);
-    private static final Key SECRET_KEY = Keys.hmacShaKeyFor(SECRET_BYTES);
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
     private static final long EXPIRATION_TIME = 86400000; // 24小时
+
+    private final Key secretKey;
+
+    public JwtUtil(@Value("${jwt.secret:}") String configuredSecret) {
+        byte[] keyBytes;
+        if (configuredSecret != null && !configuredSecret.isBlank()) {
+            keyBytes = configuredSecret.getBytes(StandardCharsets.UTF_8);
+        } else {
+            // No secret configured — generate a random one (tokens won't survive restart)
+            String random = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+            keyBytes = random.getBytes(StandardCharsets.UTF_8);
+            log.warn("JWT_SECRET not set. Generated a random key — tokens will be invalidated on restart. Set JWT_SECRET env var for production.");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
+    }
 
     /**
      * 生成 Token
@@ -37,7 +54,7 @@ public class JwtUtil {
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SECRET_KEY, SignatureAlgorithm.HS256)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -75,7 +92,7 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(secretKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

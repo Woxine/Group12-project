@@ -15,7 +15,7 @@
 				<view class="section-card">
 					<text class="section-title">Profile</text>
 
-					<navigator url="/pages/portrait/portrait" open-type="navigate" class="menu-item">
+					<navigator url="/pages/portrait/portrait" open-type="navigate" class="menu-item menu-item-avatar">
 						<view class="menu-leading avatar-item-icon">
 							<text class="menu-leading-text">📷</text>
 						</view>
@@ -26,7 +26,7 @@
 						<text class="menu-arrow">›</text>
 					</navigator>
 
-					<navigator url="/pages/username/username" open-type="navigate" class="menu-item">
+					<navigator url="/pages/username/username" open-type="navigate" class="menu-item menu-item-username">
 						<view class="menu-leading username-item-icon">
 							<text class="menu-leading-text">👤</text>
 						</view>
@@ -41,7 +41,7 @@
 				<view class="section-card">
 					<text class="section-title">Security</text>
 
-					<navigator url="/pages/email/email" open-type="navigate" class="menu-item">
+					<navigator url="/pages/email/email" open-type="navigate" class="menu-item menu-item-email">
 						<view class="menu-leading email-item-icon">
 							<text class="menu-leading-text">✉</text>
 						</view>
@@ -52,7 +52,7 @@
 						<text class="menu-arrow">›</text>
 					</navigator>
 
-					<navigator url="/pages/password/password" open-type="navigate" class="menu-item">
+					<navigator url="/pages/password/password" open-type="navigate" class="menu-item menu-item-password">
 						<view class="menu-leading password-item-icon">
 							<text class="menu-leading-text">🔑</text>
 						</view>
@@ -88,7 +88,7 @@
 import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
-const DEFAULT_AVATAR = '/static/me.png'
+const DEFAULT_AVATAR = '/static/icons/me.png'
 const AVATAR_STORAGE_KEY_PREFIX = 'userAvatar_'
 const LEGACY_AVATAR_STORAGE_KEY = 'userAvatar'
 
@@ -179,7 +179,7 @@ onShow(() => {
 	width: 100%;
 	height: 100%;
 	box-sizing: border-box;
-	background-color: #eef5ff;
+	background-color: $bg-page;
 }
 
 .scroll-wrap {
@@ -188,7 +188,7 @@ onShow(() => {
 
 .scroll-area {
 	width: 100%;
-	padding: 24px 16px 40px;
+	padding: 0 $page-padding-h $page-padding-bottom;
 	box-sizing: border-box;
 }
 
@@ -196,9 +196,9 @@ onShow(() => {
 	width: 100%;
 	padding: 20px 18px;
 	box-sizing: border-box;
-	background-color: #4b7fd6;
-	border-radius: 18px;
-	box-shadow: 0 12px 30px rgba(76, 175, 80, 0.18);
+	background-color: $color-info;
+	border-radius: 12px;
+	box-shadow: $shadow-modal;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -227,42 +227,42 @@ onShow(() => {
 	width: 100%;
 	margin-top: 16px;
 	background-color: rgba(255, 255, 255, 0.92);
-	border-radius: 18px;
+	border-radius: 12px;
 	padding: 22px 18px;
 	box-sizing: border-box;
-	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .title {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: 700;
-	color: #ffffff;
+	color: $text-inverse;
 }
 
 .hero-name {
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: 700;
 	color: rgba(255, 255, 255, 0.98);
 	margin-top: 6px;
 }
 
 .hero-email {
-	font-size: 12px;
+	font-size: $font-hint;
 	color: rgba(255, 255, 255, 0.9);
 	margin-top: 2px;
 }
 
 .hint {
-	font-size: 13px;
+	font-size: $font-caption;
 	line-height: 20px;
 	color: rgba(255, 255, 255, 0.92);
 	margin-top: 8px;
 }
 
 .section-title {
-	font-size: 13px;
+	font-size: $font-caption;
 	font-weight: 700;
-	color: #6b7280;
+	color: $text-secondary;
 	letter-spacing: 0.5px;
 	margin-bottom: 8px;
 }
@@ -275,7 +275,7 @@ onShow(() => {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-	border-top: 1px solid #e5e7eb;
+	border-top: 1px solid $border-light;
 }
 
 .section-title + .menu-item {
@@ -283,8 +283,8 @@ onShow(() => {
 }
 
 .menu-leading {
-	width: 38px;
-	height: 38px;
+	width: 44px;
+	height: 44px;
 	border-radius: 12px;
 	display: flex;
 	align-items: center;
@@ -294,7 +294,7 @@ onShow(() => {
 }
 
 .menu-leading-text {
-	font-size: 17px;
+	font-size: $font-section;
 	line-height: 17px;
 }
 
@@ -306,21 +306,69 @@ onShow(() => {
 }
 
 .menu-title {
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: 600;
-	color: #111827;
+	color: $text-primary;
 }
 
 .menu-hint {
-	font-size: 12px;
+	font-size: $font-hint;
 	line-height: 18px;
-	color: #6b7280;
+	color: $text-secondary;
 	margin-top: 4px;
 }
 
 .menu-arrow {
-	font-size: 22px;
-	color: #9ca3af;
+	font-size: $font-title;
+	color: $text-placeholder;
 	margin-left: 12px;
+}
+
+.avatar-item-icon {
+	background-color: #E3F2FD;
+}
+
+.username-item-icon {
+	background-color: #E8F5E9;
+}
+
+.email-item-icon {
+	background-color: #FFF3E0;
+}
+
+.password-item-icon {
+	background-color: #F3E5F5;
+}
+
+.menu-item-avatar {
+	background-color: #F5F9FF;
+	border-radius: 10px;
+	margin-bottom: 6px;
+	padding: 14px 16px;
+	border-top-width: 0;
+}
+
+.menu-item-username {
+	background-color: #F5FBF5;
+	border-radius: 10px;
+	margin-bottom: 6px;
+	padding: 14px 16px;
+	border-top-width: 0;
+}
+
+.menu-item-email {
+	background-color: #FFFAF5;
+	border-radius: 10px;
+	margin-bottom: 6px;
+	padding: 14px 16px;
+	border-top-width: 0;
+}
+
+.menu-item-password {
+	background-color: #FBF5FC;
+	border-radius: 10px;
+	margin-bottom: 6px;
+	padding: 14px 16px;
+	border-top-width: 0;
 }
 </style>

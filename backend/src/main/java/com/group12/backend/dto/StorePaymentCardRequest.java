@@ -9,23 +9,23 @@ import jakarta.validation.constraints.Pattern;
  * TODO(ID2): 支付卡保存请求体骨架。
  */
 public class StorePaymentCardRequest {
-    @NotBlank(message = "holderName is required")
-    @Pattern(regexp = "^[A-Za-z ]{2,50}$", message = "holderName must contain only letters and spaces")
+    @NotBlank(message = "Card holder name is required.")
+    @Pattern(regexp = "^[A-Za-z ]{2,50}$", message = "Card holder name must contain 2-50 letters and spaces.")
     private String holderName;
 
-    @NotBlank(message = "cardNumber is required")
-    @Pattern(regexp = "^\\d{13,19}$", message = "cardNumber must be 13-19 digits")
+    @NotBlank(message = "Card number is required.")
+    @Pattern(regexp = "^\\d{13,19}$", message = "Card number must be 13-19 digits.")
     private String cardNumber;
 
-    @NotBlank(message = "brand is required")
+    @NotBlank(message = "Card brand is required.")
     private String brand;
 
-    @Min(value = 1, message = "expiryMonth must be between 1 and 12")
-    @Max(value = 12, message = "expiryMonth must be between 1 and 12")
+    @Min(value = 1, message = "Expiry month must be between 1 and 12.")
+    @Max(value = 12, message = "Expiry month must be between 1 and 12.")
     private Integer expiryMonth;
 
-    @Min(value = 2024, message = "expiryYear is invalid")
-    @Max(value = 2100, message = "expiryYear is invalid")
+    @Min(value = 2024, message = "Expiry year is invalid.")
+    @Max(value = 2100, message = "Expiry year is invalid.")
     private Integer expiryYear;
 
     public String getHolderName() { return holderName; }

@@ -3,7 +3,7 @@
 	<view class="container">
 		<!-- Not Logged In -->
 		<view v-if="!isLoggedIn" class="login-prompt">
-			<image src="/static/me.png" mode="aspectFit" class="icon-large"></image>
+			<image src="/static/icons/me.png" mode="aspectFit" class="icon-large"></image>
 			<text class="prompt-text">Please log in to view your bookings</text>
 			<navigator url="/pages/login/login" open-type="navigate">
 				<button class="login-btn">Go to Login</button>
@@ -125,6 +125,7 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
+import { startTracking, stopTracking, getTrackingBookingId, isActive as isTrackingActive } from '../../common/trajectoryTracker.uts'
 import {
 	DURATION_PRESETS,
 	findPresetByMinutes,
@@ -330,6 +331,31 @@ const hasActiveBookings = (): boolean => {
 	return false
 }
 
+const findFirstConfirmedBookingId = (): string | null => {
+	const list = bookings.value
+	for (let i = 0; i < list.length; i++) {
+		const s = ('' + list[i].status).trim().toUpperCase()
+		const bid = list[i].id
+		if (s == 'CONFIRMED' && bid != null && bid.length > 0) {
+			return bid
+		}
+	}
+	return null
+}
+
+const syncTrajectoryTracking = (): void => {
+	const confirmedId = findFirstConfirmedBookingId()
+	if (confirmedId != null) {
+		if (getTrackingBookingId() != confirmedId) {
+			startTracking(confirmedId)
+		}
+	} else {
+		if (isTrackingActive()) {
+			stopTracking()
+		}
+	}
+}
+
 const clearAutoRefresh = () => {
 	const id = autoRefreshTimer
 	if (id != null) {
@@ -393,6 +419,7 @@ const fetchBookings = (fromPullRefresh: boolean) => {
 					bookings.value = list
 					total.value = totalCount
 					if (hasActiveBookings()) startAutoRefresh()
+					syncTrajectoryTracking()
 				} else {
 					bookings.value = []
 					total.value = 0
@@ -470,7 +497,17 @@ const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
 	if (status == null || status.length < 1) return []
 	const s = ('' + status).trim().toUpperCase()
-	if (s == 'CONFIRMED') return ['endRide', 'extendBooking', 'cancelOrder']
+	if (s == 'CONFIRMED') {
+		const now = new Date()
+		const startTimeStr = booking.startTime
+		if (startTimeStr != null && startTimeStr != '-' && startTimeStr.length > 0) {
+			const start = new Date(startTimeStr)
+			if (!isNaN(start.getTime()) && now.getTime() >= start.getTime()) {
+				return ['endRide']
+			}
+		}
+		return ['endRide', 'extendBooking', 'cancelOrder']
+	}
 	if (s == 'PENDING_PAYMENT') return ['continuePayment', 'cancelOrder']
 	if (s == 'PENDING') return ['cancelOrder']
 	if (s == 'COMPLETED') return ['viewRoute']
@@ -758,6 +795,7 @@ const cancelOrder = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
+								stopTracking()
 								showSuccess(bookingMessage('cancelBookingSuccess', 'Booking cancelled'))
 								fetchBookings(false)
 							} else {
@@ -815,6 +853,7 @@ const endRide = (booking: Booking) => {
 						},
 						success: (resp) => {
 							if (resp.statusCode >= 200 && resp.statusCode < 300) {
+								stopTracking()
 								showSuccess(bookingMessage('endRideSuccess', 'Ride ended'))
 								fetchBookings(false)
 							} else {
@@ -902,7 +941,7 @@ onHide(() => {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 	box-sizing: border-box;
 }
 
@@ -922,8 +961,8 @@ onHide(() => {
 }
 
 .prompt-text {
-	font-size: 16px;
-	color: #666;
+	font-size: $font-section;
+	color: $text-secondary;
 	margin-bottom: 24px;
 	text-align: center;
 }
@@ -931,11 +970,11 @@ onHide(() => {
 .login-btn {
 	width: 200px;
 	height: 44px;
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
 }
 
@@ -945,8 +984,7 @@ onHide(() => {
 
 .scroll-area {
 	width: 100%;
-	padding: 20px;
-	padding-bottom: 40px;
+	padding: 0 $page-padding-h $page-padding-bottom;
 	box-sizing: border-box;
 }
 
@@ -955,9 +993,9 @@ onHide(() => {
 }
 
 .title-text {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 }
 
 .loading-section,
@@ -969,25 +1007,25 @@ onHide(() => {
 }
 
 .loading-text {
-	font-size: 14px;
-	color: #999;
+	font-size: $font-body;
+	color: $text-placeholder;
 	text-align: center;
 }
 
 .error-text {
-	font-size: 14px;
-	color: #f44336;
+	font-size: $font-body;
+	color: $color-danger;
 	margin-bottom: 16px;
 	text-align: center;
 }
 
 .retry-btn {
 	padding: 10px 24px;
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 }
 
@@ -999,30 +1037,30 @@ onHide(() => {
 	padding: 60px 24px;
 	background-color: white;
 	border-radius: 12px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .empty-text {
-	font-size: 18px;
+	font-size: $font-title-sm;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 8px;
 }
 
 .empty-hint {
-	font-size: 14px;
-	color: #999;
+	font-size: $font-body;
+	color: $text-placeholder;
 	margin-bottom: 24px;
 	text-align: center;
 }
 
 .explore-btn {
 	padding: 12px 32px;
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 }
 
@@ -1036,8 +1074,8 @@ onHide(() => {
 }
 
 .pagination-text {
-	font-size: 12px;
-	color: #999;
+	font-size: $font-hint;
+	color: $text-placeholder;
 	text-align: center;
 }
 
@@ -1049,13 +1087,13 @@ onHide(() => {
 
 .load-more-btn {
 	padding: 10px 28px;
-	background-color: #FFFFFF;
-	color: #4CAF50;
+	background-color: $bg-card;
+	color: $brand-green;
 	border-width: 1px;
 	border-style: solid;
-	border-color: #4CAF50;
+	border-color: $brand-green;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 }
 
 .load-more-btn-disabled {
@@ -1067,7 +1105,7 @@ onHide(() => {
 	border-radius: 12px;
 	padding: 16px;
 	margin-bottom: 16px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .card-header {
@@ -1079,49 +1117,49 @@ onHide(() => {
 	padding-bottom: 10px;
 	border-bottom-width: 1px;
 	border-bottom-style: solid;
-	border-bottom-color: #eee;
+	border-bottom-color: $border-light;
 }
 
 .booking-id {
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 }
 
 .status-badge {
-	font-size: 12px;
+	font-size: $font-hint;
 	padding: 4px 10px;
 	border-radius: 6px;
 	font-weight: bold;
 }
 
 .status-Confirmed {
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
 }
 
 .status-Pending {
-	background-color: #FFC107;
-	color: #333;
+	background-color: $status-pending;
+	color: $text-primary;
 }
 
 .status-AwaitingPayment {
-	background-color: #FF9800;
+	background-color: $status-awaiting;
 	color: white;
 }
 
 .status-Cancelled {
-	background-color: #f44336;
+	background-color: $color-danger;
 	color: white;
 }
 
 .status-Completed {
-	background-color: #2196F3;
+	background-color: $status-completed;
 	color: white;
 }
 
 .status-Unknown {
-	background-color: #9E9E9E;
+	background-color: $status-default;
 	color: white;
 }
 
@@ -1135,7 +1173,7 @@ onHide(() => {
 	padding-top: 10px;
 	border-top-width: 1px;
 	border-top-style: solid;
-	border-top-color: #eee;
+	border-top-color: $border-light;
 	display: flex;
 	flex-direction: row;
 }
@@ -1143,14 +1181,14 @@ onHide(() => {
 .end-ride-btn {
 	flex: 1;
 	margin: 0 5px;
-	height: 40px;
-	line-height: 40px;
+	height: 44px;
+	line-height: 44px;
 	padding: 0;
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 	text-align: center;
 }
@@ -1158,14 +1196,14 @@ onHide(() => {
 .extend-booking-btn {
 	flex: 1;
 	margin: 0 5px;
-	height: 40px;
-	line-height: 40px;
+	height: 44px;
+	line-height: 44px;
 	padding: 0;
-	background-color: #2196F3;
+	background-color: $status-completed;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 	text-align: center;
 }
@@ -1173,14 +1211,14 @@ onHide(() => {
 .cancel-order-btn {
 	flex: 1;
 	margin: 0 5px;
-	height: 40px;
-	line-height: 40px;
+	height: 44px;
+	line-height: 44px;
 	padding: 0;
-	background-color: #f44336;
+	background-color: $color-danger;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 	text-align: center;
 }
@@ -1188,16 +1226,16 @@ onHide(() => {
 .view-route-btn {
 	flex: 1;
 	margin: 0 5px;
-	height: 40px;
-	line-height: 40px;
+	height: 44px;
+	line-height: 44px;
 	padding: 0;
-	background-color: #FFFFFF;
-	color: #2196F3;
+	background-color: $bg-card;
+	color: $status-completed;
 	border-width: 1px;
 	border-style: solid;
-	border-color: #2196F3;
+	border-color: $status-completed;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 	text-align: center;
 }
@@ -1210,13 +1248,13 @@ onHide(() => {
 }
 
 .detail-row .label {
-	font-size: 14px;
-	color: #999;
+	font-size: $font-body;
+	color: $text-placeholder;
 }
 
 .detail-row .value {
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 	font-weight: 400;
 }
 
@@ -1225,14 +1263,13 @@ onHide(() => {
 	border-radius: 12px;
 	padding: 12px;
 	margin-bottom: 12px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .duration-wheel-row {
 	margin-top: 8px;
 	display: flex;
 	flex-direction: row;
-	gap: 8px;
 	justify-content: space-between;
 }
 
@@ -1254,13 +1291,13 @@ onHide(() => {
 }
 
 .wheel-pill-text {
-	font-size: 12px;
+	font-size: $font-hint;
 	font-weight: bold;
 	color: #2b3a55;
 }
 
 .wheel-btn {
-	font-size: 12px;
+	font-size: $font-hint;
 	color: #2b3a55;
 	min-width: 44px;
 	height: 28px;

@@ -331,7 +331,7 @@ function pickAvailableVisibleScooterIds(body, limit = 10) {
 }
 
 function randomVisa() {
-  const pool = ['4242424242424242', '4012888888881881', '5555555555554444'];
+  const pool = ['4242424242424242', '4012888888881881'];
   return pool[Math.floor(Math.random() * pool.length)];
 }
 

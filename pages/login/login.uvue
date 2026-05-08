@@ -1,5 +1,5 @@
 <template>
-	<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
+	<image src="/static/backgrounds/login_back1.jpg" mode="" class="backpic"></image>
 	<view class="back">
 		<view v-if="showCredentialForm" class="login_container">
 			<view class="credential-form">
@@ -40,8 +40,6 @@
 			<button @click="goToRegister" size="default" class="secondary-button login-action-button signup-action-button">Sign Up</button>
 		</view>
 	</view>
-	
-	<TabBar current="me" />
 </template>
 
 <script setup lang="uts">
@@ -83,7 +81,6 @@ const closeCredentialForm = () => {
 // 定义提交方法
 const onSubmit = () => {
 	const fillCredentialsMessage = getAppMessage('auth', 'fillCredentials', 'Please fill in both email and password.')
-	const adminLoginSuccessMessage = getAppMessage('auth', 'adminLoginSuccess', 'Admin login')
 	const loginSuccessMessage = getAppMessage('auth', 'loginSuccess', 'Login successful!')
 	const loginFailedMessage = getAppMessage('auth', 'loginFailed', 'Login failed. Please check your credentials.')
 	const requestFailedLaterMessage = getAppMessage('network', 'requestFailedLater', 'Network error, please try again later.')
@@ -196,13 +193,7 @@ const onSubmit = () => {
 						} catch (e) {
 							console.error('Failed to save role:', e)
 						}
-						// 用前缀匹配判断管理员角色，避免依赖 JSON 字段与字面量的严格相等比较
-						const roleForCheck = ('' + role).trim().toUpperCase()
-						const isAdmin = roleForCheck.indexOf('ADMIN') == 0 && roleForCheck.length == 5
-						const targetUrl = isAdmin ? '/pages/admin/home' : '/pages/index/index'
-						console.log('Login role:', roleForCheck, 'isAdmin:', isAdmin, 'targetUrl:', targetUrl)
-						
-						showThenNavigate(isAdmin ? adminLoginSuccessMessage : loginSuccessMessage, targetUrl, true, 800, 'reLaunch');
+						showThenNavigate(loginSuccessMessage, '/pages/index/index', true, 800, 'reLaunch');
 						return;
 					}
 				}
@@ -262,8 +253,8 @@ const onSubmit = () => {
 	padding: 28px 24px;
 	background-color: rgba(255, 255, 255, 0.92);
 	border: 1px solid rgba(0, 0, 0, 0.08);
-	border-radius: 14px;
-	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+	border-radius: 12px;
+	box-shadow: $shadow-modal;
 	box-sizing: border-box;
 }
 
@@ -278,25 +269,25 @@ const onSubmit = () => {
 
 .field-label {
 	margin-bottom: 6px;
-	color: #1f2937;
-	font-size: 14px;
+	color: $text-primary;
+	font-size: $font-body;
 	font-weight: 600;
 }
 
 .input{
 	width: 100%;
-	min-height: 46px;
-	padding: 12px 14px;
-	border: 1px solid rgba(0, 0, 0, 0.14);
+	height: 44px;
+	padding: 0 12px;
+	border: 1px solid $border-input;
 	border-radius: 8px;
-	background-color: #ffffff;
-	color: #111827;
-	font-size: 16px;
+	background-color: $bg-card;
+	color: $text-primary;
+	font-size: $font-body;
 	box-sizing: border-box;
 }
 
 .input-placeholder {
-	color: #6b7280;
+	color: $text-secondary;
 }
 
 .login-actions {
@@ -315,7 +306,7 @@ const onSubmit = () => {
 .secondary-button,
 .text-button {
 	width: 100%;
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: 600;
 	border-radius: 8px;
 	box-sizing: border-box;
@@ -324,7 +315,7 @@ const onSubmit = () => {
 .login-action-button {
 	flex: 1;
 	width: 0;
-	height: 58px;
+	height: 44px;
 	margin-left: 0;
 	margin-right: 0;
 	font-weight: 700;
@@ -335,19 +326,19 @@ const onSubmit = () => {
 }
 
 .primary-button {
-	color: #ffffff;
-	background-color: #1f2937;
+	color: $text-inverse;
+	background-color: $text-primary;
 }
 
 .secondary-button {
-	color: #1f2937;
-	background-color: #ffffff;
+	color: $text-primary;
+	background-color: $bg-card;
 	border: 1px solid rgba(31, 41, 55, 0.28);
 }
 
 .text-button {
 	margin-top: 10px;
-	color: #374151;
+	color: $text-primary;
 	background-color: rgba(31, 41, 55, 0.08);
 }
 </style>

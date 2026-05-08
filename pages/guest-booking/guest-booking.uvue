@@ -48,6 +48,7 @@
 
 				<view class="card-section">
 					<text class="section-title">Bind Card For Guest</text>
+					<text class="validation-note">Only supported local test card BINs can be bound. If simulated issuer validation fails, the guest card cannot be bound.</text>
 					<input v-model="cardForm.holderName" class="input" placeholder="Card holder name" />
 					<input v-model="cardForm.brand" class="input" placeholder="Card brand (e.g. VISA)" />
 					<input v-model="cardForm.cardNumber" class="input" type="number" maxlength="19" placeholder="Card number" />
@@ -118,6 +119,8 @@ const cardForm = reactive({
 	expiryMonth: '',
 	expiryYear: ''
 })
+
+const cardBrandValues = ['VISA', 'MASTERCARD', 'UNIONPAY', 'AMEX', 'JCB']
 
 const isSubmitting = ref(false)
 const scooterOptions = ref<ScooterOption[]>([])
@@ -190,6 +193,29 @@ const readStorageStringOrNull = (key: string): string | null => {
 	if (raw == null) return null
 	const value = ('' + raw).trim()
 	return value.length < 1 ? null : value
+}
+
+const normalizeCardNumber = (value: string): string => {
+	return value.replace(/\s/g, '').trim()
+}
+
+const normalizeCardBrand = (value: string): string => {
+	return value.replace(/\s/g, '').trim().toUpperCase()
+}
+
+const isLuhnValid = (cardNumber: string): boolean => {
+	let sum = 0
+	let shouldDouble = false
+	for (let i = cardNumber.length - 1; i >= 0; i--) {
+		let digit = parseInt(cardNumber.charAt(i))
+		if (shouldDouble) {
+			digit = digit * 2
+			if (digit > 9) digit = digit - 9
+		}
+		sum += digit
+		shouldDouble = !shouldDouble
+	}
+	return sum % 10 == 0
 }
 
 const normalizeGuestId = (rawGuestId: string): string => {
@@ -273,10 +299,13 @@ const validateGuestForm = (): boolean => {
 	const scooterId = ('' + form.scooterId).trim()
 	const duration = ('' + form.duration).trim().toUpperCase()
 	const holderName = ('' + cardForm.holderName).trim()
-	const brand = ('' + cardForm.brand).trim()
-	const cardNumber = ('' + cardForm.cardNumber).replace(/\s/g, '')
+	const brand = normalizeCardBrand('' + cardForm.brand)
+	const cardNumber = normalizeCardNumber('' + cardForm.cardNumber)
 	const month = parseInt(('' + cardForm.expiryMonth).trim())
 	const year = parseInt(('' + cardForm.expiryYear).trim())
+	const now = new Date()
+	const currentYear = now.getFullYear()
+	const currentMonth = now.getMonth() + 1
 
 	if (!/^G?\d+$/.test(guestId)) {
 		showInfo(getAppMessage('guestBooking', 'guestIdRequired', 'Please enter a valid guest ID (e.g. G100)'))
@@ -304,8 +333,32 @@ const validateGuestForm = (): boolean => {
 		showInfo(getAppMessage('guestBooking', 'startTimeRequired', 'Please select start time'))
 		return false
 	}
-	if (holderName.length < 2 || brand.length < 2 || !/^\d{13,19}$/.test(cardNumber) || isNaN(month) || isNaN(year)) {
-		showInfo(getAppMessage('guestBooking', 'cardFormInvalid', 'Please complete valid card info for guest'))
+	if (!/^[A-Za-z ]{2,50}$/.test(holderName)) {
+		showInfo(getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'))
+		return false
+	}
+	if (cardBrandValues.indexOf(brand) < 0) {
+		showInfo(getAppMessage('paymentCard', 'brandInvalid', 'Invalid brand'))
+		return false
+	}
+	if (!/^\d{13,19}$/.test(cardNumber)) {
+		showInfo(getAppMessage('paymentCard', 'cardNumberFormatInvalid', 'Card number must be 13-19 digits.'))
+		return false
+	}
+	if (!isLuhnValid(cardNumber)) {
+		showInfo(getAppMessage('paymentCard', 'cardNumberLuhnInvalid', 'Card number failed Luhn check. Please check the digits and try again.'))
+		return false
+	}
+	if (isNaN(month) || month < 1 || month > 12) {
+		showInfo(getAppMessage('paymentCard', 'expiryMonthInvalid', 'Invalid expiry month'))
+		return false
+	}
+	if (isNaN(year) || year < 2024) {
+		showInfo(getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'))
+		return false
+	}
+	if (year < currentYear || (year == currentYear && month < currentMonth)) {
+		showInfo(getAppMessage('paymentCard', 'expiryExpired', 'Payment card has expired. Please use a valid future expiry date.'))
 		return false
 	}
 	return true
@@ -350,8 +403,8 @@ const submitGuestBooking = () => {
 	const guestName = ('' + form.guestName).trim()
 	const guestContact = ('' + form.guestContact).trim()
 	const holderName = ('' + cardForm.holderName).trim()
-	const brand = ('' + cardForm.brand).trim()
-	const cardNumber = ('' + cardForm.cardNumber).replace(/\s/g, '')
+	const brand = normalizeCardBrand('' + cardForm.brand)
+	const cardNumber = normalizeCardNumber('' + cardForm.cardNumber)
 	const month = parseInt(('' + cardForm.expiryMonth).trim())
 	const year = parseInt(('' + cardForm.expiryYear).trim())
 	const bindPath = SALESPERSON_BIND_GUEST_CARD_TEMPLATE_URL
@@ -373,7 +426,7 @@ const submitGuestBooking = () => {
 		},
 		success: (res) => {
 			if (!(res.statusCode >= 200 && res.statusCode < 300)) {
-				showError(getResponseMessage(res.data, getAppMessage('guestBooking', 'bindCardFailed', 'Failed to bind card for guest')))
+				showError(getResponseMessage(res.data, getAppMessage('guestBooking', 'bindCardFailed', 'Guest card binding failed. Please check the card details and try again.')))
 				isSubmitting.value = false
 				return
 			}
@@ -553,48 +606,51 @@ onShow(() => {
 .container {
 	width: 100%;
 	height: 100%;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 	box-sizing: border-box;
 }
 
 .scroll-area {
 	width: 100%;
 	height: 100%;
-	padding: 16px;
+	padding: 0 $page-padding-h $page-padding-bottom;
 	box-sizing: border-box;
 }
 
 .title {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 }
 
 .subtitle {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 	margin-top: 6px;
 	margin-bottom: 14px;
 }
 
 .card {
-	background-color: #fff;
+	background-color: $bg-card;
 	border-radius: 12px;
 	padding: 14px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .input {
 	margin-top: 10px;
-	border: 1px solid #ddd;
+	height: 44px;
+	border: 1px solid $border-input;
 	border-radius: 8px;
-	padding: 10px;
-	background: #fafafa;
+	padding: 0 12px;
+	background-color: $bg-card;
+	font-size: $font-body;
+	color: $text-primary;
 }
 
 .picker {
 	margin-top: 10px;
-	border: 1px solid #ddd;
+	border: 1px solid $border-base;
 	border-radius: 8px;
 	padding: 10px;
 	background: #fafafa;
@@ -605,13 +661,13 @@ onShow(() => {
 }
 
 .picker-label {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 }
 
 .picker-value {
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 	font-weight: bold;
 }
 
@@ -623,7 +679,6 @@ onShow(() => {
 .duration-wheel-row {
 	margin-top: 10px;
 	display: flex;
-	gap: 8px;
 	justify-content: space-between;
 }
 
@@ -639,15 +694,15 @@ onShow(() => {
 }
 
 .wheel-pill-text {
-	font-size: 12px;
+	font-size: $font-hint;
 	font-weight: bold;
-	color: #2b3a55;
+	color: $text-primary;
 }
 
 .wheel-btn,
 .stepper-btn {
-	font-size: 12px;
-	color: #2b3a55;
+	font-size: $font-hint;
+	color: $text-primary;
 	min-width: 44px;
 	height: 28px;
 	line-height: 28px;
@@ -659,7 +714,14 @@ onShow(() => {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 8px;
+}
+
+.stepper-row .stepper-btn {
+	margin-left: 8px;
+}
+
+.stepper-row .picker-value {
+	margin-left: 8px;
 }
 
 .card-section {
@@ -669,14 +731,25 @@ onShow(() => {
 }
 
 .section-title {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 	font-weight: bold;
+}
+
+.validation-note {
+	display: flex;
+	margin-top: 6px;
+	font-size: $font-hint;
+	line-height: 1.4;
+	color: $text-secondary;
 }
 
 .row {
 	display: flex;
-	gap: 8px;
+}
+
+.row .half {
+	margin-left: 8px;
 }
 
 .half {
@@ -685,10 +758,10 @@ onShow(() => {
 
 .submit-btn {
 	margin-top: 16px;
-	background-color: #4CAF50;
-	color: #fff;
-	border: none;
-	height: 42px;
+	background-color: $brand-green;
+	color: $text-inverse;
+	border-width: 0;
+	height: 44px;
 	border-radius: 8px;
 }
 </style>

@@ -50,7 +50,9 @@ public class UserController {
     public ResponseEntity<Object> getHistory(
             @PathVariable String userId,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
+            @RequestParam(required = false) Integer size,
+            HttpServletRequest httpRequest) {
+        verifyOwnership(userId, httpRequest);
         return ResponseEntity.ok(userService.getUserBookings(userId, page, size));
     }
 
@@ -71,7 +73,9 @@ public class UserController {
     @GetMapping("/{userId}/bookings/{bookingId}")
     public ResponseEntity<Object> getBookingById(
             @PathVariable String userId,
-            @PathVariable String bookingId) {
+            @PathVariable String bookingId,
+            HttpServletRequest httpRequest) {
+        verifyOwnership(userId, httpRequest);
         return ResponseEntity.ok(userService.getBookingById(userId, bookingId));
     }
 
@@ -79,7 +83,8 @@ public class UserController {
      * 获取指定用户的个人资料信息。
      */
     @GetMapping("/{userId}/profile")
-    public ResponseEntity<Object> getProfile(@PathVariable String userId) {
+    public ResponseEntity<Object> getProfile(@PathVariable String userId, HttpServletRequest httpRequest) {
+        verifyOwnership(userId, httpRequest);
         return ResponseEntity.ok(Map.of("data", userService.getUserProfile(userId)));
     }
 
@@ -138,5 +143,12 @@ public class UserController {
             throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
         return ResponseEntity.ok(Map.of("data", userService.changeName(userId, request)));
+    }
+
+    private void verifyOwnership(String userId, HttpServletRequest httpRequest) {
+        Object authUserId = httpRequest.getAttribute("userId");
+        if (authUserId == null || !userId.equals(String.valueOf(authUserId))) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
     }
 }

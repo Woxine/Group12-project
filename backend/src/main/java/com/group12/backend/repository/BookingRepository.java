@@ -18,7 +18,7 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUser_Id(Long userId);
-    Page<Booking> findByUser_IdOrderByStartTimeDesc(Long userId, Pageable pageable);
+    Page<Booking> findByUser_IdOrderByIdDesc(Long userId, Pageable pageable);
     List<Booking> findByUser_IdAndStatus(Long userId, String status);
     List<Booking> findByScooterId(Long scooterId);
     List<Booking> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);

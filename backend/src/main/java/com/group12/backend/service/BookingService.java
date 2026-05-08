@@ -17,12 +17,12 @@ public interface BookingService {
     /**
      * 取消指定预约订单，并记录可选的结束位置。
      */
-    Object cancelBooking(String bookingId, Double endLat, Double endLng);
+    Object cancelBooking(String bookingId, Long authUserId, Double endLat, Double endLng);
 
     /**
      * 完成指定预约订单，并记录可选的结束位置。
      */
-    Object completeBooking(String bookingId, Double endLat, Double endLng);
+    Object completeBooking(String bookingId, Long authUserId, Double endLat, Double endLng);
 
     /**
      * 为待支付订单完成支付并正式启用车辆。

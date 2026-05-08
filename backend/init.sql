@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS feedbacks;
 DROP TABLE IF EXISTS discount_verification_submissions;
 DROP TABLE IF EXISTS billing_settings_logs;
 DROP TABLE IF EXISTS billing_settings;
+DROP TABLE IF EXISTS trajectory_points;
 DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS scooters;
 DROP TABLE IF EXISTS audit_logs;
@@ -54,6 +55,26 @@ CREATE TABLE scooters (
     FOREIGN KEY (location_point_id) REFERENCES location_points (id)
 );
 
+CREATE TABLE vehicle_descriptions (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  vehicle_type VARCHAR(20) NOT NULL,
+  display_name VARCHAR(100) NOT NULL,
+  subtitle VARCHAR(100) NOT NULL DEFAULT '',
+  description VARCHAR(500) NOT NULL DEFAULT '',
+  range_text VARCHAR(100) NOT NULL DEFAULT '',
+  speed_text VARCHAR(100) NOT NULL DEFAULT '',
+  motor_text VARCHAR(100) NOT NULL DEFAULT '',
+  advice VARCHAR(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (id),
+  UNIQUE KEY idx_vehicle_type (vehicle_type)
+);
+
+INSERT INTO vehicle_descriptions (vehicle_type, display_name, subtitle, description, range_text, speed_text, motor_text, advice) VALUES
+('GEN1',    'GEN1',    'Ninebot Fz3',     'Best for beginners and short daily trips.',           '115km/92km',  '25km/h',  '400W',        'Best for beginners and short daily trips.'),
+('GEN2',    'GEN2',    'Ninebot V70',     'Balanced choice for mid-range commuting.',            '70km',        '47km/h',  '800W',        'Balanced choice for mid-range commuting.'),
+('GEN3',    'GEN3',    'Ninebot M95C',    'Long-range flagship for heavy usage scenarios.',      '145km max',   '55km/h',  '1500W/2600W', 'Long-range flagship for heavy usage scenarios.'),
+('GEN3PRO', 'GEN3 PRO','Ninebot E300P MK2','Performance-first choice for advanced riders.',       '125km',       '135km/h', '29kW peak',   'Performance-first choice for advanced riders.');
+
 CREATE TABLE bookings (
   id BIGINT NOT NULL AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
@@ -79,6 +100,19 @@ CREATE TABLE bookings (
     FOREIGN KEY (user_id) REFERENCES users (id),
   CONSTRAINT fk_bookings_scooter
     FOREIGN KEY (scooter_id) REFERENCES scooters (id)
+);
+
+CREATE TABLE trajectory_points (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  booking_id BIGINT NOT NULL,
+  lat DOUBLE NOT NULL,
+  lng DOUBLE NOT NULL,
+  recorded_at DATETIME(6) NOT NULL,
+  seq INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY idx_trajectory_booking (booking_id),
+  CONSTRAINT fk_trajectory_booking
+    FOREIGN KEY (booking_id) REFERENCES bookings (id)
 );
 
 CREATE TABLE billing_settings (

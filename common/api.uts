@@ -1,16 +1,23 @@
 /**
- * 后端 API 根地址，修改此处即可全局生效
+ * 后端 API 根地址 —— 根据 debug/release 自动切换
  *
- * 推荐方式（无需每次改IP）：
- *   1. 用 USB 连接 Android 设备并开启 USB 调试
- *   2. 在 PC 终端执行：adb reverse tcp:8080 tcp:8080
- *   3. BASE_URL 保持 http://localhost:8080 即可，无需改 IP
+ * debug  包（HBuilderX "运行"）→ http://localhost:8080
+ * release 包（HBuilderX "发行"）→ http://8.137.174.238:8080
  *
- * 备用方式（直连 IP）：
- *   将 BASE_URL 改为 PC 的局域网 IP，例如 http://192.168.31.201:8080
- *   Android 设备需与 PC 在同一 WiFi 网络下
+ * 本地调试时用 USB + adb reverse tcp:8080 tcp:8080 即可连通后端
  */
-export const BASE_URL = 'http://8.137.174.238:8080'
+import { UTSAndroid } from 'io.dcloud.uts'
+
+const DEBUG_URL = 'http://localhost:8080'
+const RELEASE_URL = 'http://8.137.174.238:8080'
+
+function isDebugBuild(): boolean {
+	const context = UTSAndroid.getAppContext()
+	if (context == null) return false
+	return (context.applicationInfo.flags & 0x2 /* ApplicationInfo.FLAG_DEBUGGABLE */) != 0
+}
+
+export const BASE_URL = isDebugBuild() ? DEBUG_URL : RELEASE_URL
 
 // ID9 guest booking
 export const GUEST_BOOKING_CREATE_URL = '/api/v1/bookings/guest'

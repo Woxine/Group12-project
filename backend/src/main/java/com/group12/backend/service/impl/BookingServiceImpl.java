@@ -330,10 +330,14 @@ public class BookingServiceImpl implements BookingService {
     /**
      * 取消指定预约订单，并释放对应滑板车。
      */
-    public Object cancelBooking(String bookingId, Double endLat, Double endLng) {
+    public Object cancelBooking(String bookingId, Long authUserId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        if (!booking.getUser().getId().equals(authUserId)) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
 
         if (!"CONFIRMED".equals(booking.getStatus()) && !"PENDING_PAYMENT".equals(booking.getStatus())) {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
@@ -360,10 +364,15 @@ public class BookingServiceImpl implements BookingService {
     /**
      * 完成指定预约订单，并释放对应滑板车。
      */
-    public Object completeBooking(String bookingId, Double endLat, Double endLng) {
+    public Object completeBooking(String bookingId, Long authUserId, Double endLat, Double endLng) {
         Long id = Long.parseLong(bookingId);
         Booking booking = bookingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessages.BOOKING_NOT_FOUND, HttpStatus.NOT_FOUND));
+
+        if (!booking.getUser().getId().equals(authUserId)) {
+            throw new BusinessException(ErrorMessages.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+
         if (!"CONFIRMED".equals(booking.getStatus())) {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }

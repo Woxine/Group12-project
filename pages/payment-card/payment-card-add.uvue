@@ -4,6 +4,7 @@
 			<scroll-view class="scroll-area" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true" :style="{ height: scrollViewHeight + 'px' }">
 				<view class="form_card">
 					<text class="section_title">Add New Card</text>
+					<text class="validation_note">This coursework demo uses local simulated issuer validation. Unsupported test BINs cannot be bound.</text>
 					<input v-model="form.holderName" class="input" placeholder="Card holder name" />
 					<view class="brand_field">
 						<text class="field_label">Brand</text>
@@ -65,11 +66,11 @@ type CardBrandOption = {
 }
 
 const cardBrandOptions: CardBrandOption[] = [
-	{ value: 'VISA', label: 'VISA', logo: '/static/visa-official.svg' },
-	{ value: 'MASTERCARD', label: 'Mastercard', logo: '/static/mastercard-official.png' },
-	{ value: 'UNIONPAY', label: 'UnionPay', logo: '/static/unionpay.png' },
-	{ value: 'AMEX', label: 'AMEX', logo: '/static/amex-official.png' },
-	{ value: 'JCB', label: 'JCB', logo: '/static/jcb-official.gif' }
+	{ value: 'VISA', label: 'VISA', logo: '/static/payment/visa-official.svg' },
+	{ value: 'MASTERCARD', label: 'Mastercard', logo: '/static/payment/mastercard-official.png' },
+	{ value: 'UNIONPAY', label: 'UnionPay', logo: '/static/payment/unionpay.png' },
+	{ value: 'AMEX', label: 'AMEX', logo: '/static/payment/amex-official.png' },
+	{ value: 'JCB', label: 'JCB', logo: '/static/payment/jcb-official.gif' }
 ]
 const cardBrandLabels = ['VISA', 'Mastercard', 'UnionPay', 'AMEX', 'JCB']
 const cardBrandValues = ['VISA', 'MASTERCARD', 'UNIONPAY', 'AMEX', 'JCB']
@@ -117,6 +118,21 @@ const getAuth = (): UTSJSONObject | null => {
 
 const normalizeCardNumber = (value: string): string => {
 	return value.replace(/\s/g, '').trim()
+}
+
+const isLuhnValid = (cardNumber: string): boolean => {
+	let sum = 0
+	let shouldDouble = false
+	for (let i = cardNumber.length - 1; i >= 0; i--) {
+		let digit = parseInt(cardNumber.charAt(i))
+		if (shouldDouble) {
+			digit = digit * 2
+			if (digit > 9) digit = digit - 9
+		}
+		sum += digit
+		shouldDouble = !shouldDouble
+	}
+	return sum % 10 == 0
 }
 
 const updateSelectedBrand = (index: number) => {
@@ -168,7 +184,7 @@ const parseLookupData = (rawData: any | null): UTSJSONObject | null => {
 
 const applyLookupResult = (lookupData: UTSJSONObject | null) => {
 	if (lookupData == null) {
-		binLookupHint.value = 'Card details not available, please choose brand manually.'
+		binLookupHint.value = getAppMessage('paymentCard', 'binLookupFailed', 'Simulated issuer validation failed. Please check the card number or try again later.')
 		return
 	}
 	const statusRaw = lookupData['status']
@@ -179,6 +195,7 @@ const applyLookupResult = (lookupData: UTSJSONObject | null) => {
 	const normalizedBrand = brandRaw != null ? ('' + brandRaw).trim().toUpperCase() : ''
 	const issuer = issuerRaw != null ? ('' + issuerRaw).trim() : ''
 	const cardType = typeRaw != null ? ('' + typeRaw).trim().toUpperCase() : ''
+	let brandMismatchHint = ''
 	if (issuer != '' && issuer != 'UNKNOWN') {
 		issuerBankDisplay.value = issuer
 	}
@@ -186,17 +203,18 @@ const applyLookupResult = (lookupData: UTSJSONObject | null) => {
 		cardTypeDisplay.value = cardType
 	}
 	if (normalizedBrand != '' && normalizedBrand != 'UNKNOWN') {
-		updateBrandByValue(normalizedBrand, false)
-	}
-	if (status == 'DEGRADED') {
-		binLookupHint.value = 'Bank lookup is temporarily unavailable, brand selection is still supported.'
-		return
+		const selectedBrand = ('' + form.brand).trim().toUpperCase()
+		if (isBrandManuallySelected.value && selectedBrand != '' && selectedBrand != normalizedBrand) {
+			brandMismatchHint = getAppMessage('paymentCard', 'brandMismatch', 'Detected brand is {brand}. Select the detected brand or this card cannot be bound.').replace('{brand}', normalizedBrand)
+		} else {
+			updateBrandByValue(normalizedBrand, false)
+		}
 	}
 	if (status == 'UNKNOWN') {
-		binLookupHint.value = 'No BIN match yet, continue typing or choose brand manually.'
+		binLookupHint.value = getAppMessage('paymentCard', 'binUnsupported', 'Card issuer is not supported by this simulated project. Use a supported test card BIN.')
 		return
 	}
-	binLookupHint.value = ''
+	binLookupHint.value = brandMismatchHint
 }
 
 const requestBinLookup = (prefix: string) => {
@@ -217,7 +235,7 @@ const requestBinLookup = (prefix: string) => {
 		success: (res) => {
 			if (prefix != latestLookupPrefix) return
 			if (res.statusCode == 429) {
-				binLookupHint.value = 'Lookup limit reached, please continue with manual brand selection.'
+				binLookupHint.value = getAppMessage('paymentCard', 'binRateLimited', 'Too many issuer validation requests. Please try again later.')
 				return
 			}
 			if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -226,11 +244,11 @@ const requestBinLookup = (prefix: string) => {
 				applyLookupResult(parseLookupData(dataField))
 				return
 			}
-			binLookupHint.value = 'Card lookup failed, please choose brand manually.'
+			binLookupHint.value = getAppMessage('paymentCard', 'binLookupFailed', 'Simulated issuer validation failed. Please check the card number or try again later.')
 		},
 		fail: () => {
 			if (prefix != latestLookupPrefix) return
-			binLookupHint.value = 'Network is unstable, please choose brand manually.'
+			binLookupHint.value = getAppMessage('paymentCard', 'binLookupNetworkFailed', 'Cannot reach simulated issuer validation right now. Please try again later.')
 		}
 	})
 }
@@ -250,7 +268,7 @@ const scheduleBinLookup = (cardNumber: string) => {
 			isBrandManuallySelected.value = false
 			updateSelectedBrand(-1)
 		} else {
-			binLookupHint.value = 'Type at least 6 digits for bank/type lookup.'
+			binLookupHint.value = getAppMessage('paymentCard', 'binLookupInputHint', 'Type at least 6 digits for simulated issuer validation.')
 		}
 		if (lookupDebounceTimer != null) {
 			clearTimeout(lookupDebounceTimer as number)
@@ -264,7 +282,7 @@ const scheduleBinLookup = (cardNumber: string) => {
 	latestLookupPrefix = prefix
 	issuerBankDisplay.value = ''
 	cardTypeDisplay.value = ''
-	binLookupHint.value = 'Checking card issuer details...'
+	binLookupHint.value = getAppMessage('paymentCard', 'binLookupChecking', 'Checking simulated issuer validation...')
 	if (lookupDebounceTimer != null) {
 		clearTimeout(lookupDebounceTimer as number)
 		lookupDebounceTimer = null
@@ -294,7 +312,10 @@ const validateForm = (): boolean => {
 	const cardNumber = normalizeCardNumber('' + form.cardNumber)
 	const month = parseInt('' + form.expiryMonth)
 	const year = parseInt('' + form.expiryYear)
-	if (holderName.length < 2) {
+	const now = new Date()
+	const currentYear = now.getFullYear()
+	const currentMonth = now.getMonth() + 1
+	if (!/^[A-Za-z ]{2,50}$/.test(holderName)) {
 		showInfo(getAppMessage('paymentCard', 'holderNameInvalid', 'Invalid holder name'))
 		return false
 	}
@@ -303,7 +324,11 @@ const validateForm = (): boolean => {
 		return false
 	}
 	if (!/^\d{13,19}$/.test(cardNumber)) {
-		showInfo(getAppMessage('paymentCard', 'cardNumberInvalid', 'Invalid card number'))
+		showInfo(getAppMessage('paymentCard', 'cardNumberFormatInvalid', 'Card number must be 13-19 digits.'))
+		return false
+	}
+	if (!isLuhnValid(cardNumber)) {
+		showInfo(getAppMessage('paymentCard', 'cardNumberLuhnInvalid', 'Card number failed Luhn check. Please check the digits and try again.'))
 		return false
 	}
 	if (isNaN(month) || month < 1 || month > 12) {
@@ -312,6 +337,10 @@ const validateForm = (): boolean => {
 	}
 	if (isNaN(year) || year < 2024) {
 		showInfo(getAppMessage('paymentCard', 'expiryYearInvalid', 'Invalid expiry year'))
+		return false
+	}
+	if (year < currentYear || (year == currentYear && month < currentMonth)) {
+		showInfo(getAppMessage('paymentCard', 'expiryExpired', 'Payment card has expired. Please use a valid future expiry date.'))
 		return false
 	}
 	return true
@@ -345,7 +374,7 @@ const submitAddCard = () => {
 				uni.navigateBack({ delta: entryFrom.value == 'payment' ? 2 : 1 })
 				return
 			}
-			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Failed to add card')))
+			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'addFailed', 'Card binding failed. Please check the card details and try again.')))
 		},
 		fail: () => {
 			showError(getAppMessage('network', 'requestFailed', 'Network error'))
@@ -385,30 +414,32 @@ onLoad((options) => {
 </script>
 
 <style lang="scss">
-.container { width: 100%; height: 100%; background: #f5f5f5; box-sizing: border-box; display: flex; flex-direction: column; }
+.container { width: 100%; height: 100%; background: $bg-page; box-sizing: border-box; display: flex; flex-direction: column; }
 .scroll-wrap { width: 100%; }
-.scroll-area { width: 100%; padding: 16px; padding-bottom: 24px; box-sizing: border-box; }
-.form_card { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 12px; }
-.section_title { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 8px; display: block; }
-.input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; margin-bottom: 8px; background: #fafafa; }
-.field_label { font-size: 12px; color: #666; margin-bottom: 6px; display: block; }
+.scroll-area { width: 100%; padding: 0 $page-padding-h $page-padding-bottom; box-sizing: border-box; }
+.form_card { background: $bg-card; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+.section_title { font-size: $font-body; font-weight: bold; color: $text-primary; margin-bottom: 8px; display: flex; }
+.validation_note { color: #7a7a7a; font-size: $font-hint; line-height: 1.4; margin-bottom: 8px; display: flex; }
+.input { width: 100%; height: 44px; border: 1px solid $border-input; border-radius: 8px; padding: 0 12px; box-sizing: border-box; margin-bottom: 8px; background-color: $bg-card; font-size: $font-body; color: $text-primary; }
+.field_label { font-size: $font-hint; color: $text-secondary; margin-bottom: 6px; display: flex; }
 .brand_field { margin-bottom: 8px; }
 .brand_picker { width: 100%; }
-.brand_picker_inner { width: 100%; min-height: 46px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; padding: 10px 12px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; }
+.brand_picker_inner { width: 100%; min-height: 46px; border: 1px solid $border-base; border-radius: 8px; background: #fafafa; padding: 10px 12px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; }
 .brand_preview { display: flex; align-items: center; min-width: 0; flex: 1; }
-.brand_logo_box { width: 42px; height: 28px; border-radius: 6px; background: #fff; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
+.brand_logo_box { width: 42px; height: 28px; border-radius: 6px; background: $bg-card; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
 .brand_logo { width: 34px; height: 20px; }
 .brand_fallback { padding: 4px 8px; border-radius: 6px; background: #eef3ff; margin-right: 10px; flex-shrink: 0; }
-.brand_fallback_text { font-size: 11px; font-weight: 600; color: #3355aa; }
-.picker_text { color: #333; font-size: 14px; flex: 1; }
-.picker_placeholder_text { color: #999; }
-.picker_arrow { color: #999; font-size: 12px; margin-left: 8px; }
+.brand_fallback_text { font-size: $font-micro; font-weight: 600; color: #3355aa; }
+.picker_text { color: $text-primary; font-size: $font-body; flex: 1; }
+.picker_placeholder_text { color: $text-placeholder; }
+.picker_arrow { color: $text-placeholder; font-size: $font-hint; margin-left: 8px; }
 .lookup_hint_wrap { margin-top: -2px; margin-bottom: 8px; }
-.lookup_hint { color: #7a7a7a; font-size: 12px; }
+.lookup_hint { color: #7a7a7a; font-size: $font-hint; }
 .lookup_result_wrap { margin-top: -4px; margin-bottom: 8px; background: #f3f8ff; border: 1px solid #d8e7ff; border-radius: 8px; padding: 8px 10px; }
-.lookup_result { color: #365d95; font-size: 12px; display: block; line-height: 1.4; }
-.row { display: flex; gap: 8px; }
+.lookup_result { color: #365d95; font-size: $font-hint; display: flex; line-height: 1.4; }
+.row { display: flex; }
+.row .half { margin-left: 8px; }
 .half { flex: 1; }
 .date_input { margin-bottom: 0; }
-.primary_btn { margin-top: 6px; background: #4CAF50; color: #fff; border: none; height: 40px; font-size: 16px; }
+.primary_btn { margin-top: 6px; background: $brand-green; color: $text-inverse; border-width: 0; height: 44px; font-size: $font-section; }
 </style>

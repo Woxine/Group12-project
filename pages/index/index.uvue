@@ -3,9 +3,19 @@
 		<!-- 1. 全局沉浸式地图 -->
 		<map id="mainMap" class="full-map" :longitude="longitude" :latitude="latitude" :scale="scale" :markers="markers" show-location @regionchange="onMapRegionChange"></map>
 
-		<!-- 2. 顶部悬浮栏 (包含公告) -->
-		<view class="top-notice-pill">
-			<image src="/static/broadcast.png" mode="aspectFit" class="notice-icon"></image>
+		<!-- 2. 顶部悬浮栏：有活跃订单时显示订单概览，否则显示公告 -->
+		<view v-if="activeBooking != null" class="order-overview-pill" @click="goToOrders">
+			<view :class="['order-accent-bar', activeBooking.status == 'CONFIRMED' ? 'accent-confirmed' : 'accent-awaiting']"></view>
+			<view class="order-content">
+				<view class="order-main-row">
+					<text :class="['order-status-label', activeBooking.status == 'CONFIRMED' ? 'label-confirmed' : 'label-awaiting']">{{ activeBooking.status == 'CONFIRMED' ? 'Riding' : 'Awaiting Payment' }}</text>
+					<text class="order-detail-text">{{ activeBooking.status == 'CONFIRMED' ? elapsedText : formatScooterId(activeBooking.scooterId) }}</text>
+				</view>
+			</view>
+			<text class="order-chevron">></text>
+		</view>
+		<view v-else class="top-notice-pill">
+			<image src="/static/icons/broadcast.png" mode="aspectFit" class="notice-icon"></image>
 			<swiper class="notice-swiper" vertical="true" autoplay="true" circular :interval="3000" :duration="1000">
 				<swiper-item><text class="notice-text">Before cycling, check the brakes, seat, and pedals.</text></swiper-item>
 				<swiper-item><text class="notice-text">Remember to return the e-Scooter when the ride is over.</text></swiper-item>
@@ -22,118 +32,21 @@
 			<!-- 
 			<swiper class="modern-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="1000"
 			indicator-color="rgba(255,255,255,0.5)" indicator-active-color="#4CAF50" circular>
-				<swiper-item><image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="card-img"></image></swiper-item>
-				<swiper-item><image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="card-img"></image></swiper-item>
-				<swiper-item><image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="card-img"></image></swiper-item>
-				<swiper-item><image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/vehicles/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/vehicles/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/vehicles/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="card-img"></image></swiper-item>
+				<swiper-item><image src="/static/vehicles/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="card-img"></image></swiper-item>
 			</swiper>
 			-->
 			
 			<view class="booking-button" @click="goToBikeList">
-				<text class="btn-text-normal">BOOK A&nbsp;</text>
-				<text class="btn-text-gradient">RIDE</text>
+				<text class="btn-text">Book a Ride</text>
+				<text class="btn-arrow">→</text>
 			</view>
 		</view>
 
 		<!-- 4. 车辆介绍全屏悬浮卡片 -->
-		<view class="vehicle-intro-overlay" v-if="isVehicleIntroVisible">
-			<view class="vehicle-intro-card">
-				<view class="intro-header">
-					<text class="intro-title">Our Vehicles</text>
-					<text class="close-btn" @click="hideVehicleIntro">✕</text>
-				</view>
-				<scroll-view class="intro-scroll" scroll-y="true">
-					<view class="intro-item">
-						<image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN1</view>
-							<view class="intro-subtitle">Ninebot Fz3</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">115km/92km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">25km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">400W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Best for beginners and short daily trips.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN2</view>
-							<view class="intro-subtitle">Ninebot V70</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">70km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">47km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">800W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Balanced choice for mid-range commuting.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN3</view>
-							<view class="intro-subtitle">Ninebot M95C</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">145km max</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">55km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">1500W/2600W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Long-range flagship for heavy usage scenarios.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN3 PRO</view>
-							<view class="intro-subtitle">Ninebot E300P MK2</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">125km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">135km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">29kW peak</text>
-								</view>
-							</view>
-							<view class="intro-advice">Performance-first choice for advanced riders.</view>
-						</view>
-					</view>
-				</scroll-view>
-			</view>
-		</view>
+		<VehicleIntroOverlay :visible="isVehicleIntroVisible" @close="hideVehicleIntro" />
 	</view>
 
 	<TabBar current="home" />
@@ -143,7 +56,7 @@
 <script setup lang="uts">
 	// 首页逻辑：获取定位、加载滑板车地图标记、定时刷新、跳转滑板车列表
 	import { ref, onMounted, getCurrentInstance, nextTick } from 'vue'
-	import { onShow } from '@dcloudio/uni-app'
+	import { onShow, onHide } from '@dcloudio/uni-app'
 	import { BASE_URL } from '../../common/api.uts'
 	import { getAppMessage } from '../../common/messages.uts'
 	import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
@@ -158,7 +71,123 @@
 	let regionDebounceTimer: number | null = null
 
 	const isVehicleIntroVisible = ref(false)
-	
+
+	type ActiveBookingInfo = {
+		id: string
+		status: string
+		scooterId: string
+		startTime: string
+	}
+
+	const activeBooking = ref<ActiveBookingInfo | null>(null)
+	const elapsedText = ref('')
+	let elapsedTimer: number | null = null
+
+	const readStorageString = (key: string): string => {
+		const raw = uni.getStorageSync(key)
+		return raw == null ? '' : ('' + raw).trim()
+	}
+
+	const readStorageStringOrNull = (key: string): string | null => {
+		const value = readStorageString(key)
+		return value.length < 1 ? null : value
+	}
+
+	const formatElapsed = (startTimeStr: string): string => {
+		const startMs = Date.parse(startTimeStr)
+		if (isNaN(startMs)) return ''
+		const nowMs = Date.now()
+		const diffMin = Math.floor((nowMs - startMs) / 60000)
+		if (diffMin < 0) return ''
+		if (diffMin < 60) return diffMin + 'm'
+		const h = Math.floor(diffMin / 60)
+		const m = diffMin % 60
+		const mStr = m < 10 ? ('0' + m) : '' + m
+		return h + 'h ' + mStr + 'm'
+	}
+
+	const clearElapsedTimer = () => {
+		const id = elapsedTimer
+		if (id != null) {
+			clearInterval(id)
+			elapsedTimer = null
+		}
+	}
+
+	const startElapsedTimer = () => {
+		clearElapsedTimer()
+		const update = () => {
+			const booking = activeBooking.value
+			if (booking == null || booking.status != 'CONFIRMED') return
+			elapsedText.value = formatElapsed(booking.startTime)
+		}
+		update()
+		elapsedTimer = setInterval(update, 60000)
+	}
+
+	const checkActiveBooking = () => {
+		const userId = readStorageStringOrNull('userId')
+		const token = readStorageStringOrNull('token')
+		if (userId == null || token == null) {
+			activeBooking.value = null
+			clearElapsedTimer()
+			return
+		}
+		uni.request({
+			url: BASE_URL + '/api/v1/users/' + userId + '/bookings?page=1&size=10',
+			method: 'GET',
+			header: {
+				'Content-Type': 'application/json',
+				'Authorization': 'Bearer ' + token
+			},
+			success: (res) => {
+				if (res.statusCode < 200 || res.statusCode >= 300) {
+					activeBooking.value = null
+					clearElapsedTimer()
+					return
+				}
+				const responseData = res.data
+				if (responseData == null || typeof responseData != 'object') {
+					activeBooking.value = null
+					clearElapsedTimer()
+					return
+				}
+				const obj = responseData as UTSJSONObject
+				let arr: any[] = []
+				if (obj['data'] != null && Array.isArray(obj['data'])) {
+					arr = obj['data'] as any[]
+				}
+				let found: ActiveBookingInfo | null = null
+				for (let i = 0; i < arr.length; i++) {
+					const item = arr[i] as UTSJSONObject
+					const rawStatus = item['status']
+					const status = rawStatus != null ? ('' + rawStatus).trim().toUpperCase() : ''
+					if (status == 'CONFIRMED' || status == 'PENDING_PAYMENT') {
+						const rawId = item['id']
+						const id = rawId != null ? ('' + rawId) : ''
+						const rawScooterId = item['scooter_id'] != null ? item['scooter_id'] : item['scooterId']
+						const scooterId = rawScooterId != null ? ('' + rawScooterId) : ''
+						const rawStart = item['start_time'] != null ? item['start_time'] : item['startTime']
+						const startTime = rawStart != null ? ('' + rawStart) : ''
+						found = { id: id, status: status, scooterId: scooterId, startTime: startTime }
+						break
+					}
+				}
+				activeBooking.value = found
+				if (found != null && found.status == 'CONFIRMED') {
+					startElapsedTimer()
+				} else {
+					clearElapsedTimer()
+					elapsedText.value = ''
+				}
+			},
+			fail: () => {
+				activeBooking.value = null
+				clearElapsedTimer()
+			}
+		})
+	}
+
 	const showVehicleIntro = () => {
 		isVehicleIntroVisible.value = true
 	}
@@ -182,25 +211,41 @@
 		return earthRadius * c
 	}
 	
-	const getMarkerIcon = (type: string | null): string => {
-	  if (type == null || type.length == 0) return '/static/loc.png'
-	  switch (type) {
-	    case 'GEN1':
-	      return '/static/gen1_escooter_Fz3_liangziyin.png'
-	    case 'GEN2':
-	      return '/static/gen2_eScooter_V70_GardeniaGreen_005.png'
-	    case 'GEN3':
-	      return '/static/gen3_eScooter-M95C_MK2-jingyahui.png'
-	    case 'GEN3PRO':
-	      return '/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
-	    default:
-	      return '/static/loc.png'
+	const DEFAULT_SCOOTER_MARKER_ICON = '/static/markers/scooter-marker-gen1.png'
+
+	const normalizeScooterType = (type: string | null): string => {
+	  if (type == null || type.length == 0) return 'GEN1'
+	  const value = ('' + type).trim().toUpperCase()
+	  if (value == 'GEN3 PRO' || value == 'GEN3_PRO' || value == 'GEN-3-PRO') {
+	    return 'GEN3PRO'
 	  }
+	  return value.length > 0 ? value : 'GEN1'
+	}
+
+	const getScooterMarkerIcon = (type: string | null): string => {
+	  switch (normalizeScooterType(type)) {
+	    case 'GEN2':
+	      return '/static/markers/scooter-marker-gen2.png'
+	    case 'GEN3':
+	      return '/static/markers/scooter-marker-gen3.png'
+	    case 'GEN3PRO':
+	      return '/static/markers/scooter-marker-gen3pro.png'
+	    case 'GEN1':
+	      return '/static/markers/scooter-marker-gen1.png'
+	    default:
+	      return DEFAULT_SCOOTER_MARKER_ICON
+	  }
+	}
+
+	const isAvailableScooterMarker = (item: UTSJSONObject): boolean => {
+	  const rawStatus = item['status']
+	  if (rawStatus == null) return true
+	  return ('' + rawStatus).trim().toUpperCase() == 'AVAILABLE'
 	}
 
 	const fetchScooterMarkers = (lat: number, lng: number) => {
 	  uni.request({
-	    url: BASE_URL + '/api/v1/scooters',
+	    url: BASE_URL + '/api/v1/scooters?status=AVAILABLE&_t=' + Date.now(),
 	    method: 'GET',
 	    success: (res) => {
 	      if (res.statusCode != 200 || res.data == null) {
@@ -220,6 +265,9 @@
 	      let count = 0
 	      for (let i = 0; i < arr.length && count < MARKER_LIMIT; i++) {
 	        const item = arr[i] as UTSJSONObject
+	        if (!isAvailableScooterMarker(item)) {
+	          continue
+	        }
 	        const latVal = item['location_lat'] != null ? item['location_lat'] : item['locationLat']
 	        const lngVal = item['location_lng'] != null ? item['location_lng'] : item['locationLng']
 	        const numLat = latVal != null ? (latVal as number) : null
@@ -230,15 +278,15 @@
 	          }
 	          const rawId = item['id']
 	          const sid = rawId != null ? ('SC' + ('' + rawId)) : ('SC' + (count + 1))
-	          const type = item['type'] != null ? ('' + item['type']) : 'GEN1'
+	          const type = item['type'] != null ? ('' + item['type']) : null
 	          scooterMarkers.push({
 	            id: 10 + count,
 	            latitude: numLat,
 	            longitude: numLng,
 	            title: sid,
-	            iconPath: getMarkerIcon(type),
-	            width: 48,
-	            height: 48,
+	            iconPath: getScooterMarkerIcon(type),
+	            width: 34,
+	            height: 34,
 	            anchor: { x: 0.5, y: 1 }
 	          } as Marker)
 	          count++
@@ -296,7 +344,11 @@
 	      longitude.value = lng
 	      latitude.value = lat
 	      applyMarkers(lat, lng)
-	      mapContext.value?.moveToLocation({ latitude: lat, longitude: lng })
+	      try {
+        mapContext.value?.moveToLocation({ latitude: lat, longitude: lng })
+      } catch (e) {
+        console.error('moveToLocation failed', e)
+      }
 	    },
 	    fail: (err) => {
 	      console.error('定位失败', err)
@@ -317,6 +369,7 @@
 
 	
 	onShow(() => {
+	  checkActiveBooking()
 	  applyMarkers(latitude.value, longitude.value)
 	  nextTick(() => {
 	    const instance = getCurrentInstance()
@@ -328,7 +381,21 @@
 	    getCurrentLocation()
 	  })
 	})
+
+	onHide(() => {
+	  clearElapsedTimer()
+	})
 	
+	const goToOrders = () => {
+		uni.navigateTo({ url: '/pages/orders/orders' })
+	}
+
+	const formatScooterId = (scooterId: string | null): string => {
+		if (scooterId == null || scooterId.length == 0) return '-'
+		if (scooterId.startsWith('SC')) return scooterId
+		return 'SC' + scooterId.padStart(3, '0')
+	}
+
 	// 跳转到单车列表页面（未登录先提示并进入登录页）
 	const goToBikeList = () => {
 		const token = uni.getStorageSync('token')
@@ -347,7 +414,7 @@
 	.page-container {
 		position: relative;
 		flex: 1;
-		background-color: #F8F8F8;
+		background-color: $bg-page;
 		overflow: hidden;
 	}
 
@@ -373,7 +440,7 @@
 		padding: 0 16px;
 		box-sizing: border-box;
 		z-index: 10;
-		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+		box-shadow: $shadow-card;
 	}
 
 	.notice-icon {
@@ -389,29 +456,97 @@
 
 	.notice-text {
 		line-height: 44px;
-		font-size: 12px;
-		color: #444;
+		font-size: $font-hint;
+		color: $text-primary;
 		lines: 1;
 		text-overflow: ellipsis;
 	}
 
-	.bottom-action-card {
+	.order-overview-pill {
 		position: absolute;
-		bottom: 80px; /* 留出底部TabBar的高度，因为TabBar自带悬浮/固定效果 */
-		left: 4%;
-		width: 92%;
-		background-color: #FFFFFF;
-		border-radius: 24px;
-		padding: 24px 20px;
+		top: 16px;
+		left: 5%;
+		width: 90%;
+		height: 56px;
+		background-color: #ffffff;
+		border-radius: 16px;
+		flex-direction: row;
+		align-items: center;
+		padding: 0 16px;
 		box-sizing: border-box;
 		z-index: 10;
-		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+		box-shadow: $shadow-card;
+	}
+
+	.order-accent-bar {
+		width: 4px;
+		height: 28px;
+		border-radius: 2px;
+		margin-right: 14px;
+	}
+
+	.accent-confirmed {
+		background-color: $brand-green;
+	}
+
+	.accent-awaiting {
+		background-color: $status-awaiting;
+	}
+
+	.order-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+
+	.order-main-row {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.order-status-label {
+		font-size: $font-body;
+		font-weight: bold;
+		margin-bottom: 2px;
+	}
+
+	.label-confirmed {
+		color: $brand-green;
+	}
+
+	.label-awaiting {
+		color: $status-awaiting;
+	}
+
+	.order-detail-text {
+		font-size: $font-caption;
+		color: $text-secondary;
+	}
+
+	.order-chevron {
+		font-size: $font-section;
+		color: $text-placeholder;
+		margin-left: 12px;
+	}
+
+	.bottom-action-card {
+		position: absolute;
+		bottom: 80px;
+		left: 4%;
+		width: 92%;
+		background-color: $bg-card;
+		border-radius: 22px;
+		padding: 20px 20px 18px;
+		box-sizing: border-box;
+		z-index: 10;
+		box-shadow: $shadow-overlay;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.card-header {
-		margin-bottom: 16px;
+		margin-bottom: 14px;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -419,15 +554,15 @@
 	}
 
 	.card-title {
-		font-size: 15px;
-		font-weight: bold;
-		color: #1A1A1A;
+		font-size: $font-body;
+		font-weight: 600;
+		color: $text-primary;
 	}
 
 	.link-text {
-		font-size: 13px;
-		color: #4CAF50;
-		font-weight: 500;
+		font-size: $font-caption;
+		color: $brand-green;
+		font-weight: 600;
 	}
 
 	.modern-swiper {
@@ -446,157 +581,29 @@
 
 	.booking-button {
 		width: 100%;
-		height: 56px;
-		background-color: #FFFFFF;
-		border: 2px solid #1A1A1A;
-		border-radius: 28px;
+		height: 52px;
+		background-color: $brand-green;
+		border-radius: 14px;
 		display: flex;
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
 		box-sizing: border-box;
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+		box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
 	}
 
-	.btn-text-normal {
-		font-size: 22px;
-		font-weight: bold;
-		color: #1A1A1A;
-		letter-spacing: 1px;
-	}
-
-	.btn-text-gradient {
-		font-size: 22px;
-		font-weight: bold;
-		color: #009688;
-		letter-spacing: 1px;
-	}
-
-	/* 车辆介绍全屏悬浮卡片样式 */
-	.vehicle-intro-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		z-index: 100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.vehicle-intro-card {
-		width: 86%;
-		height: 68%;
-		background-color: #f6f7fb;
-		border-radius: 24px;
-		padding: 18px;
-		box-sizing: border-box;
-		display: flex;
-		flex-direction: column;
-		box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
-	}
-
-	.intro-header {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 16px;
-	}
-
-	.intro-title {
-		font-size: 18px;
+	.btn-text {
+		font-size: $font-title-sm;
 		font-weight: 700;
-		color: #0f172a;
+		color: #ffffff;
+		letter-spacing: 0.5px;
 	}
 
-	.close-btn {
-		font-size: 20px;
-		color: #999;
-		padding: 4px;
+	.btn-arrow {
+		font-size: $font-title;
+		font-weight: 400;
+		color: rgba(255, 255, 255, 0.7);
+		margin-left: 8px;
 	}
 
-	.intro-scroll {
-		flex: 1;
-		width: 100%;
-	}
-
-	.intro-item {
-		display: flex;
-		flex-direction: column;
-		margin-bottom: 12px;
-		background-color: #ffffff;
-		border-radius: 16px;
-		overflow: hidden;
-		border: 1px solid #e8ebf2;
-		box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-	}
-
-	.intro-img {
-		width: 100%;
-		height: 118px;
-	}
-
-	.intro-text-box {
-		padding: 10px 12px 12px;
-	}
-
-	.intro-name {
-		font-size: 11px;
-		font-weight: 700;
-		color: #64748b;
-		letter-spacing: 0.8px;
-		margin-bottom: 2px;
-	}
-
-	.intro-subtitle {
-		font-size: 17px;
-		font-weight: 700;
-		color: #0f172a;
-		margin-bottom: 8px;
-	}
-
-	.intro-meta-row {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		gap: 10px;
-		margin-bottom: 8px;
-	}
-
-	.meta-chip {
-		flex: 1;
-		background-color: #f8fafc;
-		border: 1px solid #e2e8f0;
-		border-radius: 10px;
-		padding: 7px 6px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.meta-label {
-		font-size: 10px;
-		font-weight: bold;
-		color: #64748b;
-		margin-bottom: 3px;
-	}
-
-	.meta-value {
-		font-size: 10px;
-		font-weight: 700;
-		color: #0f172a;
-	}
-
-	.intro-advice {
-		font-size: 11px;
-		color: #334155;
-		line-height: 1.3;
-		padding: 7px 9px;
-		background: #f8fafc;
-		border-radius: 8px;
-	}
 </style>

@@ -167,6 +167,8 @@ const updateDurations = () => {
 	durations.value = items;
 };
 
+const scooterLat = ref<number | null>(null);
+const scooterLng = ref<number | null>(null);
 const startTime = ref<string>('');
 const endTime = ref<string>('');
 const durationCode = ref<string>('');
@@ -282,6 +284,14 @@ const fetchHourRate = () => {
 					if (m2Val != null) {
 						extraLongRentHourRateMultiplier.value = m2Val as number;
 					}
+					const latVal = dataObj['locationLat'];
+					if (latVal != null && typeof latVal == 'number') {
+						scooterLat.value = latVal as number;
+					}
+					const lngVal = dataObj['locationLng'];
+					if (lngVal != null && typeof lngVal == 'number') {
+						scooterLng.value = lngVal as number;
+					}
 				}
 			}
 			updateDurations();
@@ -303,14 +313,18 @@ onShow(() => {
 	fetchHourRate();
 	const roleRaw = uni.getStorageSync('role');
 	const role = roleRaw != null ? ('' + roleRaw).trim().toUpperCase() : '';
-	isStaffRole.value = role == 'STAFF' || role == 'ADMIN';
+	isStaffRole.value = role == 'STAFF';
 	const now = new Date();
 	startPickerValue.value = formatTimeHHmm(now);
 	if (startTime.value == '') {
 		startTime.value = formatDateTime(now);
 	}
 	syncDurationWheelByMinutes(selectedDurationMinutes.value);
-	clearDurationSelection();
+	if (selectedDurationMinutes.value > 0) {
+		applyDurationMinutes(selectedDurationMinutes.value);
+	} else {
+		clearDurationSelection();
+	}
 });
 
 const selectStartPreset = () => {
@@ -322,7 +336,9 @@ const selectStartPreset = () => {
 			const selected = new Date(now.getTime() + plusHours * 60 * 60 * 1000);
 			startTime.value = formatDateTime(selected);
 			startPickerValue.value = formatTimeHHmm(selected);
-			clearDurationSelection();
+			if (selectedDurationMinutes.value > 0) {
+				applyDurationMinutes(selectedDurationMinutes.value);
+			}
 		}
 	});
 };
@@ -338,7 +354,9 @@ const onStartWheelChange = (event: any) => {
 	}
 	startPickerValue.value = formatTimeHHmm(selected);
 	startTime.value = formatDateTime(selected);
-	clearDurationSelection();
+	if (selectedDurationMinutes.value > 0) {
+		applyDurationMinutes(selectedDurationMinutes.value);
+	}
 };
 
 const shiftStartMinutes = (deltaMinutes: number) => {
@@ -351,7 +369,9 @@ const shiftStartMinutes = (deltaMinutes: number) => {
 	}
 	startPickerValue.value = formatTimeHHmm(checked);
 	startTime.value = formatDateTime(checked);
-	clearDurationSelection();
+	if (selectedDurationMinutes.value > 0) {
+		applyDurationMinutes(selectedDurationMinutes.value);
+	}
 };
 
 const selectDurationPreset = () => {
@@ -447,7 +467,9 @@ const stepSendBooking = () => {
 		'duration': codeToSend,
 		'durationCode': codeToSend,
 		'durationMinutes': selectedDurationMinutes.value,
-		'total_price': pendingTotalPrice.value
+		'total_price': pendingTotalPrice.value,
+		'startLat': scooterLat.value,
+		'startLng': scooterLng.value
 	};
 	uni.request({
 		url: BASE_URL + '/api/v1/bookings',
@@ -636,6 +658,20 @@ const stepCheckScooter = () => {
 	});
 };
 
+const refreshExpiredStartTimeBeforeConfirm = () => {
+	const selected = new Date(startTime.value);
+	const now = new Date();
+	const selectedMinute = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), selected.getHours(), selected.getMinutes(), 0, 0);
+	const nowMinute = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0);
+	if (selectedMinute.getTime() < nowMinute.getTime()) {
+		startTime.value = formatDateTime(now);
+		startPickerValue.value = formatTimeHHmm(now);
+		if (selectedDurationMinutes.value > 0) {
+			applyDurationMinutes(selectedDurationMinutes.value);
+		}
+	}
+};
+
 const confirm = () => {
 	if (startTime.value == '' || endTime.value == '') {
 		const msg = startTime.value == '' ?
@@ -643,6 +679,7 @@ const confirm = () => {
 			bookingMessage('selectEndTime', 'Please select end time');
 		showInfo(msg);
 	} else {
+		refreshExpiredStartTimeBeforeConfirm();
 		const tokenRaw = uni.getStorageSync('token');
 		const token = tokenRaw != null ? ('' + tokenRaw).trim() : '';
 		const userIdStorage = uni.getStorageSync('userId');
@@ -713,7 +750,7 @@ const goGuestBooking = () => {
 	.container {
 		width: 100%;
 		height: 100%;
-		background-color: #f5f5f5;
+		background-color: $bg-page;
 		padding: 0;
 		box-sizing: border-box;
 		display: flex;
@@ -723,7 +760,7 @@ const goGuestBooking = () => {
 	.scroll-area {
 		flex: 1;
 		width: 100%;
-		padding: 20px;
+		padding: 0 $page-padding-h $page-padding-bottom;
 		box-sizing: border-box;
 	}
 
@@ -734,9 +771,9 @@ const goGuestBooking = () => {
 	}
 
 	.title-text {
-		font-size: 24px;
+		font-size: $font-title-lg;
 		font-weight: bold;
-		color: #333;
+		color: $text-primary;
 		text-align: center;
 	}
 
@@ -745,7 +782,7 @@ const goGuestBooking = () => {
 		border-radius: 12px;
 		padding: 20px;
 		margin-bottom: 20px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		box-shadow: $shadow-card-hover;
 	}
 
 	.section-title {
@@ -753,14 +790,14 @@ const goGuestBooking = () => {
 	}
 
 	.section-title-text {
-		font-size: 14px;
+		font-size: $font-body;
 		font-weight: bold;
-		color: #666;
+		color: $text-secondary;
 	}
 
 	.time-input {
 		background-color: #f9f9f9;
-		border: 1px solid #ddd;
+		border: 1px solid $border-base;
 		border-radius: 8px;
 		padding: 12px 15px;
 		display: flex;
@@ -769,13 +806,13 @@ const goGuestBooking = () => {
 	}
 
 	.time-label {
-		font-size: 12px;
-		color: #999;
+		font-size: $font-hint;
+		color: $text-placeholder;
 	}
 
 	.time-value {
-		font-size: 14px;
-		color: #333;
+		font-size: $font-body;
+		color: $text-primary;
 		font-weight: bold;
 	}
 
@@ -791,12 +828,12 @@ const goGuestBooking = () => {
 	}
 
 	.picker-inline-label {
-		font-size: 12px;
+		font-size: $font-hint;
 		color: #5c6f8a;
 	}
 
 	.picker-inline-value {
-		font-size: 14px;
+		font-size: $font-body;
 		font-weight: bold;
 		color: #2b3a55;
 	}
@@ -806,7 +843,6 @@ const goGuestBooking = () => {
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
-		gap: 8px;
 	}
 
 	.wheel-pill {
@@ -821,14 +857,14 @@ const goGuestBooking = () => {
 	}
 
 	.wheel-pill-text {
-		font-size: 12px;
+		font-size: $font-hint;
 		font-weight: bold;
 		color: #2b3a55;
 	}
 
 	.wheel-btn,
 	.stepper-btn {
-		font-size: 12px;
+		font-size: $font-hint;
 		color: #2b3a55;
 		min-width: 44px;
 		height: 28px;
@@ -841,7 +877,14 @@ const goGuestBooking = () => {
 		display: flex;
 		flex-direction: row;
 		align-items: center;
-		gap: 8px;
+	}
+
+	.stepper-row .stepper-btn {
+		margin-left: 8px;
+	}
+
+	.stepper-row .picker-inline-value {
+		margin-left: 8px;
 	}
 
 	.estimated-total-section {
@@ -849,7 +892,7 @@ const goGuestBooking = () => {
 		border-radius: 12px;
 		padding: 20px;
 		margin-bottom: 20px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		box-shadow: $shadow-card-hover;
 	}
 
 	.estimated-total-row {
@@ -859,15 +902,15 @@ const goGuestBooking = () => {
 	}
 
 	.estimated-total-label {
-		font-size: 16px;
+		font-size: $font-section;
 		font-weight: bold;
-		color: #333;
+		color: $text-primary;
 	}
 
 	.estimated-total-value {
-		font-size: 22px;
+		font-size: $font-title;
 		font-weight: bold;
-		color: #4CAF50;
+		color: $brand-green;
 	}
 
 	.button-group {
@@ -880,35 +923,35 @@ const goGuestBooking = () => {
 
 	.confirm-btn {
 		width: 80%;
-		height: 45px;
-		background-color: #4CAF50;
+		height: 44px;
+		background-color: $brand-green;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 8px;
-		font-size: 16px;
+		font-size: $font-section;
 		font-weight: bold;
 		margin-bottom: 15px;
 	}
 
 	.cancel-btn {
 		width: 80%;
-		height: 45px;
-		background-color: #f44336;
+		height: 44px;
+		background-color: $color-danger;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 8px;
-		font-size: 16px;
+		font-size: $font-section;
 		font-weight: bold;
 	}
 
 	.guest-btn {
 		width: 80%;
-		height: 45px;
-		background-color: #2196F3;
+		height: 44px;
+		background-color: $color-info;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 8px;
-		font-size: 16px;
+		font-size: $font-section;
 		font-weight: bold;
 		margin-bottom: 15px;
 	}
@@ -921,9 +964,9 @@ const goGuestBooking = () => {
 	}
 
 	.pricing-ref-title-text {
-		font-size: 16px;
+		font-size: $font-section;
 		font-weight: bold;
-		color: #999;
+		color: $text-placeholder;
 	}
 
 	.duration-cards {
@@ -936,7 +979,7 @@ const goGuestBooking = () => {
 		background-color: white;
 		border-radius: 12px;
 		padding: 20px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		box-shadow: $shadow-card-hover;
 		margin-bottom: 15px;
 	}
 
@@ -947,9 +990,9 @@ const goGuestBooking = () => {
 	}
 
 	.duration {
-		font-size: 18px;
+		font-size: $font-title-sm;
 		font-weight: bold;
-		color: #333;
+		color: $text-primary;
 		text-align: center;
 	}
 
@@ -961,7 +1004,7 @@ const goGuestBooking = () => {
 	.price {
 		font-size: 20px;
 		font-weight: bold;
-		color: #4CAF50;
+		color: $brand-green;
 		text-align: center;
 	}
 </style>

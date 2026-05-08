@@ -1,0 +1,51 @@
+/**
+ * Notification event bus and function registry.
+ * Uses UTSJSONObject for payloads and a Map for resolve functions.
+ */
+
+// Function registry — stores resolve functions by ID
+const resolveRegistry = new Map<number, Any>()
+let nextResolveId = 1
+
+export function registerResolve(fn: Any): number {
+	const id = nextResolveId
+	nextResolveId++
+	resolveRegistry.set(id, fn)
+	return id
+}
+
+export function takeResolve(id: number): Any | null {
+	const fn = resolveRegistry.get(id)
+	resolveRegistry.delete(id)
+	return fn
+}
+
+// Toast — emit event with typed payload
+export function emitToast(type: string, message: string, duration: number) {
+	const data = new UTSJSONObject()
+	data['type'] = type
+	data['message'] = message
+	data['duration'] = duration
+	uni.$emit('app:toast', data)
+}
+
+// Modal — register resolve, emit event
+export function emitModal(title: string, content: string, confirmText: string, cancelText: string, resolve: Any) {
+	const id = registerResolve(resolve)
+	const data = new UTSJSONObject()
+	data['title'] = title
+	data['content'] = content
+	data['confirmText'] = confirmText
+	data['cancelText'] = cancelText
+	data['resolveId'] = id
+	uni.$emit('app:modal', data)
+}
+
+// ActionSheet — register resolve, emit event
+export function emitActionSheet(items: string[], resolve: Any) {
+	const id = registerResolve(resolve)
+	const data = new UTSJSONObject()
+	data['items'] = items.join('|||')
+	data['resolveId'] = id
+	uni.$emit('app:actionsheet', data)
+}

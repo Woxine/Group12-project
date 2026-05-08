@@ -65,8 +65,8 @@ class BookingConcurrentStateTransitionTest {
         when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         List<Object> results = runParallel(
-                () -> bookingService.cancelBooking("501", null, null),
-                () -> bookingService.completeBooking("501", null, null));
+                () -> bookingService.cancelBooking("501", 9001L, null, null),
+                () -> bookingService.completeBooking("501", 9001L, null, null));
 
         long successCount = results.stream().filter(result -> !(result instanceof Throwable)).count();
         long conflictCount = results.stream().filter(this::isConflictFailure).count();
@@ -96,7 +96,7 @@ class BookingConcurrentStateTransitionTest {
 
         List<Object> results = runParallel(
                 () -> bookingExtensionService.extendBooking("601", extendRequest, owner.getId()),
-                () -> bookingService.completeBooking("601", null, null));
+                () -> bookingService.completeBooking("601", 9001L, null, null));
 
         long completeSuccess = results.stream()
                 .filter(result -> "Booking completed successfully".equals(result))
@@ -118,7 +118,7 @@ class BookingConcurrentStateTransitionTest {
         when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         List<Object> results = runParallel(
-                () -> bookingService.cancelBooking("701", null, null),
+                () -> bookingService.cancelBooking("701", 9001L, null, null),
                 () -> {
                     bookingCompletionService.completeSingleBooking(booking);
                     return "scheduler-complete";

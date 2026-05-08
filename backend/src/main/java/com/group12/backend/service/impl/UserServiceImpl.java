@@ -85,7 +85,7 @@ public class UserServiceImpl implements UserService {
         int pageNum = (page != null && page > 0) ? page : 1;
         int pageSize = (size != null && size > 0) ? size : 10;
 
-        Page<Booking> pageResult = bookingRepository.findByUser_IdOrderByStartTimeDesc(uId, PageRequest.of(pageNum - 1, pageSize));
+        Page<Booking> pageResult = bookingRepository.findByUser_IdOrderByIdDesc(uId, PageRequest.of(pageNum - 1, pageSize));
         List<Booking> bookings = pageResult.getContent();
 
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

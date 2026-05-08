@@ -1,7 +1,7 @@
 <template>
 	<!-- 注册页：背景图、姓名/邮箱/密码输入框及实时校验提示 -->
 	<view class="back">
-		<image src="/static/login_back1.jpg" mode="" class="backpic"></image>
+		<image src="/static/backgrounds/login_back1.jpg" mode="" class="backpic"></image>
 		
 		<view class="login_title">
 			<text class="title_text">register</text>
@@ -61,8 +61,6 @@
 			</view>
 		</view>
 	</view>
-	
-	<TabBar current="me" />
 </template>
 
 <script setup lang="uts">
@@ -287,7 +285,7 @@ const handleRegister = async (): Promise<void> => {
 /* 注册页样式：背景图、标题定位、输入框、校验提示文字颜色 */
 .back {
 	width: 100%;
-	min-height: 100%;
+	min-height: 1000px;
 	padding: 32px 24px 88px;
 	box-sizing: border-box;
 	display: flex;
@@ -317,7 +315,7 @@ const handleRegister = async (): Promise<void> => {
 		box-sizing: border-box;
 		.title_text {
 			height: 100%;
-			font-size: 32px;
+			font-size: $font-title-lg;
 			font-weight: bold;
 			color: white;
 			text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
@@ -332,8 +330,8 @@ const handleRegister = async (): Promise<void> => {
 		padding: 28px 24px;
 		background-color: rgba(255, 255, 255, 0.92);
 		border: 1px solid rgba(0, 0, 0, 0.08);
-		border-radius: 14px;
-		box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+		border-radius: 12px;
+		box-shadow: $shadow-modal;
 		box-sizing: border-box;
 
 		.field-group {
@@ -342,27 +340,27 @@ const handleRegister = async (): Promise<void> => {
 		}
 
 		.field-label {
-			display: block;
+			display: flex;
 			margin-bottom: 6px;
-			color: #1f2937;
-			font-size: 14px;
+			color: $text-primary;
+			font-size: $font-body;
 			font-weight: 600;
 		}
 		
 		.input {
 			width: 100%;
-			min-height: 46px;
-			padding: 12px 14px;
-			border: 1px solid rgba(0, 0, 0, 0.14);
+			height: 44px;
+			padding: 0 12px;
+			border: 1px solid $border-input;
 			border-radius: 8px;
-			background-color: #ffffff;
-			color: #111827;
-			font-size: 16px;
+			background-color: $bg-card;
+			color: $text-primary;
+			font-size: $font-body;
 			box-sizing: border-box;
 		}
 
 		.input-placeholder {
-			color: #6b7280;
+			color: $text-secondary;
 		}
 		
 		.span1 {
@@ -387,47 +385,50 @@ const handleRegister = async (): Promise<void> => {
 		}
 
 		.validation-message {
-			display: block;
-			color: #374151;
-			font-size: 12px;
+			display: flex;
+			color: $text-primary;
+			font-size: $font-hint;
 			margin-bottom: 5px;
 		}
 
 		.validation-message.valid {
-			color: #16803c; // Green color
+			color: $brand-green; // Green color
 			font-weight: bold;
 		}
 
 		.validation-message.invalid {
-			color: #c0392b; // Red color
+			color: $color-danger; // Red color
 			font-weight: bold;
 		}
 
 		.form-actions {
 			display: flex;
 			align-items: center;
-			gap: 12px;
 			width: 100%;
+		}
+
+		.form-actions .primary-button {
+			margin-right: 12px;
 		}
 
 		.primary-button,
 		.secondary-button {
 			flex: 1;
 			width: 100%;
-			font-size: 16px;
+			font-size: $font-section;
 			font-weight: 600;
 			border-radius: 8px;
 			box-sizing: border-box;
 		}
 
 		.primary-button {
-			color: #ffffff;
-			background-color: #1f2937;
+			color: $text-inverse;
+			background-color: $text-primary;
 		}
 
 		.secondary-button {
-			color: #1f2937;
-			background-color: #ffffff;
+			color: $text-primary;
+			background-color: $bg-card;
 			border: 1px solid rgba(31, 41, 55, 0.28);
 		}
 		
@@ -439,7 +440,7 @@ const handleRegister = async (): Promise<void> => {
 			
 			.config-label {
 				color: white;
-				font-size: 14px;
+				font-size: $font-body;
 				margin-bottom: 5px;
 			}
 			
@@ -448,7 +449,7 @@ const handleRegister = async (): Promise<void> => {
 				padding: 10px;
 				border-radius: 5px;
 				background-color: rgba(255, 255, 255, 0.8);
-				font-size: 14px;
+				font-size: $font-body;
 			}
 		}
 	}

@@ -28,6 +28,20 @@ public class LocalDiscountDocumentStorage implements DiscountDocumentStorage {
     }
 
     @Override
+    public byte[] load(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) return null;
+        Path rootDir = Paths.get(storageProperties.getRootDir()).normalize();
+        Path targetPath = rootDir.resolve(storagePath).normalize();
+        if (!targetPath.startsWith(rootDir)) return null;
+        try {
+            if (!Files.exists(targetPath)) return null;
+            return Files.readAllBytes(targetPath);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    @Override
     public StoredDiscountDocument store(Long userId, String type, int version, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("Uploaded file is required", HttpStatus.BAD_REQUEST);

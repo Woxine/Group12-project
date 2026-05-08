@@ -177,7 +177,7 @@ onShow(() => {
 })
 </script>
 
-<style>
+<style lang="scss">
 /* 反馈页样式：表单卡片、输入框、字数计数、错误提示、提交按钮 */
 .container {
 	width: 100%;
@@ -185,7 +185,7 @@ onShow(() => {
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 }
 
 .scroll-wrap {
@@ -194,8 +194,7 @@ onShow(() => {
 
 .scroll-area {
 	width: 100%;
-	padding: 24px;
-	padding-bottom: 40px;
+	padding: 0 $page-padding-h $page-padding-bottom;
 	box-sizing: border-box;
 }
 
@@ -206,21 +205,21 @@ onShow(() => {
 }
 
 .title-text {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 8px;
 }
 
 .hint-text {
-	font-size: 14px;
-	color: #666;
+	font-size: $font-body;
+	color: $text-secondary;
 	margin-bottom: 6px;
 }
 
 .a11y-hint-text {
-	font-size: 13px;
-	color: #374151;
+	font-size: $font-caption;
+	color: $text-primary;
 }
 
 .form-section {
@@ -229,7 +228,7 @@ onShow(() => {
 	background-color: white;
 	border-radius: 12px;
 	padding: 20px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	box-shadow: $shadow-card;
 }
 
 .form-row {
@@ -239,27 +238,26 @@ onShow(() => {
 }
 
 .label {
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 8px;
 }
 
 .field-help {
-	font-size: 12px;
-	color: #4b5563;
+	font-size: $font-hint;
+	color: $text-secondary;
 	margin-bottom: 8px;
 }
 
 .input {
 	height: 44px;
 	padding: 0 12px;
-	border-width: 1px;
-	border-style: solid;
-	border-color: #ddd;
+	border: 1px solid $border-input;
 	border-radius: 8px;
-	font-size: 14px;
-	background-color: white;
+	font-size: $font-body;
+	background-color: $bg-card;
+	color: $text-primary;
 }
 
 .textarea {
@@ -267,19 +265,19 @@ onShow(() => {
 	padding: 12px;
 	border-width: 1px;
 	border-style: solid;
-	border-color: #ddd;
+	border-color: $border-base;
 	border-radius: 8px;
-	font-size: 14px;
+	font-size: $font-body;
 	background-color: white;
 }
 
 .input-placeholder {
-	color: #999;
+	color: $text-placeholder;
 }
 
 .char-count {
-	font-size: 12px;
-	color: #999;
+	font-size: $font-hint;
+	color: $text-placeholder;
 	margin-top: 4px;
 }
 
@@ -294,7 +292,7 @@ onShow(() => {
 }
 
 .error-text {
-	font-size: 14px;
+	font-size: $font-body;
 	color: #b91c1c;
 	font-weight: bold;
 }
@@ -310,24 +308,24 @@ onShow(() => {
 }
 
 .warning-text {
-	font-size: 13px;
+	font-size: $font-caption;
 	color: #9a3412;
 }
 
 .submit-btn {
 	margin-top: 8px;
-	min-height: 48px;
+	height: 44px;
 	padding: 14px;
-	background-color: #4CAF50;
+	background-color: $brand-green;
 	color: white;
-	border: none;
+	border-width: 0;
 	border-radius: 8px;
-	font-size: 16px;
+	font-size: $font-section;
 	font-weight: bold;
 }
 
 .submit-btn-disabled {
-	background-color: #ccc;
+	background-color: $bg-disabled;
 }
 
 .priority-options {
@@ -340,7 +338,7 @@ onShow(() => {
 	height: 44px;
 	border-width: 1px;
 	border-style: solid;
-	border-color: #ddd;
+	border-color: $border-base;
 	border-radius: 8px;
 	display: flex;
 	justify-content: center;
@@ -353,18 +351,18 @@ onShow(() => {
 }
 
 .priority-btn-active-low {
-	background-color: #4CAF50;
-	border-color: #4CAF50;
+	background-color: $brand-green;
+	border-color: $brand-green;
 }
 
 .priority-btn-active-high {
-	background-color: #f44336;
-	border-color: #f44336;
+	background-color: $color-danger;
+	border-color: $color-danger;
 }
 
 .priority-text {
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 }
 
 .priority-text-active {

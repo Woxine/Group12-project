@@ -114,104 +114,7 @@
 			</view>
 		</view>
 
-		<view class="vehicle-intro-overlay" v-if="isVehicleIntroVisible">
-			<view class="vehicle-intro-card">
-				<view class="intro-header">
-					<text class="intro-title">Our Vehicles</text>
-					<text class="close-btn" @click="hideVehicleIntro">✕</text>
-				</view>
-				<scroll-view class="intro-scroll" scroll-y="true">
-					<view class="intro-item">
-						<image src="/static/gen1_escooter_Fz3_liangziyin.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN1</view>
-							<view class="intro-subtitle">Ninebot Fz3</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">115km/92km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">25km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">400W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Best for beginners and short daily trips.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen2_eScooter_V70_GardeniaGreen_005.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN2</view>
-							<view class="intro-subtitle">Ninebot V70</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">70km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">47km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">800W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Balanced choice for mid-range commuting.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen3_eScooter-M95C_MK2-jingyahui.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN3</view>
-							<view class="intro-subtitle">Ninebot M95C</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">145km max</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">55km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">1500W/2600W</text>
-								</view>
-							</view>
-							<view class="intro-advice">Long-range flagship for heavy usage scenarios.</view>
-						</view>
-					</view>
-					<view class="intro-item">
-						<image src="/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png" mode="aspectFill" class="intro-img"></image>
-						<view class="intro-text-box">
-							<view class="intro-name">GEN3 PRO</view>
-							<view class="intro-subtitle">Ninebot E300P MK2</view>
-							<view class="intro-meta-row">
-								<view class="meta-chip">
-									<text class="meta-label">Range</text>
-									<text class="meta-value">125km</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Top Speed</text>
-									<text class="meta-value">135km/h</text>
-								</view>
-								<view class="meta-chip">
-									<text class="meta-label">Motor</text>
-									<text class="meta-value">29kW peak</text>
-								</view>
-							</view>
-							<view class="intro-advice">Performance-first choice for advanced riders.</view>
-						</view>
-					</view>
-				</scroll-view>
-			</view>
-		</view>
+		<VehicleIntroOverlay :visible="isVehicleIntroVisible" @close="hideVehicleIntro" />
 
 		<TabBar current="bike" />
 	</view>
@@ -265,15 +168,15 @@ const normalizeType = (rawType: string): string => {
 const getScooterImage = (type: string): string => {
 	switch (normalizeType(type)) {
 		case 'GEN1':
-			return '/static/gen1_escooter_Fz3_liangziyin.png'
+			return '/static/vehicles/gen1_escooter_Fz3_liangziyin.png'
 		case 'GEN2':
-			return '/static/gen2_eScooter_V70_GardeniaGreen_005.png'
+			return '/static/vehicles/gen2_eScooter_V70_GardeniaGreen_005.png'
 		case 'GEN3':
-			return '/static/gen3_eScooter-M95C_MK2-jingyahui.png'
+			return '/static/vehicles/gen3_eScooter-M95C_MK2-jingyahui.png'
 		case 'GEN3PRO':
-			return '/static/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
+			return '/static/vehicles/gen3_pro_Escooter_E300PMK2_QuantumSilver_PC.png'
 		default:
-			return '/static/gen1_escooter_Fz3_liangziyin.png'
+			return '/static/vehicles/gen1_escooter_Fz3_liangziyin.png'
 	}
 }
 
@@ -819,7 +722,7 @@ const bookScooter = () => {
 		height: 100%;
 		display: flex;
 		flex-direction: column;
-		background-color: #f5f5f5;
+		background-color: $bg-page;
 	}
 
 	.scroll-container {
@@ -843,21 +746,21 @@ const bookScooter = () => {
 	}
 
 	.title-text {
-		font-size: 22px;
+		font-size: $font-title;
 		font-weight: bold;
-		color: #333;
-		display: block;
+		color: $text-primary;
+		display: flex;
 	}
 
 	.title-hint {
-		font-size: 13px;
-		color: #666;
+		font-size: $font-caption;
+		color: $text-secondary;
 		line-height: 18px;
 	}
 
 	.link-text {
-		font-size: 13px;
-		color: #4CAF50;
+		font-size: $font-caption;
+		color: $brand-green;
 		font-weight: 500;
 		flex-shrink: 0;
 		margin-left: 12px;
@@ -866,13 +769,13 @@ const bookScooter = () => {
 	.filter-hint {
 		margin-bottom: 14px;
 		padding: 10px 14px;
-		background-color: #edf7ed;
+		background-color: $brand-green-bg;
 		border-radius: 12px;
 	}
 
 	.filter-hint-text {
-		font-size: 13px;
-		color: #2e7d32;
+		font-size: $font-caption;
+		color: $brand-green-dark;
 		font-weight: 600;
 	}
 
@@ -885,25 +788,25 @@ const bookScooter = () => {
 	}
 
 	.loading-text {
-		font-size: 14px;
-		color: #999;
+		font-size: $font-body;
+		color: $text-placeholder;
 		text-align: center;
 	}
 
 	.error-text {
-		font-size: 14px;
-		color: #f44336;
+		font-size: $font-body;
+		color: $color-danger;
 		text-align: center;
 		margin-bottom: 16px;
 	}
 
 	.retry-btn {
 		padding: 10px 24px;
-		background-color: #4CAF50;
+		background-color: $brand-green;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 8px;
-		font-size: 14px;
+		font-size: $font-body;
 	}
 
 	.empty-section {
@@ -914,28 +817,28 @@ const bookScooter = () => {
 		padding: 60px 24px;
 		background-color: white;
 		border-radius: 12px;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		box-shadow: $shadow-card;
 	}
 
 	.empty-text {
-		font-size: 18px;
+		font-size: $font-title-sm;
 		font-weight: bold;
-		color: #333;
+		color: $text-primary;
 		margin-bottom: 8px;
 	}
 
 	.empty-hint {
-		font-size: 14px;
-		color: #999;
+		font-size: $font-body;
+		color: $text-placeholder;
 		text-align: center;
 	}
 
 	.scooter-card {
 		margin-bottom: 16px;
 		padding: 16px;
-		background-color: #fff;
-		border-radius: 18px;
-		box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+		background-color: $bg-card;
+		border-radius: 12px;
+		box-shadow: $shadow-card;
 		position: relative;
 		overflow: visible;
 	}
@@ -946,7 +849,7 @@ const bookScooter = () => {
 
 	.scooter-card-placeholder {
 		background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
-		border: 2px dashed #cbd5e1;
+		border: 2px dashed $border-base;
 		box-shadow: none;
 	}
 
@@ -956,7 +859,7 @@ const bookScooter = () => {
 		right: -28px;
 		width: 110px;
 		height: 24px;
-		background-color: #94a3b8;
+		background-color: $text-placeholder;
 		transform: rotate(35deg);
 		display: flex;
 		align-items: center;
@@ -965,7 +868,7 @@ const bookScooter = () => {
 	}
 
 	.placeholder-corner-badge-text {
-		font-size: 10px;
+		font-size: $font-micro;
 		font-weight: 700;
 		color: #ffffff;
 		letter-spacing: 0.8px;
@@ -985,16 +888,16 @@ const bookScooter = () => {
 	}
 
 	.group-name {
-		display: block;
+		display: flex;
 		font-size: 20px;
 		font-weight: 700;
-		color: #111827;
+		color: $text-primary;
 		margin-bottom: 4px;
 	}
 
 	.group-subtitle {
-		font-size: 13px;
-		color: #6b7280;
+		font-size: $font-caption;
+		color: $text-secondary;
 	}
 
 	.group-badge {
@@ -1004,14 +907,14 @@ const bookScooter = () => {
 	}
 
 	.scooter-card-placeholder .group-badge {
-		background-color: #e2e8f0;
-		border: 1px solid #cbd5e1;
+		background-color: $border-light;
+		border: 1px solid $border-base;
 	}
 
 	.group-badge-text {
-		font-size: 12px;
+		font-size: $font-hint;
 		font-weight: 600;
-		color: #4b5563;
+		color: $text-secondary;
 	}
 
 	.card-main {
@@ -1034,8 +937,8 @@ const bookScooter = () => {
 	}
 
 	.scooter-media-placeholder {
-		background-color: #e5e7eb;
-		border: 1px dashed #cbd5e1;
+		background-color: $border-light;
+		border: 1px dashed $border-base;
 	}
 
 	.scooter-image {
@@ -1054,51 +957,51 @@ const bookScooter = () => {
 
 	.card-info-panel {
 		padding: 12px 14px;
-		background-color: #ffffff;
-		border-radius: 14px;
-		border: 1px solid #e5e7eb;
+		background-color: $bg-card;
+		border-radius: 12px;
+		border: 1px solid $border-light;
 	}
 
 	.card-info-panel-placeholder {
 		background-color: #f1f5f9;
-		border: 1px dashed #cbd5e1;
+		border: 1px dashed $border-base;
 	}
 
 	.scooter-id {
-		display: block;
-		font-size: 17px;
+		display: flex;
+		font-size: $font-section;
 		font-weight: 700;
-		color: #111827;
+		color: $text-primary;
 		margin-bottom: 8px;
 	}
 
 	.group-availability {
-		display: block;
-		font-size: 13px;
-		color: #6b7280;
+		display: flex;
+		font-size: $font-caption;
+		color: $text-secondary;
 		margin-bottom: 8px;
 	}
 
 	.scooter-status {
-		font-size: 13px;
+		font-size: $font-caption;
 		font-weight: 600;
 	}
 
 	.status-available {
-		color: #2e7d32;
+		color: $brand-green-dark;
 	}
 
 	.status-rented {
-		color: #c62828;
+		color: $color-danger;
 	}
 
 	.status-maintenance {
-		color: #ef6c00;
+		color: $color-warning;
 	}
 
 	.status-placeholder {
-		color: #475569;
-		background-color: #e2e8f0;
+		color: $text-secondary;
+		background-color: $border-light;
 		padding: 3px 8px;
 		border-radius: 999px;
 		align-self: flex-start;
@@ -1109,7 +1012,6 @@ const bookScooter = () => {
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		gap: 12px;
 	}
 
 	.card-footer-placeholder {
@@ -1138,43 +1040,43 @@ const bookScooter = () => {
 	}
 
 	.pager-button-text {
-		font-size: 18px;
+		font-size: $font-title-sm;
 		font-weight: 700;
-		color: #334155;
+		color: $text-primary;
 	}
 
 	.pager-text {
 		margin: 0 10px;
-		font-size: 13px;
-		color: #475569;
+		font-size: $font-caption;
+		color: $text-secondary;
 		font-weight: 600;
 	}
 
 	.select-button {
 		min-width: 110px;
-		height: 40px;
+		height: 44px;
 		padding: 0 18px;
-		background-color: #111827;
+		background-color: $text-primary;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 999px;
-		font-size: 14px;
+		font-size: $font-body;
 		font-weight: 700;
 	}
 
 	.select-button.selected {
-		background-color: #2e7d32;
+		background-color: $brand-green-dark;
 	}
 
 	.select-button.disabled {
 		background-color: #d1d5db;
-		color: #6b7280;
+		color: $text-secondary;
 	}
 
 	.scooter-card-placeholder .select-button.disabled {
-		background-color: #cbd5e1;
-		color: #475569;
-		border: 1px dashed #94a3b8;
+		background-color: $border-base;
+		color: $text-secondary;
+		border: 1px dashed $text-placeholder;
 	}
 
 	.booking-fixed-bar {
@@ -1183,7 +1085,7 @@ const bookScooter = () => {
 		right: 0;
 		bottom: 72px;
 		padding: 8px 0;
-		background-color: #f5f5f5;
+		background-color: $bg-page;
 		z-index: 90;
 	}
 
@@ -1196,158 +1098,32 @@ const bookScooter = () => {
 
 	.booking-selected-text {
 		margin-bottom: 2px;
-		font-size: 12px;
-		color: #334155;
+		font-size: $font-hint;
+		color: $text-primary;
 		font-weight: 600;
 	}
 
 	.booking-hint-text {
 		margin-bottom: 6px;
-		font-size: 11px;
+		font-size: $font-micro;
 		line-height: 15px;
-		color: #64748b;
+		color: $text-secondary;
 	}
 
 	.booking-button {
 		width: 100%;
-		height: 40px;
-		background-color: #4CAF50;
+		height: 44px;
+		background-color: $brand-green;
 		color: white;
-		border: none;
+		border-width: 0;
 		border-radius: 10px;
-		font-size: 15px;
+		font-size: $font-body;
 		font-weight: bold;
 	}
 
 	.booking-button.disabled {
-		background-color: #cccccc;
-		color: #666666;
+		background-color: $bg-disabled;
+		color: $text-secondary;
 	}
 
-	.vehicle-intro-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		z-index: 100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.vehicle-intro-card {
-		width: 86%;
-		height: 68%;
-		background-color: #f6f7fb;
-		border-radius: 24px;
-		padding: 18px;
-		box-sizing: border-box;
-		display: flex;
-		flex-direction: column;
-		box-shadow: 0 14px 36px rgba(15, 23, 42, 0.22);
-	}
-
-	.intro-header {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 16px;
-	}
-
-	.intro-title {
-		font-size: 18px;
-		font-weight: 700;
-		color: #0f172a;
-	}
-
-	.close-btn {
-		font-size: 20px;
-		color: #999;
-		padding: 4px;
-	}
-
-	.intro-scroll {
-		flex: 1;
-		width: 100%;
-	}
-
-	.intro-item {
-		display: flex;
-		flex-direction: column;
-		margin-bottom: 12px;
-		background-color: #ffffff;
-		border-radius: 16px;
-		overflow: hidden;
-		border: 1px solid #e8ebf2;
-		box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-	}
-
-	.intro-img {
-		width: 100%;
-		height: 118px;
-	}
-
-	.intro-text-box {
-		padding: 10px 12px 12px;
-	}
-
-	.intro-name {
-		font-size: 11px;
-		font-weight: 700;
-		color: #64748b;
-		letter-spacing: 0.8px;
-		margin-bottom: 2px;
-	}
-
-	.intro-subtitle {
-		font-size: 17px;
-		font-weight: 700;
-		color: #0f172a;
-		margin-bottom: 8px;
-	}
-
-	.intro-meta-row {
-		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		gap: 10px;
-		margin-bottom: 8px;
-	}
-
-	.meta-chip {
-		flex: 1;
-		background-color: #f8fafc;
-		border: 1px solid #e2e8f0;
-		border-radius: 10px;
-		padding: 7px 6px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.meta-label {
-		font-size: 10px;
-		font-weight: bold;
-		color: #64748b;
-		margin-bottom: 3px;
-	}
-
-	.meta-value {
-		font-size: 10px;
-		font-weight: 700;
-		color: #0f172a;
-	}
-
-	.intro-advice {
-		font-size: 11px;
-		color: #334155;
-		line-height: 1.3;
-		padding: 7px 9px;
-		background: #f8fafc;
-		border-radius: 8px;
-	}
 </style>

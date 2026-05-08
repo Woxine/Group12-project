@@ -2,17 +2,17 @@
 <template>
 	<view class="tabbar">
 		<view class="tab-item" @click="switchTab('home')">
-			<image src="/static/home.png" mode="aspectFit" :class="current == 'home' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<image src="/static/icons/home.png" mode="aspectFit" :class="current == 'home' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
 			<text :class="current == 'home' ? 'tab-label tab-label-active' : 'tab-label'">Home</text>
 		</view>
 
 		<view class="tab-item" @click="switchTab('bike')">
-			<image src="/static/bike.png" mode="aspectFit" :class="current == 'bike' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<image src="/static/icons/bike.png" mode="aspectFit" :class="current == 'bike' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
 			<text :class="current == 'bike' ? 'tab-label tab-label-active' : 'tab-label'">Bike</text>
 		</view>
 
 		<view class="tab-item" @click="switchTab('me')">
-			<image src="/static/me.png" mode="aspectFit" :class="current == 'me' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
+			<image src="/static/icons/me.png" mode="aspectFit" :class="current == 'me' ? 'tab-icon tab-icon-active' : 'tab-icon'"></image>
 			<text :class="current == 'me' ? 'tab-label tab-label-active' : 'tab-label'">Me</text>
 		</view>
 	</view>
@@ -43,7 +43,7 @@ const switchTab = (tab: string) => {
 .tabbar {
 	width: 100%;
 	height: 72px;
-	background-color: #F8F8F8;
+	background-color: $bg-page;
 	border-top: 1px solid rgba(0, 0, 0, 0.05);
 	box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 	border-radius: 0;
@@ -89,13 +89,13 @@ const switchTab = (tab: string) => {
 }
 
 .tab-label {
-	font-size: 12px;
+	font-size: $font-hint;
 	margin-top: 2px;
-	color: #999;
+	color: $text-placeholder;
 }
 
 .tab-label-active {
-	color: #4CAF50;
+	color: $brand-green;
 	font-weight: bold;
 }
 </style>

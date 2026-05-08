@@ -187,8 +187,8 @@ const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
 	latitude.value = (slat + elat) / 2
 	scale.value = samePoint ? 17 : 14
 	const rawMarkers: Marker[] = [
-		{ id: 1, latitude: slat, longitude: slng, title: 'Start', iconPath: '/static/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'Start', display: 'ALWAYS' } as MapMarkerCallout } as Marker,
-		{ id: 2, latitude: elat, longitude: elng, title: 'End', iconPath: '/static/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'End', display: 'ALWAYS' } as MapMarkerCallout } as Marker
+		{ id: 1, latitude: slat, longitude: slng, title: 'Start', iconPath: '/static/icons/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'Start', display: 'ALWAYS' } as MapMarkerCallout } as Marker,
+		{ id: 2, latitude: elat, longitude: elng, title: 'End', iconPath: '/static/icons/loc.png', width: 40, height: 40, anchor: { x: 0.5, y: 1 }, callout: { content: 'End', display: 'ALWAYS' } as MapMarkerCallout } as Marker
 	]
 	markers.value = JSON.parse<Marker[]>(JSON.stringify(rawMarkers))!
 	mapKey.value = mapKey.value + 1
@@ -201,6 +201,61 @@ const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
 			syncMarkersToMap()
 		}
 	}, 200)
+}
+
+const applyTrajectoryPolyline = (points: LocationObject[]) => {
+	if (points.length < 2) return
+	const trajectoryLinePoints: uts.sdk.modules.DCloudUniMapTencent.LocationObject[] = []
+	for (let i = 0; i < points.length; i++) {
+		trajectoryLinePoints.push({
+			latitude: points[i].latitude,
+			longitude: points[i].longitude
+		} as uts.sdk.modules.DCloudUniMapTencent.LocationObject)
+	}
+	polylines.value = [{ points: trajectoryLinePoints, color: '#FF3B30', width: 10 } as Polyline]
+	includePoints.value = JSON.parse<LocationObject[]>(JSON.stringify(points))!
+	mapKey.value = mapKey.value + 1
+	syncMarkersToMap()
+	setTimeout(() => {
+		if (mapUpdatedOnce.value) {
+			mapKey.value = mapKey.value + 1
+			syncMarkersToMap()
+		}
+	}, 200)
+}
+
+const loadTrajectory = (bookingIdStr: string) => {
+	const token = readStorageStringOrNull('token')
+	if (token == null || token.length == 0 || bookingIdStr.length == 0) return
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings/' + bookingIdStr + '/trajectory',
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data != null) {
+				const obj = res.data as UTSJSONObject
+				const dataArr = obj['data'] as UTSJSONObject[] | null
+				if (dataArr != null && dataArr.length > 1) {
+					const points: LocationObject[] = []
+					for (let i = 0; i < dataArr.length; i++) {
+						const pt = dataArr[i]
+						const lat = pt['lat'] as number | null
+						const lng = pt['lng'] as number | null
+						if (lat != null && lng != null) {
+							points.push({ latitude: lat, longitude: lng } as LocationObject)
+						}
+					}
+					if (points.length > 1) {
+						applyTrajectoryPolyline(points)
+					}
+				}
+			}
+		},
+		fail: () => {}
+	})
 }
 
 onReady(() => {
@@ -243,6 +298,7 @@ const loadBooking = () => {
 				endLng.value = elng
 				if (slat != null && slng != null && elat != null && elng != null && !isNaN(slat) && !isNaN(slng) && !isNaN(elat) && !isNaN(elng)) {
 					applyRoute(slat, slng, elat, elng)
+					loadTrajectory(bookingId.value)
 				}
 			} else {
 				error.value = 'Failed to load booking'
@@ -284,6 +340,7 @@ onLoad((options: UTSJSONObject) => {
 		endLng.value = elngOpt
 		applyRoute(slatOpt, slngOpt, elatOpt, elngOpt)
 		loading.value = false
+		loadTrajectory(id)
 		return
 	}
 
@@ -303,7 +360,7 @@ onLoad((options: UTSJSONObject) => {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	background-color: #f5f5f5;
+	background-color: $bg-page;
 	box-sizing: border-box;
 }
 
@@ -312,9 +369,9 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .title-text {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 }
 
 .loading-section,
@@ -329,27 +386,27 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .loading-text {
-	font-size: 16px;
-	color: #666;
+	font-size: $font-section;
+	color: $text-secondary;
 }
 
 .error-text {
-	font-size: 16px;
-	color: #f44336;
+	font-size: $font-section;
+	color: $color-danger;
 	text-align: center;
 	margin-bottom: 12px;
 }
 
 .no-route-text {
-	font-size: 16px;
-	color: #666;
+	font-size: $font-section;
+	color: $text-secondary;
 	text-align: center;
 	margin-bottom: 8px;
 }
 
 .no-route-hint {
-	font-size: 14px;
-	color: #999;
+	font-size: $font-body;
+	color: $text-placeholder;
 	text-align: center;
 	margin-top: 0;
 	margin-bottom: 20px;
@@ -359,7 +416,7 @@ onLoad((options: UTSJSONObject) => {
 	width: 84px;
 	height: 84px;
 	border-radius: 42px;
-	background-color: #fee2e2;
+	background-color: rgba($color-danger, 0.1);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -370,22 +427,22 @@ onLoad((options: UTSJSONObject) => {
 	font-size: 44px;
 	line-height: 1;
 	font-weight: 700;
-	color: #ef4444;
+	color: $color-danger;
 }
 
 .back-btn {
 	margin-top: 0;
 	padding: 12px 24px;
 	background-color: rgba(255, 255, 255, 0.94);
-	color: #1f2937;
+	color: $text-primary;
 	border-width: 1px;
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
 	border-radius: 12px;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
 	min-width: 180px;
-	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+	box-shadow: $shadow-overlay;
 }
 
 .map-wrap {
@@ -405,7 +462,7 @@ onLoad((options: UTSJSONObject) => {
 	border-width: 1px;
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
-	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	box-shadow: $shadow-overlay;
 	margin-bottom: 18px;
 }
 
@@ -416,16 +473,16 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .summary-label {
-	font-size: 12px;
-	color: #64748b;
+	font-size: $font-hint;
+	color: $text-secondary;
 	font-weight: 600;
 	letter-spacing: 0.3px;
 	margin-bottom: 4px;
 }
 
 .summary-value {
-	font-size: 15px;
-	color: #0f172a;
+	font-size: $font-body;
+	color: $text-primary;
 	font-weight: 700;
 }
 
@@ -441,7 +498,7 @@ onLoad((options: UTSJSONObject) => {
 	position: relative;
 	border-radius: 16px;
 	overflow: hidden;
-	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	box-shadow: $shadow-overlay;
 	margin-bottom: 18px;
 }
 
@@ -456,12 +513,12 @@ onLoad((options: UTSJSONObject) => {
 	border-width: 1px;
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
-	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+	box-shadow: $shadow-overlay;
 }
 
 .control-btn {
 	width: 42px;
-	height: 42px;
+	height: 44px;
 	background-color: transparent;
 	padding: 0;
 	text-align: center;
@@ -478,15 +535,15 @@ onLoad((options: UTSJSONObject) => {
 	align-items: center;
 	justify-content: center;
 	width: 42px;
-	height: 42px;
-	line-height: 42px;
+	height: 44px;
+	line-height: 44px;
 	text-align: center;
-	color: #1f2937;
+	color: $text-primary;
 	font-weight: 600;
 }
 
 .control-btn-text-plus {
-	font-size: 24px;
+	font-size: $font-title-lg;
 }
 
 .control-btn-text-minus {
@@ -496,7 +553,7 @@ onLoad((options: UTSJSONObject) => {
 .route-map {
 	width: 100%;
 	height: 320px;
-	background-color: #e5e5e5;
+	background-color: $bg-disabled;
 }
 
 .info-grid {
@@ -508,12 +565,12 @@ onLoad((options: UTSJSONObject) => {
 .info-card {
 	flex: 1;
 	background-color: rgba(255, 255, 255, 0.94);
-	border-radius: 16px;
+	border-radius: 12px;
 	padding: 16px;
 	border-width: 1px;
 	border-style: solid;
 	border-color: rgba(15, 23, 42, 0.08);
-	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+	box-shadow: $shadow-overlay;
 }
 
 .info-card + .info-card {
@@ -523,9 +580,9 @@ onLoad((options: UTSJSONObject) => {
 .info-card-title {
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: 700;
-	color: #0f172a;
+	color: $text-primary;
 	margin-bottom: 12px;
 }
 
@@ -546,8 +603,8 @@ onLoad((options: UTSJSONObject) => {
 .info-label {
 	display: flex;
 	flex-direction: column;
-	font-size: 12px;
-	color: #64748b;
+	font-size: $font-hint;
+	color: $text-secondary;
 	margin-bottom: 4px;
 	font-weight: 600;
 	letter-spacing: 0.3px;
@@ -556,8 +613,8 @@ onLoad((options: UTSJSONObject) => {
 .info-value {
 	display: flex;
 	flex-direction: column;
-	font-size: 14px;
-	color: #1f2937;
+	font-size: $font-body;
+	color: $text-primary;
 	line-height: 1.5;
 }
 </style>

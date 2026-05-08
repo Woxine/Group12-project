@@ -1,0 +1,158 @@
+<template>
+	<view v-if="visible" class="modal-overlay">
+		<view class="modal-backdrop" @click="onCancel"></view>
+		<view class="modal-card">
+			<text class="modal-title">{{ modalTitle }}</text>
+			<text class="modal-content">{{ modalContent }}</text>
+			<view class="modal-buttons">
+				<view class="modal-btn modal-btn-cancel" @click="onCancel">
+					<text class="modal-btn-text modal-btn-cancel-text">{{ cancelLabel }}</text>
+				</view>
+				<view class="modal-btn modal-btn-confirm" @click="onConfirm">
+					<text class="modal-btn-text modal-btn-confirm-text">{{ confirmLabel }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import { takeResolve } from '@/common/notifier.uts'
+
+const visible = ref(false)
+const modalTitle = ref('')
+const modalContent = ref('')
+const confirmLabel = ref('Confirm')
+const cancelLabel = ref('Cancel')
+let resolveId: number = -1
+
+function onModalEvent(data: any) {
+	if (UTSAndroid.typeof(data) == 'object') {
+		const obj = data as UTSJSONObject
+		modalTitle.value = obj['title'] as string ?? ''
+		modalContent.value = obj['content'] as string ?? ''
+		confirmLabel.value = obj['confirmText'] as string ?? 'Confirm'
+		cancelLabel.value = obj['cancelText'] as string ?? 'Cancel'
+		resolveId = obj['resolveId'] as number ?? -1
+		visible.value = true
+	}
+}
+
+function onConfirm() {
+	visible.value = false
+	if (resolveId >= 0) {
+		const fn = takeResolve(resolveId)
+		if (fn != null) {
+			(fn as (value: boolean) => void)(true)
+		}
+		resolveId = -1
+	}
+}
+
+function onCancel() {
+	visible.value = false
+	if (resolveId >= 0) {
+		const fn = takeResolve(resolveId)
+		if (fn != null) {
+			(fn as (value: boolean) => void)(false)
+		}
+		resolveId = -1
+	}
+}
+
+onMounted(() => {
+	uni.$on('app:modal', onModalEvent)
+})
+
+onUnmounted(() => {
+	uni.$off('app:modal', onModalEvent)
+})
+</script>
+
+<style lang="scss">
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 9998;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.modal-backdrop {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-card {
+		position: relative;
+		width: 80%;
+		background-color: $bg-card;
+		border-radius: 16px;
+		padding: 24px;
+		box-shadow: $shadow-modal;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.modal-title {
+		font-size: $font-section;
+		font-weight: 700;
+		color: $text-primary;
+		margin-bottom: 12px;
+		text-align: center;
+	}
+
+	.modal-content {
+		font-size: $font-body;
+		color: $text-secondary;
+		margin-bottom: 24px;
+		line-height: 1.5;
+		text-align: center;
+	}
+
+	.modal-buttons {
+		display: flex;
+		flex-direction: row;
+	}
+
+	.modal-btn {
+		flex: 1;
+		height: 44px;
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.modal-btn-cancel {
+		background-color: $bg-input;
+		margin-right: 10px;
+	}
+
+	.modal-btn-confirm {
+		background-color: $brand-green;
+		margin-left: 10px;
+	}
+
+	.modal-btn-text {
+		font-size: $font-body;
+		font-weight: 700;
+	}
+
+	.modal-btn-cancel-text {
+		color: $text-primary;
+	}
+
+	.modal-btn-confirm-text {
+		color: $text-inverse;
+	}
+</style>

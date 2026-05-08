@@ -1,5 +1,6 @@
 package com.group12.backend.sprint3state2.admin;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +39,7 @@ class DataInitializerTest {
     @DisplayName("run_alwaysExecutesBillingSetupAndLegacyRepair")
     void run_alwaysExecutesBillingSetupAndLegacyRepair() throws Exception {
         when(userRepository.findByEmail("admin@admin.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.encode("admin123")).thenReturn("encoded-password");
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
 
         dataInitializer.run();
 

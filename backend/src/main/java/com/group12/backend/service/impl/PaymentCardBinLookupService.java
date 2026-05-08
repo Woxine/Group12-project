@@ -1,23 +1,12 @@
 package com.group12.backend.service.impl;
 
-import java.net.URI;
 import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.group12.backend.config.PaymentCardBinLookupProperties;
 import com.group12.backend.dto.BinLookupResponse;
@@ -26,7 +15,20 @@ import com.group12.backend.exception.ErrorMessages;
 
 @Service
 public class PaymentCardBinLookupService {
-    private static final Logger log = LoggerFactory.getLogger(PaymentCardBinLookupService.class);
+    private static final List<LocalBinEntry> LOCAL_BIN_CATALOG = List.of(
+            new LocalBinEntry("411111", "VISA", "SIMULATED VISA ISSUER", "CREDIT", "GB"),
+            new LocalBinEntry("424242", "VISA", "SIMULATED VISA TEST BANK", "CREDIT", "GB"),
+            new LocalBinEntry("401288", "VISA", "SIMULATED VISA COMMERCIAL", "CREDIT", "US"),
+            new LocalBinEntry("400000", "VISA", "SIMULATED VISA BANK", "DEBIT", "GB"),
+            new LocalBinEntry("555555", "MASTERCARD", "SIMULATED MASTERCARD ISSUER", "CREDIT", "GB"),
+            new LocalBinEntry("510510", "MASTERCARD", "SIMULATED MASTERCARD BANK", "CREDIT", "US"),
+            new LocalBinEntry("222100", "MASTERCARD", "SIMULATED MASTERCARD 2-SERIES", "CREDIT", "GB"),
+            new LocalBinEntry("378282", "AMEX", "AMERICAN EXPRESS TEST ISSUER", "CREDIT", "US"),
+            new LocalBinEntry("371449", "AMEX", "AMERICAN EXPRESS SIMULATION", "CREDIT", "US"),
+            new LocalBinEntry("356600", "JCB", "JCB TEST ISSUER", "CREDIT", "JP"),
+            new LocalBinEntry("353011", "JCB", "JCB SIMULATION BANK", "CREDIT", "JP"),
+            new LocalBinEntry("620000", "UNIONPAY", "UNIONPAY SIMULATION BANK", "DEBIT", "CN"),
+            new LocalBinEntry("622126", "UNIONPAY", "UNIONPAY TEST ISSUER", "DEBIT", "CN"));
 
     private final PaymentCardBinLookupProperties properties;
     private final ConcurrentHashMap<String, CachedLookupResult> cache = new ConcurrentHashMap<>();
@@ -37,91 +39,35 @@ public class PaymentCardBinLookupService {
     }
 
     public BinLookupResponse lookup(String prefix, String clientKey) {
+        String normalizedPrefix = normalizePrefix(prefix);
         enforceRateLimit(clientKey);
 
-        CachedLookupResult cached = cache.get(prefix);
+        CachedLookupResult cached = cache.get(normalizedPrefix);
         if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
             return cached.response();
         }
 
-        BinLookupResponse response = fetchFromProvider(prefix);
+        BinLookupResponse response = lookupLocalCatalog(normalizedPrefix);
         long ttlSeconds = Math.max(30, properties.getCacheTtlSeconds());
-        cache.put(prefix, new CachedLookupResult(response, Instant.now().plusSeconds(ttlSeconds)));
+        cache.put(normalizedPrefix, new CachedLookupResult(response, Instant.now().plusSeconds(ttlSeconds)));
         return response;
     }
 
-    private BinLookupResponse fetchFromProvider(String prefix) {
-        if (!properties.isEnabled()) {
-            return degraded();
-        }
-        String endpoint = safeTrim(properties.getEndpoint());
-        if (endpoint.isEmpty()) {
-            return degraded();
-        }
-        String apiKey = safeTrim(properties.getApiKey());
-        if (apiKey.isEmpty()) {
-            return degraded();
-        }
-
-        try {
-            SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-            requestFactory.setConnectTimeout(Math.max(200, properties.getConnectTimeoutMs()));
-            requestFactory.setReadTimeout(Math.max(200, properties.getReadTimeoutMs()));
-            RestTemplate restTemplate = new RestTemplate(requestFactory);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            String headerName = safeTrim(properties.getApiKeyHeader());
-            if (!headerName.isEmpty()) {
-                String keyPrefix = properties.getApiKeyPrefix() == null ? "" : properties.getApiKeyPrefix();
-                headers.set(headerName, keyPrefix + apiKey);
+    private BinLookupResponse lookupLocalCatalog(String prefix) {
+        for (LocalBinEntry entry : LOCAL_BIN_CATALOG) {
+            if (prefix.startsWith(entry.prefix())) {
+                return matched(entry);
             }
-
-            URI uri = endpoint.contains("{prefix}")
-                    ? URI.create(endpoint.replace("{prefix}", prefix))
-                    : URI.create(endpoint + (endpoint.endsWith("/") ? "" : "/") + prefix);
-
-            ResponseEntity<Map<String, Object>> providerResponse = restTemplate.exchange(
-                    uri,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headers),
-                    new ParameterizedTypeReference<Map<String, Object>>() {
-                    });
-            Map<?, ?> responseBody = providerResponse.getBody();
-            return toLookupResponse(responseBody);
-        } catch (Exception ex) {
-            log.warn("BIN lookup provider unavailable, degraded mode enabled");
-            return degraded();
         }
+        return unknown();
     }
 
-    private BinLookupResponse toLookupResponse(Map<?, ?> raw) {
-        if (raw == null || raw.isEmpty()) {
-            return unknown();
-        }
-
-        String brand = normalize(safeString(raw, "brand", "scheme", "network"));
-        String issuer = normalize(
-                firstNonEmpty(
-                        safeString(raw, "issuerBank", "issuer_name", "bank", "bankName"),
-                        nestedString(raw, "issuer", "name"),
-                        nestedString(raw, "bank", "name")));
-        String cardType = normalize(safeString(raw, "cardType", "type", "funding"));
-        String countryCode = normalize(
-                firstNonEmpty(
-                        safeString(raw, "countryCode", "country_code"),
-                        nestedString(raw, "country", "alpha2"),
-                        nestedString(raw, "country", "code")));
-
-        if (brand.isEmpty() && issuer.isEmpty() && cardType.isEmpty() && countryCode.isEmpty()) {
-            return unknown();
-        }
-
+    private BinLookupResponse matched(LocalBinEntry entry) {
         BinLookupResponse response = new BinLookupResponse();
-        response.setBrand(brand.isEmpty() ? "UNKNOWN" : brand);
-        response.setIssuerBank(issuer);
-        response.setCardType(cardType);
-        response.setCountryCode(countryCode);
+        response.setBrand(entry.brand());
+        response.setIssuerBank(entry.issuerBank());
+        response.setCardType(entry.cardType());
+        response.setCountryCode(entry.countryCode());
         response.setStatus("MATCHED");
         return response;
     }
@@ -147,38 +93,6 @@ public class PaymentCardBinLookupService {
         }
     }
 
-    private String safeString(Map<?, ?> raw, String... keys) {
-        for (String key : keys) {
-            Object value = raw.get(key);
-            if (value instanceof String str && !str.trim().isEmpty()) {
-                return str.trim();
-            }
-        }
-        return "";
-    }
-
-    private String nestedString(Map<?, ?> raw, String parent, String child) {
-        Object value = raw.get(parent);
-        if (!(value instanceof Map<?, ?> nested)) {
-            return "";
-        }
-        Object childValue = nested.get(child);
-        if (childValue instanceof String str && !str.trim().isEmpty()) {
-            return str.trim();
-        }
-        return "";
-    }
-
-    private BinLookupResponse degraded() {
-        BinLookupResponse response = new BinLookupResponse();
-        response.setBrand("UNKNOWN");
-        response.setIssuerBank("");
-        response.setCardType("");
-        response.setCountryCode("");
-        response.setStatus("DEGRADED");
-        return response;
-    }
-
     private BinLookupResponse unknown() {
         BinLookupResponse response = new BinLookupResponse();
         response.setBrand("UNKNOWN");
@@ -189,22 +103,15 @@ public class PaymentCardBinLookupService {
         return response;
     }
 
-    private String normalize(String value) {
-        return safeTrim(value).toUpperCase();
-    }
-
-    private String firstNonEmpty(String... values) {
-        for (String value : values) {
-            String normalized = safeTrim(value);
-            if (!normalized.isEmpty()) {
-                return normalized;
-            }
-        }
-        return "";
+    private String normalizePrefix(String value) {
+        return safeTrim(value).replaceAll("\\s+", "");
     }
 
     private String safeTrim(String value) {
         return Optional.ofNullable(value).orElse("").trim();
+    }
+
+    private record LocalBinEntry(String prefix, String brand, String issuerBank, String cardType, String countryCode) {
     }
 
     private record CachedLookupResult(BinLookupResponse response, Instant expiresAt) {

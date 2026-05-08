@@ -74,3 +74,68 @@ $uni-color-subtitle: #555555; // 二级标题颜色
 $uni-font-size-subtitle:26px;
 $uni-color-paragraph: #3F536E; // 文章段落颜色
 $uni-font-size-paragraph:15px;
+
+/* ===== 项目自定义色板 ===== */
+
+/* 品牌色 */
+$brand-green: #4CAF50;
+$brand-green-light: #66BB6A;
+$brand-green-dark: #388E3C;
+$brand-green-bg: #edf7ed;
+
+/* 语义色 */
+$color-primary: $brand-green;
+$color-danger: #f44336;
+$color-warning: #FF9800;
+$color-info: #2196F3;
+$color-success: $brand-green;
+
+/* 文字色 */
+$text-primary: #333333;
+$text-secondary: #666666;
+$text-placeholder: #999999;
+$text-inverse: #ffffff;
+
+/* 背景色 */
+$bg-page: #f5f5f5;
+$bg-card: #ffffff;
+$bg-input: #fafafa;
+$bg-disabled: #cccccc;
+
+/* 边框色 */
+$border-light: #eeeeee;
+$border-base: #dddddd;
+$border-input: #d8d8d8;
+
+/* 状态色 */
+$status-confirmed: $brand-green;
+$status-pending: #FFC107;
+$status-awaiting: #FF9800;
+$status-cancelled: #f44336;
+$status-completed: #2196F3;
+$status-default: #9E9E9E;
+
+/* ===== P2 设计令牌 ===== */
+
+/* 字体尺寸 */
+$font-title-lg: 24px;
+$font-title: 22px;
+$font-title-sm: 18px;
+$font-section: 16px;
+$font-body: 14px;
+$font-caption: 13px;
+$font-hint: 12px;
+$font-micro: 11px;
+
+/* 阴影 */
+$shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+$shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.12);
+$shadow-modal: 0 12px 28px rgba(0, 0, 0, 0.18);
+$shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.22);
+
+/* 间距（页面级） */
+$page-padding-h: 16px;
+$page-padding-bottom: 40px;
+$card-padding: 18px;
+$section-gap: 16px;

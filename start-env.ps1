@@ -16,15 +16,19 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "`n[1/3] Setting SQL/Environment to Local ..." -ForegroundColor Yellow
 $env:SPRING_PROFILES_ACTIVE = "local"
 $env:SPRING_DATASOURCE_URL = "jdbc:mysql://localhost:3306/scooter_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-Write-Host "Environment variables set: SPRING_PROFILES_ACTIVE=local" -ForegroundColor Green
+$env:JWT_SECRET = "dev-only-secret-key-at-least-32-chars-long!!"
+$env:ADMIN_INITIAL_PASSWORD = "admin123"
+Write-Host "Environment variables set: SPRING_PROFILES_ACTIVE=local, JWT_SECRET, ADMIN_INITIAL_PASSWORD" -ForegroundColor Green
 
 # 2. Port reverse
 Write-Host "`n[2/3] Reversing port (adb reverse tcp:8080 tcp:8080) ..." -ForegroundColor Yellow
-try {
-    adb reverse tcp:8080 tcp:8080
-    Write-Host "Port reverse command executed successfully." -ForegroundColor Green
-} catch {
-    Write-Host "Warning: Port reverse failed. Please ensure your device is connected with USB debugging enabled." -ForegroundColor Red
+$adbOutput = & adb reverse tcp:8080 tcp:8080 2>&1
+if ($LASTEXITCODE -eq 0 -and $adbOutput -notmatch "error|cannot|failed|no devices|offline") {
+    Write-Host "Port reverse successful." -ForegroundColor Green
+} else {
+    Write-Host "Error: Port reverse failed - $adbOutput" -ForegroundColor Red
+    Write-Host "Please ensure your device is connected with USB debugging enabled." -ForegroundColor Red
+    exit 1
 }
 
 # 3. Start backend
@@ -42,4 +46,5 @@ if (Test-Path $BackendPath) {
     }
 } else {
     Write-Host "Error: Cannot find 'backend' folder." -ForegroundColor Red
+    exit 1
 }

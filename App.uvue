@@ -1,4 +1,6 @@
-<template></template>
+<template>
+	<view></view>
+</template>
 
 <script lang="uts">
 	// #ifdef APP-ANDROID || APP-HARMONY
@@ -39,8 +41,7 @@
 	}
 </script>
 
-<style>
-	/*每个页面公共css */
+<style lang="scss">
 	.uni-row {
 		flex-direction: row;
 	}

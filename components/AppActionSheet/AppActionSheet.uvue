@@ -1,0 +1,141 @@
+<template>
+	<view v-if="visible" class="sheet-overlay">
+		<view class="sheet-backdrop" @click="onCancel"></view>
+		<view class="sheet-card">
+			<view class="sheet-list">
+				<view
+					v-for="(item, index) in sheetItems"
+					:key="index"
+					class="sheet-item"
+					@click="onSelect(index)"
+				>
+					<text class="sheet-item-text">{{ item }}</text>
+				</view>
+			</view>
+			<view class="sheet-divider"></view>
+			<view class="sheet-cancel" @click="onCancel">
+				<text class="sheet-cancel-text">Cancel</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import { takeResolve } from '@/common/notifier.uts'
+
+const visible = ref(false)
+const sheetItems = ref<string[]>([])
+let resolveId: number = -1
+
+function onSheetEvent(data: any) {
+	if (UTSAndroid.typeof(data) == 'object') {
+		const obj = data as UTSJSONObject
+		const raw = obj['items'] as string ?? ''
+		sheetItems.value = raw.split('|||')
+		resolveId = obj['resolveId'] as number ?? -1
+		visible.value = true
+	}
+}
+
+function onSelect(index: number) {
+	visible.value = false
+	if (resolveId >= 0) {
+		const fn = takeResolve(resolveId)
+		if (fn != null) {
+			(fn as (value: number) => void)(index)
+		}
+		resolveId = -1
+	}
+}
+
+function onCancel() {
+	visible.value = false
+	if (resolveId >= 0) {
+		const fn = takeResolve(resolveId)
+		if (fn != null) {
+			(fn as (value: number) => void)(-1)
+		}
+		resolveId = -1
+	}
+}
+
+onMounted(() => {
+	uni.$on('app:actionsheet', onSheetEvent)
+})
+
+onUnmounted(() => {
+	uni.$off('app:actionsheet', onSheetEvent)
+})
+</script>
+
+<style lang="scss">
+	.sheet-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 9998;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+	}
+
+	.sheet-backdrop {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	.sheet-card {
+		position: relative;
+		background-color: $bg-card;
+		border-radius: 16px 16px 0 0;
+		padding: 8px 0;
+		box-shadow: $shadow-modal;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.sheet-list {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.sheet-item {
+		height: 52px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-bottom-width: 1px;
+		border-bottom-color: $border-light;
+		border-bottom-style: solid;
+	}
+
+	.sheet-item-text {
+		font-size: $font-body;
+		color: $text-primary;
+	}
+
+	.sheet-divider {
+		height: 8px;
+		background-color: $bg-page;
+	}
+
+	.sheet-cancel {
+		height: 52px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.sheet-cancel-text {
+		font-size: $font-body;
+		font-weight: 700;
+		color: $color-danger;
+	}
+</style>

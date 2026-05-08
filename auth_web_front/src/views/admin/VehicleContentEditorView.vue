@@ -8,7 +8,7 @@
         </div>
         <el-space class="admin-page-toolbar">
           <el-button @click="resetDefaults">Reset Defaults</el-button>
-          <el-button type="primary" :icon="Check" @click="save">Save Content</el-button>
+          <el-button type="primary" :icon="Check" :loading="saving" @click="save">Save Content</el-button>
         </el-space>
       </div>
     </template>
@@ -33,6 +33,9 @@
               <el-form label-position="top" class="form">
                 <el-form-item label="Display Name">
                   <el-input v-model="item.name" />
+                </el-form-item>
+                <el-form-item label="Subtitle">
+                  <el-input v-model="item.subtitle" />
                 </el-form-item>
                 <el-form-item label="Description">
                   <el-input v-model="item.description" />
@@ -63,6 +66,7 @@
           <el-space direction="vertical" fill :size="12">
             <div v-for="item in models" :key="item.key" class="preview-item">
               <div class="preview-title">{{ item.name }}</div>
+              <div class="preview-line" v-if="item.subtitle">{{ item.subtitle }}</div>
               <div class="preview-line">{{ item.description }}</div>
               <div class="preview-line">Range: {{ item.range }}</div>
               <div class="preview-line">Top Speed: {{ item.speed }}</div>
@@ -79,11 +83,14 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import { Check } from "@element-plus/icons-vue";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { getVehicleDescriptions, updateVehicleDescription } from "@/api/admin";
+import type { VehicleDescription } from "@/types/api";
 
 type VehicleContent = {
-  key: "GEN1" | "GEN2" | "GEN3" | "GEN3PRO";
+  key: string;
   name: string;
+  subtitle: string;
   description: string;
   range: string;
   speed: string;
@@ -91,71 +98,76 @@ type VehicleContent = {
   advice: string;
 };
 
-const STORAGE_KEY = "admin.vehicle.content.v1";
-
 const defaults: VehicleContent[] = [
-  {
-    key: "GEN1",
-    name: "GEN1: Ninebot Fz3",
-    description: "Entry level for daily commute.",
-    range: "115km (Max) / 92km (Real)",
-    speed: "25km/h",
-    motor: "400W",
-    advice: "Good for beginners, no license required."
-  },
-  {
-    key: "GEN2",
-    name: "GEN2: Ninebot V70",
-    description: "Mid-range commute with better speed.",
-    range: "70km",
-    speed: "47km/h",
-    motor: "800W",
-    advice: "Suitable for medium distance travel."
-  },
-  {
-    key: "GEN3",
-    name: "GEN3: Ninebot M95C",
-    description: "Long-range flagship for heavy usage.",
-    range: "up to 145km",
-    speed: "55km/h",
-    motor: "1500W (Peak 2600W)",
-    advice: "Large storage, best for delivery or long trips."
-  },
-  {
-    key: "GEN3PRO",
-    name: "GEN3PRO: Ninebot E300P MK2",
-    description: "Top-performance electric motorcycle.",
-    range: "125km (Mixed)",
-    speed: "135km/h (0-100 in 5.9s)",
-    motor: "Peak 29kW",
-    advice: "For ultimate speed and performance enthusiasts."
-  }
+  { key: "GEN1", name: "GEN1", subtitle: "Ninebot Fz3", description: "Best for beginners and short daily trips.", range: "115km/92km", speed: "25km/h", motor: "400W", advice: "Best for beginners and short daily trips." },
+  { key: "GEN2", name: "GEN2", subtitle: "Ninebot V70", description: "Balanced choice for mid-range commuting.", range: "70km", speed: "47km/h", motor: "800W", advice: "Balanced choice for mid-range commuting." },
+  { key: "GEN3", name: "GEN3", subtitle: "Ninebot M95C", description: "Long-range flagship for heavy usage scenarios.", range: "145km max", speed: "55km/h", motor: "1500W/2600W", advice: "Long-range flagship for heavy usage scenarios." },
+  { key: "GEN3PRO", name: "GEN3 PRO", subtitle: "Ninebot E300P MK2", description: "Performance-first choice for advanced riders.", range: "125km", speed: "135km/h", motor: "29kW peak", advice: "Performance-first choice for advanced riders." }
 ];
 
-const parseStored = (): VehicleContent[] | null => {
+const models = ref<VehicleContent[]>(JSON.parse(JSON.stringify(defaults)));
+const activeKey = ref("GEN1");
+const loading = ref(false);
+const saving = ref(false);
+
+const API_TYPE_MAP: Record<string, string> = { GEN1: "GEN1", GEN2: "GEN2", GEN3: "GEN3", GEN3PRO: "GEN3PRO" };
+
+function toContent(d: VehicleDescription): VehicleContent {
+  return {
+    key: d.vehicleType,
+    name: d.displayName,
+    subtitle: d.subtitle,
+    description: d.description,
+    range: d.rangeText,
+    speed: d.speedText,
+    motor: d.motorText,
+    advice: d.advice
+  };
+}
+
+async function load() {
+  loading.value = true;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as VehicleContent[];
-    if (!Array.isArray(parsed) || parsed.length !== 4) return null;
-    return parsed;
-  } catch {
-    return null;
+    const data = await getVehicleDescriptions();
+    if (data && data.length > 0) {
+      models.value = data.map(toContent);
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.message ?? "Failed to load vehicle descriptions, using defaults");
+  } finally {
+    loading.value = false;
   }
-};
+}
 
-const models = ref<VehicleContent[]>(parseStored() ?? JSON.parse(JSON.stringify(defaults)));
-const activeKey = ref<VehicleContent["key"]>("GEN1");
-
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(models.value));
-  ElMessage.success("Vehicle content saved");
+async function save() {
+  saving.value = true;
+  try {
+    for (const m of models.value) {
+      const type = API_TYPE_MAP[m.key] ?? m.key;
+      await updateVehicleDescription(type, {
+        display_name: m.name,
+        subtitle: m.subtitle,
+        description: m.description,
+        range_text: m.range,
+        speed_text: m.speed,
+        motor_text: m.motor,
+        advice: m.advice
+      });
+    }
+    ElMessage.success("Vehicle content saved");
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.message ?? "Failed to save vehicle descriptions");
+  } finally {
+    saving.value = false;
+  }
 }
 
 function resetDefaults() {
   models.value = JSON.parse(JSON.stringify(defaults));
-  ElMessage.success("Default content restored");
+  ElMessage.success("Default content restored (click Save to persist)");
 }
+
+onMounted(load);
 </script>
 
 <style scoped>

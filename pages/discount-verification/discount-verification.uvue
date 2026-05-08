@@ -245,11 +245,11 @@ onShow(() => {
 })
 </script>
 
-<style>
+<style lang="scss">
 .container {
 	padding: 20px;
-	background-color: #f5f5f5;
-	min-height: 750px;
+	background-color: $bg-page;
+	height: 100%;
 }
 
 .title-section {
@@ -257,42 +257,42 @@ onShow(() => {
 }
 
 .title {
-	font-size: 22px;
+	font-size: $font-title;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 6px;
 }
 
 .hint {
-	font-size: 13px;
-	color: #666;
+	font-size: $font-caption;
+	color: $text-secondary;
 }
 
 .card {
-	background-color: #fff;
+	background-color: $bg-card;
 	border-radius: 12px;
 	padding: 16px;
 	margin-bottom: 14px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	box-shadow: $shadow-card;
 }
 
 .label {
-	font-size: 14px;
+	font-size: $font-body;
 	font-weight: bold;
-	color: #333;
+	color: $text-primary;
 	margin-bottom: 8px;
 }
 
 .picker {
-	border: 1px solid #ddd;
+	border: 1px solid $border-base;
 	border-radius: 8px;
 	padding: 10px 12px;
 	margin-bottom: 12px;
 }
 
 .picker-value {
-	font-size: 14px;
-	color: #333;
+	font-size: $font-body;
+	color: $text-primary;
 }
 
 .file-box {
@@ -303,26 +303,26 @@ onShow(() => {
 }
 
 .file-name {
-	font-size: 13px;
-	color: #555;
+	font-size: $font-caption;
+	color: $text-secondary;
 }
 
 .btn {
 	margin-top: 8px;
 	padding: 12px;
 	border-radius: 8px;
-	font-size: 15px;
+	font-size: $font-body;
 }
 
 .primary {
-	background-color: #4CAF50;
-	color: #fff;
+	background-color: $brand-green;
+	color: $text-inverse;
 }
 
 .secondary {
-	background-color: #fff;
-	color: #4CAF50;
-	border: 1px solid #4CAF50;
+	background-color: $bg-card;
+	color: $brand-green;
+	border: 1px solid $brand-green;
 }
 
 .status-header {
@@ -334,7 +334,7 @@ onShow(() => {
 }
 
 .mini-btn {
-	font-size: 12px;
+	font-size: $font-hint;
 	padding: 6px 10px;
 	background-color: #f0f7ff;
 	color: #2f7fe6;
@@ -342,7 +342,7 @@ onShow(() => {
 }
 
 .status-text {
-	font-size: 13px;
+	font-size: $font-caption;
 	color: #888;
 }
 
@@ -369,49 +369,49 @@ onShow(() => {
 }
 
 .type-badge {
-	font-size: 12px;
+	font-size: $font-hint;
 	font-weight: bold;
-	color: #1d4ed8;
+	color: $color-info;
 	background-color: #dbeafe;
 	padding: 5px 10px;
 	border-radius: 999px;
 }
 
 .status-badge {
-	font-size: 12px;
+	font-size: $font-hint;
 	font-weight: bold;
 	padding: 5px 10px;
 	border-radius: 999px;
 }
 
 .status-pending {
-	color: #92400e;
+	color: $color-warning;
 	background-color: #fef3c7;
 }
 
 .status-approved {
-	color: #166534;
-	background-color: #dcfce7;
+	color: $brand-green;
+	background-color: $brand-green-bg;
 }
 
 .status-rejected {
-	color: #991b1b;
+	color: $color-danger;
 	background-color: #fee2e2;
 }
 
 .status-unknown {
-	color: #374151;
+	color: $text-primary;
 	background-color: #e5e7eb;
 }
 
 .status-sub {
-	font-size: 12px;
-	color: #666;
+	font-size: $font-hint;
+	color: $text-secondary;
 	margin-bottom: 2px;
 }
 
 .reject-reason {
-	font-size: 12px;
-	color: #d64545;
+	font-size: $font-hint;
+	color: $color-danger;
 }
 </style>

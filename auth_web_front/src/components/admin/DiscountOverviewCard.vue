@@ -10,7 +10,7 @@
     @keydown.space.prevent="emit('click')"
   >
     <div class="card-header">
-      <span class="title">{{ title }}</span>
+      <span class="title admin-card-title">{{ title }}</span>
       <el-tag size="small" type="info">{{ tag }}</el-tag>
     </div>
     <el-text class="summary">{{ summary }}</el-text>
@@ -38,13 +38,12 @@ const emit = defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: var(--ui-space-3);
+  margin-bottom: var(--ui-space-3);
 }
 
 .title {
   font-size: 16px;
-  font-weight: 700;
-  color: var(--ui-text-strong);
 }
 
 .summary {
@@ -54,7 +53,7 @@ const emit = defineEmits<{
 }
 
 :deep(.el-card__body) {
-  padding: 16px;
+  padding: var(--ui-space-4);
 }
 
 :deep(.el-tag) {

@@ -54,25 +54,7 @@
 				"navigationBarTitleText": "Payment"
 			}
 		},
-		{
-			"path": "pages/admin/modify",
-			"style": {
-				"navigationBarTitleText": "Admin"
-			}
-		},
-		{
-			"path": "pages/admin/home",
-			"style": {
-				"navigationBarTitleText": "Admin"
-			}
-		},
-		{
-			"path": "pages/admin/revenue",
-			"style": {
-				"navigationBarTitleText": "Admin"
-			}
-		},
-		{
+{
 			"path": "pages/orders/route",
 			"style": {
 				"navigationBarTitleText": "Ride Route"
@@ -154,8 +136,8 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "Uni-App X",
-		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"navigationBarBackgroundColor": "#f5f5f5",
+		"backgroundColor": "#f5f5f5"
 	},
 	"uniIdRouter": {}
 }

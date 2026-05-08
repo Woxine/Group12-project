@@ -1,0 +1,180 @@
+import { BASE_URL } from './api.uts'
+
+export type TrajectoryPointData = {
+	lat: number
+	lng: number
+	recordedAt: string
+	seq: number
+}
+
+// Module-level state (persists across page navigations within app process)
+let isTracking = false
+let currentBookingId = ''
+let locationChangeCallback: ((res: any) => void) | null = null
+let uploadTimer: number | null = null
+let pendingPoints: TrajectoryPointData[] = []
+let lastLat: number = 0
+let lastLng: number = 0
+let lastSeq: number = 0
+
+const MIN_DISTANCE_METERS = 5.0
+const UPLOAD_INTERVAL_MS = 30000
+const MAX_PENDING_POINTS = 100
+
+const distanceMeters = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+	const R = 6371000
+	const dLat = (lat2 - lat1) * Math.PI / 180
+	const dLng = (lng2 - lng1) * Math.PI / 180
+	const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+		Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+		Math.sin(dLng / 2) * Math.sin(dLng / 2)
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+	return R * c
+}
+
+const pad2 = (n: number): string => {
+	return n < 10 ? ('0' + n) : ('' + n)
+}
+
+const formatRecordedAt = (d: Date): string => {
+	return d.getFullYear() + '-' +
+		pad2(d.getMonth() + 1) + '-' +
+		pad2(d.getDate()) + 'T' +
+		pad2(d.getHours()) + ':' +
+		pad2(d.getMinutes()) + ':' +
+		pad2(d.getSeconds())
+}
+
+const addPoint = (lat: number, lng: number): void => {
+	if (pendingPoints.length > 0) {
+		const dist = distanceMeters(lastLat, lastLng, lat, lng)
+		if (dist < MIN_DISTANCE_METERS) return
+	}
+	if (pendingPoints.length >= MAX_PENDING_POINTS) return
+
+	lastSeq++
+	lastLat = lat
+	lastLng = lng
+
+	pendingPoints.push({
+		lat: lat,
+		lng: lng,
+		recordedAt: formatRecordedAt(new Date()),
+		seq: lastSeq
+	} as TrajectoryPointData)
+}
+
+const getToken = (): string | null => {
+	const raw = uni.getStorageSync('token')
+	if (raw == null) return null
+	const val = ('' + raw).trim()
+	return val.length > 0 ? val : null
+}
+
+const flushPoints = (): void => {
+	if (pendingPoints.length == 0) return
+	const token = getToken()
+	if (token == null || token.length == 0) return
+	if (currentBookingId.length == 0) return
+
+	const pointsToSend: TrajectoryPointData[] = []
+	for (let i = 0; i < pendingPoints.length; i++) {
+		pointsToSend.push(pendingPoints[i])
+	}
+
+	uni.request({
+		url: BASE_URL + '/api/v1/bookings/' + currentBookingId + '/trajectory',
+		method: 'POST',
+		data: {
+			points: pointsToSend
+		},
+		header: {
+			'Content-Type': 'application/json',
+			'Authorization': 'Bearer ' + token
+		},
+		success: (res) => {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				const sentSeqs = new Set<number>()
+				for (let i = 0; i < pointsToSend.length; i++) {
+					sentSeqs.add(pointsToSend[i].seq)
+				}
+				const remaining: TrajectoryPointData[] = []
+				for (let i = 0; i < pendingPoints.length; i++) {
+					if (!sentSeqs.has(pendingPoints[i].seq)) {
+						remaining.push(pendingPoints[i])
+					}
+				}
+				pendingPoints = remaining
+			}
+		},
+		fail: () => {
+			// Points stay in pendingPoints for next attempt
+		}
+	})
+}
+
+export const startTracking = (bookingId: string): void => {
+	if (isTracking && currentBookingId == bookingId) return
+	stopTracking()
+
+	currentBookingId = bookingId
+	isTracking = true
+	pendingPoints = []
+	lastSeq = 0
+	lastLat = 0
+	lastLng = 0
+
+	uni.startLocationUpdate({
+		success: () => {
+			locationChangeCallback = (res: any) => {
+				const obj = res as UTSJSONObject
+				const lat = obj['latitude'] as number | null
+				const lng = obj['longitude'] as number | null
+				if (lat != null && lng != null) {
+					addPoint(lat, lng)
+				}
+			}
+			uni.onLocationChange(locationChangeCallback!)
+		},
+		fail: (err: any) => {
+			console.error('Failed to start location update:', err)
+			isTracking = false
+		}
+	})
+
+	uploadTimer = setInterval(() => {
+		flushPoints()
+	}, UPLOAD_INTERVAL_MS)
+}
+
+export const stopTracking = (): void => {
+	if (!isTracking) return
+
+	if (locationChangeCallback != null) {
+		uni.offLocationChange(locationChangeCallback!)
+		locationChangeCallback = null
+	}
+	uni.stopLocationUpdate({
+		success: () => {},
+		fail: () => {}
+	})
+
+	if (uploadTimer != null) {
+		clearInterval(uploadTimer!)
+		uploadTimer = null
+	}
+
+	flushPoints()
+
+	isTracking = false
+	currentBookingId = ''
+	pendingPoints = []
+}
+
+export const getTrackingBookingId = (): string => {
+	return currentBookingId
+}
+
+export const isActive = (): boolean => {
+	return isTracking
+}

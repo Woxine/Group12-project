@@ -8,7 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.ExtendBookingRequest;
+import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.BookingExtensionService;
+
+import org.springframework.http.HttpStatus;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,7 +33,11 @@ public class BookingExtensionController {
     public ResponseEntity<Object> extendBooking(@PathVariable String bookingId,
                                                 @Valid @RequestBody ExtendBookingRequest body,
                                                 HttpServletRequest request) {
-        Long userId = (Long) request.getAttribute("userId");
+        Object authUserId = request.getAttribute("userId");
+        if (authUserId == null) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Long userId = Long.parseLong(String.valueOf(authUserId));
         Object result = bookingExtensionService.extendBooking(bookingId, body, userId);
         return ResponseEntity.ok(java.util.Map.of("data", result));
     }
