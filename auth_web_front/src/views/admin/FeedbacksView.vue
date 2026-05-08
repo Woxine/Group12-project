@@ -189,12 +189,19 @@
       <div class="admin-detail-field"><span class="admin-detail-label">Process Status</span><span>{{ detailRow.escalationStatus || "PENDING" }}</span></div>
     </div>
     <el-divider />
+    <div v-if="fileLoading" class="admin-detail-field admin-detail-field--full">
+      <span class="admin-detail-label">Image</span><span>Loading...</span>
+    </div>
+    <div v-else-if="filePreviewUrl" class="admin-detail-field admin-detail-field--full">
+      <span class="admin-detail-label">Image</span>
+      <img :src="filePreviewUrl" alt="Feedback image" class="file-preview-image" />
+    </div>
     <div class="detail-content">
       <div class="admin-detail-label">Feedback Content</div>
       <p class="full-content">{{ detailRow?.content || "-" }}</p>
     </div>
     <template #footer>
-      <el-button @click="detailDialogVisible = false">Close</el-button>
+      <el-button @click="closeDetailDialog">Close</el-button>
     </template>
   </el-dialog>
 
@@ -242,7 +249,7 @@ import { ElMessage } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
 import { Search, CircleCheck, Check, Warning, Select } from '@element-plus/icons-vue';
 
-import { getFeedbacks, processFeedbackByPriority } from "@/api/admin";
+import { getFeedbacks, getFeedbackFileUrl, processFeedbackByPriority } from "@/api/admin";
 import { getAdminPriorityTagType, getAdminStatusTagType } from "@/adminStatus";
 import type { FeedbackItem } from "@/types/api";
 
@@ -255,6 +262,8 @@ const resolvedView = ref<boolean | undefined>(undefined);
 const liveMessage = ref("");
 const detailDialogVisible = ref(false);
 const detailRow = ref<FeedbackItem | null>(null);
+const fileLoading = ref(false);
+const filePreviewUrl = ref<string | null>(null);
 const escalateDialog = reactive({
   visible: false,
   feedbackId: 0,
@@ -281,9 +290,28 @@ function summarizeContent(content: string) {
   return `${plain.slice(0, 80)}...`;
 }
 
-function openDetailDialog(row: FeedbackItem) {
+async function openDetailDialog(row: FeedbackItem) {
   detailRow.value = row;
   detailDialogVisible.value = true;
+  filePreviewUrl.value = null;
+  if (row.imageMimeType && row.imageMimeType.startsWith("image/")) {
+    fileLoading.value = true;
+    try {
+      filePreviewUrl.value = await getFeedbackFileUrl(row.id);
+    } catch {
+      filePreviewUrl.value = null;
+    } finally {
+      fileLoading.value = false;
+    }
+  }
+}
+
+function closeDetailDialog() {
+  if (filePreviewUrl.value) {
+    URL.revokeObjectURL(filePreviewUrl.value);
+    filePreviewUrl.value = null;
+  }
+  detailDialogVisible.value = false;
 }
 
 async function load() {
@@ -397,5 +425,14 @@ onMounted(load);
 
 :deep(.clickable-row) {
   cursor: pointer;
+}
+
+.file-preview-image {
+  width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-lighter);
+  margin-top: 8px;
 }
 </style>

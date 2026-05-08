@@ -565,7 +565,7 @@ const onPayment = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				const cardMessage = selectedCardId.value.length > 0 ? ' (saved card)' : '';
-				showSuccess(`Payment successful via ${method}${cardMessage}!`, 2000);
+				showSuccess('Payment successful via ' + method + cardMessage + '!', 2000);
 				uni.removeStorageSync('totalPrice');
 				uni.removeStorageSync('pendingBookingId');
 				setTimeout(() => {

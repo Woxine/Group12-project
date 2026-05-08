@@ -55,6 +55,15 @@ public class Feedback implements Serializable {
     @Column(name = "escalation_status", length = 32)
     private String escalationStatus = "PENDING";
 
+    @Column(name = "image_path", length = 500)
+    private String imagePath;
+
+    @Column(name = "image_mime_type", length = 100)
+    private String imageMimeType;
+
+    @Column(name = "image_size_bytes")
+    private Long imageSizeBytes;
+
     public Feedback() {}
 
     public Long getId() { return id; }
@@ -92,4 +101,13 @@ public class Feedback implements Serializable {
 
     public String getEscalationStatus() { return escalationStatus; }
     public void setEscalationStatus(String escalationStatus) { this.escalationStatus = escalationStatus; }
+
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+
+    public String getImageMimeType() { return imageMimeType; }
+    public void setImageMimeType(String imageMimeType) { this.imageMimeType = imageMimeType; }
+
+    public Long getImageSizeBytes() { return imageSizeBytes; }
+    public void setImageSizeBytes(Long imageSizeBytes) { this.imageSizeBytes = imageSizeBytes; }
 }

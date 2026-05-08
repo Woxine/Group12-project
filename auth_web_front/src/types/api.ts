@@ -96,6 +96,7 @@ export interface FeedbackItem {
   escalated: boolean;
   escalatedTo: string | null;
   escalationStatus: string | null;
+  imageMimeType: string | null;
 }
 
 export interface ProcessFeedbackPayload {

@@ -11,7 +11,7 @@
 			<text class="error-text">{{ error }}</text>
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
-		<view v-else-if="!hasRoute" class="no-route-section">
+		<view v-else-if="!(hasRoute && hasTrajectory)" class="no-route-section">
 			<view class="no-route-icon-wrap">
 				<text class="no-route-icon-text">✕</text>
 			</view>
@@ -20,6 +20,7 @@
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else class="map-wrap">
+			<scroll-view class="map-scroll" direction="vertical" scroll-y="true" show-scrollbar="true" enable-back-to-top="true">
 			<view class="route-summary">
 				<view class="summary-item">
 					<text class="summary-label">Booking</text>
@@ -78,6 +79,7 @@
 				</view>
 			</view>
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
+			</scroll-view>
 		</view>
 	</view>
 </template>
@@ -108,6 +110,7 @@ const mapKey = ref(0)
 const mapUpdatedOnce = ref(false)
 const mapContext = ref(null as MapContext | null)
 const mapReady = ref(false)
+const hasTrajectory = ref(false)
 
 const readStorageStringOrNull = (key: string): string | null => {
 	const raw = uni.getStorageSync(key)
@@ -180,7 +183,7 @@ const applyRoute = (slat: number, slng: number, elat: number, elng: number) => {
 	const endLinePoint = ({ latitude: endLatForLine, longitude: endLngForLine } as uts.sdk.modules.DCloudUniMapTencent.LocationObject)
 	const linePoints = [startLinePoint, endLinePoint] as uts.sdk.modules.DCloudUniMapTencent.LocationObject[]
 	const rawIncludePoints: LocationObject[] = samePoint ? [startPoint, ({ latitude: endLatForLine, longitude: endLngForLine } as LocationObject)] : [startPoint, endPoint]
-	const rawPolylines: Polyline[] = [({ points: linePoints, color: '#FF3B30', width: 10 } as Polyline)]
+	const rawPolylines: Polyline[] = [({ points: linePoints, color: '#FFFF3B30', width: 10, borderWidth: 6, borderColor: '#FFFF3B30' } as Polyline)]
 	polylines.value = rawPolylines
 	includePoints.value = JSON.parse<LocationObject[]>(JSON.stringify(rawIncludePoints))!
 	longitude.value = (slng + elng) / 2
@@ -212,7 +215,7 @@ const applyTrajectoryPolyline = (points: LocationObject[]) => {
 			longitude: points[i].longitude
 		} as uts.sdk.modules.DCloudUniMapTencent.LocationObject)
 	}
-	polylines.value = [{ points: trajectoryLinePoints, color: '#FF3B30', width: 10 } as Polyline]
+	polylines.value = [{ points: trajectoryLinePoints, color: '#FFFF3B30', width: 10, borderWidth: 6, borderColor: '#FFFF3B30' } as Polyline]
 	includePoints.value = JSON.parse<LocationObject[]>(JSON.stringify(points))!
 	mapKey.value = mapKey.value + 1
 	syncMarkersToMap()
@@ -226,7 +229,10 @@ const applyTrajectoryPolyline = (points: LocationObject[]) => {
 
 const loadTrajectory = (bookingIdStr: string) => {
 	const token = readStorageStringOrNull('token')
-	if (token == null || token.length == 0 || bookingIdStr.length == 0) return
+	if (token == null || token.length == 0 || bookingIdStr.length == 0) {
+		loading.value = false
+		return
+	}
 	uni.request({
 		url: BASE_URL + '/api/v1/bookings/' + bookingIdStr + '/trajectory',
 		method: 'GET',
@@ -249,18 +255,22 @@ const loadTrajectory = (bookingIdStr: string) => {
 						}
 					}
 					if (points.length > 1) {
+						hasTrajectory.value = true
 						applyTrajectoryPolyline(points)
 					}
 				}
 			}
 		},
-		fail: () => {}
+		fail: () => {},
+		complete: () => {
+			loading.value = false
+		}
 	})
 }
 
 onReady(() => {
 	mapReady.value = true
-	if (!hasRoute.value) return
+	if (!hasRoute.value || !hasTrajectory.value) return
 	ensureMapContext()
 	syncMarkersToMap()
 })
@@ -302,12 +312,11 @@ const loadBooking = () => {
 				}
 			} else {
 				error.value = 'Failed to load booking'
+				loading.value = false
 			}
 		},
 		fail: () => {
 			error.value = 'Network error'
-		},
-		complete: () => {
 			loading.value = false
 		}
 	})
@@ -339,7 +348,6 @@ onLoad((options: UTSJSONObject) => {
 		endLat.value = elatOpt
 		endLng.value = elngOpt
 		applyRoute(slatOpt, slngOpt, elatOpt, elngOpt)
-		loading.value = false
 		loadTrajectory(id)
 		return
 	}
@@ -452,6 +460,10 @@ onLoad((options: UTSJSONObject) => {
 	padding: 16px;
 }
 
+.map-scroll {
+	flex: 1;
+}
+
 .route-summary {
 	display: flex;
 	flex-direction: row;
@@ -521,7 +533,9 @@ onLoad((options: UTSJSONObject) => {
 	height: 44px;
 	background-color: transparent;
 	padding: 0;
-	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .control-btn + .control-btn {

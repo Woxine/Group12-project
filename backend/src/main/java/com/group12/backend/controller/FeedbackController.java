@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.ProcessFeedbackRequest;
@@ -21,6 +23,7 @@ import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.security.AdminAccessGuard;
 import com.group12.backend.service.FeedbackService;
+import com.group12.backend.service.UploadRateLimiter;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -38,6 +41,9 @@ public class FeedbackController {
     @Autowired
     private AdminAccessGuard adminAccessGuard;
 
+    @Autowired
+    private UploadRateLimiter uploadRateLimiter;
+
     // API-007: 提交用户反馈
     /**
      * 提交反馈
@@ -51,6 +57,19 @@ public class FeedbackController {
         }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("data", feedbackService.submitFeedback(userId, request)));
+    }
+
+    @PatchMapping("/{feedbackId}/image")
+    public ResponseEntity<Object> uploadImage(
+            @PathVariable Long feedbackId,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest httpRequest) {
+        Long userId = extractUserId(httpRequest);
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        uploadRateLimiter.check(userId);
+        return ResponseEntity.ok(Map.of("data", feedbackService.uploadFeedbackImage(feedbackId, userId, file)));
     }
 
     private Long extractUserId(HttpServletRequest request) {

@@ -124,6 +124,13 @@ export async function getHighPriorityIssues(params: {
   return response.data;
 }
 
+export async function getFeedbackFileUrl(id: number): Promise<string> {
+  const response = await http.get(`/api/v1/admin/feedbacks/${id}/file`, {
+    responseType: "blob"
+  });
+  return URL.createObjectURL(response.data);
+}
+
 export async function getDiscountVerifications(params: {
   status?: "PENDING" | "APPROVED" | "REJECTED";
   type?: "STUDENT" | "SENIOR";

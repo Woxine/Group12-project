@@ -24,24 +24,27 @@
 				<view v-if="hasDiscountBadge()" class="profile-discount-logo" :class="getDiscountToneClass()">
 					<text class="discount-logo-text">{{ getDiscountLogoText() }}</text>
 				</view>
-				<view class="profile-header" @click="goToAccountManagement">
+				<view class="profile-header">
 					<image :src="avatarUrl" mode="scaleToFill" class="avatar"></image>
 					<view class="user-info">
 						<text class="user-name">{{ userName }}</text>
 						<text class="user-email">{{ userEmail }}</text>
 						<view v-if="hasAnyDiscountNotice()" class="discount-notice-list">
-							<view v-if="hasFrequentDiscount" class="discount-pill frequent-tone">
+							<view v-if="hasFrequentDiscount" class="discount-pill frequent-tone" @click="onDiscountPillTap('FREQUENT')">
 								<text class="discount-pill-text frequent-pill-text">Frequent Rider Discount</text>
 							</view>
-							<view v-if="hasStudentDiscount" class="discount-pill student-tone">
+							<view v-if="hasStudentDiscount" class="discount-pill student-tone" @click="onDiscountPillTap('STUDENT')">
 								<text class="discount-pill-text">Student Discount</text>
 							</view>
-							<view v-if="hasSeniorDiscount" class="discount-pill senior-tone">
+							<view v-if="hasSeniorDiscount" class="discount-pill senior-tone" @click="onDiscountPillTap('SENIOR')">
 								<text class="discount-pill-text">Senior Discount</text>
 							</view>
 						</view>
 						<view v-if="hasDiscountBadge()" class="discount-status-line">
 							<text class="discount-status-text">{{ getDiscountStatusText() }}</text>
+						</view>
+						<view v-if="!hasAnyDiscountNotice()" class="discount-apply-hint">
+							<text class="discount-apply-hint-text">Eligible for student or senior discounts? Go to Account Management to apply.</text>
 						</view>
 					</view>
 				</view>
@@ -158,6 +161,7 @@
 				<navigator v-else url="/pages/account/account" open-type="navigate" class="menu-item">
 					<view class="menu-copy">
 						<text class="menu-text">Account Management</text>
+						<text class="menu-hint">Manage profile, apply for discounts</text>
 					</view>
 					<text class="menu-arrow">›</text>
 				</navigator>
@@ -240,6 +244,9 @@ const avatarUrl = ref(DEFAULT_AVATAR)
 const hasFrequentDiscount = ref(false)
 const hasStudentDiscount = ref(false)
 const hasSeniorDiscount = ref(false)
+const studentDiscountRate = ref<number | null>(null)
+const seniorDiscountRate = ref<number | null>(null)
+const frequentDiscountRate = ref<number | null>(null)
 const heatmapLoading = ref(false)
 const totalRides = ref(0)
 const totalSpent = ref('0.00')
@@ -296,6 +303,9 @@ const resetDiscountState = () => {
 	hasFrequentDiscount.value = false
 	hasStudentDiscount.value = false
 	hasSeniorDiscount.value = false
+	studentDiscountRate.value = null
+	seniorDiscountRate.value = null
+	frequentDiscountRate.value = null
 }
 
 const resetHeatmapState = () => {
@@ -352,6 +362,41 @@ const getDiscountStatusText = (): string => {
 	if (activeType == 'SENIOR') return 'Senior benefit active'
 	if (activeType == 'FREQUENT') return 'Frequent rider benefit active'
 	return ''
+}
+
+const onDiscountPillTap = (discountType: string) => {
+	let rate: number | null = null
+	let label = ''
+
+	if (discountType == 'FREQUENT') {
+		rate = frequentDiscountRate.value
+		label = 'Frequent Rider Discount'
+	} else if (discountType == 'STUDENT') {
+		rate = studentDiscountRate.value
+		label = 'Student Discount'
+	} else if (discountType == 'SENIOR') {
+		rate = seniorDiscountRate.value
+		label = 'Senior Discount'
+	}
+
+	if (rate == null) {
+		uni.showModal({
+			title: label,
+			content: 'Loading discount information...',
+			showCancel: false,
+			confirmText: 'OK'
+		})
+		return
+	}
+
+	const multiplier = Math.round(rate * 100)
+	const percentOff = 100 - multiplier
+	uni.showModal({
+		title: label,
+		content: 'You pay ' + multiplier + '% of the original price (' + percentOff + '% off).',
+		showCancel: false,
+		confirmText: 'OK'
+	})
 }
 
 const getUserInfo = () => {
@@ -423,6 +468,13 @@ const fetchUserProfile = () => {
 			hasFrequentDiscount.value = rawHasFrequentDiscount != null ? parseBooleanFlag(rawHasFrequentDiscount) : fallbackDiscountType == 'FREQUENT'
 			hasStudentDiscount.value = rawHasStudentDiscount != null ? parseBooleanFlag(rawHasStudentDiscount) : fallbackDiscountType == 'STUDENT'
 			hasSeniorDiscount.value = rawHasSeniorDiscount != null ? parseBooleanFlag(rawHasSeniorDiscount) : fallbackDiscountType == 'SENIOR'
+
+			const rawStudentRate = profile['studentDiscountRate']
+			const rawSeniorRate = profile['seniorDiscountRate']
+			const rawFrequentRate = profile['frequentDiscountRate']
+			studentDiscountRate.value = rawStudentRate != null ? parseFloat('' + rawStudentRate) : null
+			seniorDiscountRate.value = rawSeniorRate != null ? parseFloat('' + rawSeniorRate) : null
+			frequentDiscountRate.value = rawFrequentRate != null ? parseFloat('' + rawFrequentRate) : null
 		},
 		fail: () => {
 			resetDiscountState()
@@ -632,12 +684,6 @@ const handleLogout = () => {
 				showThenNavigate('Logged out successfully', '/pages/me/me', true, 800, 'reLaunch')
 			}
 		}
-	})
-}
-
-const goToAccountManagement = () => {
-	uni.navigateTo({
-		url: '/pages/account/account'
 	})
 }
 
@@ -854,6 +900,19 @@ onShow(() => {
 }
 
 .discount-status-text {
+	font-size: $font-hint;
+	color: $text-secondary;
+	text-align: center;
+}
+
+.discount-apply-hint {
+	margin-top: 12px;
+	padding: 8px 12px;
+	background-color: $bg-input;
+	border-radius: 8px;
+}
+
+.discount-apply-hint-text {
 	font-size: $font-hint;
 	color: $text-secondary;
 	text-align: center;

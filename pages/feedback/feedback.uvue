@@ -54,6 +54,21 @@
 						</view>
 					</view>
 
+					<view class="form-row">
+						<text class="label">Image (optional)</text>
+						<view v-if="selectedFilePath.length > 0" class="image-preview">
+							<image :src="selectedFilePath" mode="aspectFit" class="preview-img"></image>
+							<view class="image-info">
+								<text class="file-name">{{ selectedFileName }}</text>
+								<text class="change-link" @click="chooseImageFile">Change</text>
+							</view>
+						</view>
+						<view v-else class="upload-area" @click="chooseImageFile">
+							<text class="upload-icon">+</text>
+							<text class="upload-text">Tap to upload image</text>
+						</view>
+					</view>
+
 					<view v-if="priority === 'HIGH'" class="warning-row">
 						<text class="warning-text">High priority reports are escalated and should include clear details.</text>
 					</view>
@@ -83,6 +98,8 @@ const location = ref('')
 const priority = ref('LOW')
 const isSubmitting = ref(false)
 const submitError = ref('')
+const selectedFilePath = ref('')
+const selectedFileName = ref('')
 const scrollWrapHeight = ref(600)
 const scrollViewHeight = ref(560)
 
@@ -96,6 +113,55 @@ const setScrollHeight = () => {
 		scrollWrapHeight.value = 600
 		scrollViewHeight.value = 560
 	}
+}
+
+const chooseImageFile = () => {
+	uni.chooseImage({
+		count: 1,
+		sourceType: ['album', 'camera'],
+		success: (res) => {
+			if (res.tempFilePaths.length > 0) {
+				selectedFilePath.value = res.tempFilePaths[0]
+				const path = selectedFilePath.value
+				const slashIndex = path.lastIndexOf('/')
+				selectedFileName.value = slashIndex >= 0 ? path.substring(slashIndex + 1) : path
+			}
+		}
+	})
+}
+
+const resetForm = () => {
+	scooterId.value = ''
+	description.value = ''
+	location.value = ''
+	priority.value = 'LOW'
+	selectedFilePath.value = ''
+	selectedFileName.value = ''
+}
+
+const uploadFeedbackImage = (feedbackId: number, token: string, successMsg: string, failMsg: string, networkMsg: string) => {
+	uni.uploadFile({
+		url: BASE_URL + '/api/v1/feedbacks/' + feedbackId + '/image',
+		filePath: selectedFilePath.value,
+		name: 'file',
+		header: {
+			'Authorization': 'Bearer ' + token
+		},
+		success: (uploadRes) => {
+			if (uploadRes.statusCode >= 200 && uploadRes.statusCode < 300) {
+				showSuccess(successMsg)
+				resetForm()
+			} else {
+				showError(failMsg, 3000)
+			}
+		},
+		fail: () => {
+			showError(networkMsg)
+		},
+		complete: () => {
+			isSubmitting.value = false
+		}
+	})
 }
 
 const onSubmit = () => {
@@ -147,22 +213,27 @@ const onSubmit = () => {
 		data: body,
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
-				showSuccess(submitSuccessMessage)
-				scooterId.value = ''
-				description.value = ''
-				location.value = ''
-				priority.value = 'LOW'
+				const hasImage = selectedFilePath.value.length > 0
+				if (hasImage) {
+					const responseData = res.data as UTSJSONObject
+					const dataObj = responseData['data'] as UTSJSONObject
+					const feedbackId = dataObj['id'] as number
+					uploadFeedbackImage(feedbackId, token, submitSuccessMessage, submitFailedMessage, requestFailedMessage)
+				} else {
+					showSuccess(submitSuccessMessage)
+					resetForm()
+					isSubmitting.value = false
+				}
 			} else {
 				const msg = getResponseMessage(res.data, submitFailedMessage)
 				submitError.value = msg
 				showError(msg, 3000)
+				isSubmitting.value = false
 			}
 		},
 		fail: () => {
 			submitError.value = requestFailedMessage
 			showError(requestFailedMessage)
-		},
-		complete: () => {
 			isSubmitting.value = false
 		}
 	})
@@ -367,6 +438,60 @@ onShow(() => {
 
 .priority-text-active {
 	color: white;
+	font-weight: bold;
+}
+
+.upload-area {
+	border: 2px dashed $border-base;
+	border-radius: 12px;
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: #fafafa;
+}
+
+.upload-icon {
+	font-size: 32px;
+	color: $text-placeholder;
+	margin-bottom: 6px;
+}
+
+.upload-text {
+	font-size: $font-caption;
+	color: $text-placeholder;
+}
+
+.image-preview {
+	border-radius: 10px;
+	overflow: hidden;
+	border: 1px solid $border-base;
+}
+
+.preview-img {
+	width: 100%;
+	height: 200px;
+}
+
+.image-info {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	background-color: #fafafa;
+}
+
+.file-name {
+	font-size: $font-caption;
+	color: $text-secondary;
+	flex: 1;
+}
+
+.change-link {
+	font-size: $font-caption;
+	color: $brand-green;
 	font-weight: bold;
 }
 </style>

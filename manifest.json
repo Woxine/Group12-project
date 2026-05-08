@@ -2,7 +2,7 @@
 	"name": "Ride Now",
 	"appid": "__UNI__E6393FD",
 	"description": "A class project",
-	"versionName": "1.0.1",
+	"versionName": "1.0.2",
 	"versionCode": 110,
 	"uni-app-x": {},
 	/* 快应用特有相关 */
@@ -55,10 +55,10 @@
 				}
 			},
 			"icons": {
-				"hdpi": "static/app-icon/icon-hdpi-72.png",
-				"xhdpi": "static/app-icon/icon-xhdpi-96.png",
-				"xxhdpi": "static/app-icon/icon-xxhdpi-144.png",
-				"xxxhdpi": "static/app-icon/icon-xxxhdpi-192.png"
+				"hdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-icon/icon-hdpi-72.png",
+				"xhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-icon/icon-xhdpi-96.png",
+				"xxhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-icon/icon-xxhdpi-144.png",
+				"xxxhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-icon/icon-xxxhdpi-192.png"
 			},
 			"splashScreens": {
 				"xhdpi": "static/app-splash/splash-xhdpi.png",
@@ -67,9 +67,9 @@
 				"background": "#0C5AC4",
 				"background@night": "#0C5AC4",
 				"default": {
-					"xhdpi": "/static/app-splash/splash-xhdpi.png",
-					"xxhdpi": "/static/app-splash/splash-xxhdpi.png",
-					"xxxhdpi": "static/app-splash/splash-xxxhdpi.png"
+					"xhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-splash/splash-xhdpi.png",
+					"xxhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-splash/splash-xxhdpi.png",
+					"xxxhdpi": "C:/Users/梁道/OneDrive - University of Leeds/Tech/Year3 part2/XJCO2913 Software Engineering Project/ProjectFile/Group12-project/static/app-splash/splash-xxxhdpi.png"
 				},
 				"icon": {
 					"xhdpi": "",

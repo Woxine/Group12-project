@@ -5,21 +5,32 @@
 			<text class="hint">Student verification is required for student discount. Senior verification is optional.</text>
 		</view>
 
-		<view class="card">
-			<text class="label">Verification Type</text>
-			<view class="picker" @click="openTypePicker">
-				<text class="picker-value">{{ typeLabelOptions[typeIndex] }}</text>
+		<view class="type-card">
+			<view class="type-tabs">
+				<view :class="['type-tab', typeIndex == 0 ? 'type-tab-active' : '']" @click="selectType(0)">
+					<text :class="['type-tab-text', typeIndex == 0 ? 'type-tab-text-active' : '']">Student</text>
+				</view>
+				<view :class="['type-tab', typeIndex == 1 ? 'type-tab-active' : '']" @click="selectType(1)">
+					<text :class="['type-tab-text', typeIndex == 1 ? 'type-tab-text-active' : '']">Senior</text>
+				</view>
 			</view>
-
-			<text class="label">Selected File</text>
-			<view class="file-box">
-				<text class="file-name">{{ selectedFileName.length > 0 ? selectedFileName : 'No file selected' }}</text>
+			<view class="type-body">
+				<text class="label">Verification Image</text>
+				<view v-if="selectedFilePath.length > 0" class="image-preview">
+					<image :src="selectedFilePath" mode="aspectFit" class="preview-img"></image>
+					<view class="image-info">
+						<text class="file-name">{{ selectedFileName }}</text>
+						<text class="change-link" @click="chooseImageFile">Change</text>
+					</view>
+				</view>
+				<view v-else class="upload-area" @click="chooseImageFile">
+					<text class="upload-icon">+</text>
+					<text class="upload-text">Tap to upload image</text>
+				</view>
+				<button class="btn primary" :disabled="isSubmitting" @click="submitVerification">
+					{{ isSubmitting ? 'Submitting...' : 'Submit Verification' }}
+				</button>
 			</view>
-
-			<button class="btn secondary" @click="chooseImageFile">Choose Image</button>
-			<button class="btn primary" :disabled="isSubmitting" @click="submitVerification">
-				{{ isSubmitting ? 'Submitting...' : 'Submit Verification' }}
-			</button>
 		</view>
 
 		<view class="card">
@@ -34,7 +45,7 @@
 						<text class="type-badge">{{ getTypeLabel(item.type) }}</text>
 						<text :class="['status-badge', getStatusClass(item.status)]">{{ getStatusLabel(item.status) }}</text>
 					</view>
-					<text class="status-sub">Submitted: {{ item.submittedAt }}</text>
+					<text class="status-sub">Submitted: {{ formatSubmittedAt(item.submittedAt) }}</text>
 					<text v-if="item.rejectReason.length > 0" class="reject-reason">Reason: {{ item.rejectReason }}</text>
 				</view>
 			</view>
@@ -59,7 +70,6 @@ type SubmissionItem = {
 }
 
 const typeOptions = ['STUDENT', 'SENIOR']
-const typeLabelOptions = ['Student', 'Senior']
 const typeIndex = ref(0)
 const isSubmitting = ref(false)
 const isLoading = ref(false)
@@ -114,13 +124,26 @@ const getAuth = (): UTSJSONObject | null => {
 	return auth
 }
 
-const openTypePicker = () => {
-	uni.showActionSheet({
-		itemList: typeLabelOptions,
-		success: (res) => {
-			typeIndex.value = res.tapIndex
-		}
-	})
+const selectType = (index: number) => {
+	typeIndex.value = index
+}
+
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+const formatSubmittedAt = (raw: string): string => {
+	if (raw.length < 10) return raw
+	const datePart = raw.substring(0, 10)
+	const parts = datePart.split('-')
+	if (parts.length < 3) return raw
+	const year = parseInt(parts[0])
+	const month = parseInt(parts[1])
+	const day = parseInt(parts[2])
+	let timeStr = ''
+	if (raw.length >= 16 && (raw.substring(10, 11) == 'T' || raw.substring(10, 11) == ' ')) {
+		timeStr = raw.substring(11, 16)
+	}
+	const result = day + ' ' + monthNames[month - 1] + ' ' + year
+	return timeStr.length > 0 ? result + ', ' + timeStr : result
 }
 
 const chooseImageFile = () => {
@@ -277,41 +300,119 @@ onShow(() => {
 }
 
 .label {
-	font-size: $font-body;
+	font-size: 15px;
 	font-weight: bold;
 	color: $text-primary;
-	margin-bottom: 8px;
+	margin-bottom: 6px;
 }
 
-.picker {
+.type-card {
+	background-color: $bg-card;
+	border-radius: 12px;
+	margin-bottom: 14px;
+	box-shadow: $shadow-card;
+	overflow: hidden;
+}
+
+.type-tabs {
+	display: flex;
+	flex-direction: row;
+}
+
+.type-tab {
+	flex: 1;
+	padding: 10px 12px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #f0f0f0;
+	border-bottom-width: 2px;
+	border-bottom-style: solid;
+	border-bottom-color: transparent;
+}
+
+.type-tab-active {
+	background-color: $bg-card;
+	border-bottom-color: $brand-green;
+}
+
+.type-tab-text {
+	font-size: 16px;
+	font-weight: bold;
+	color: $text-secondary;
+}
+
+.type-tab-text-active {
+	color: $brand-green;
+}
+
+.type-body {
+	padding: 14px 16px;
+}
+
+.upload-area {
+	border: 2px dashed $border-base;
+	border-radius: 12px;
+	padding: 24px;
+	margin-bottom: 12px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background-color: #fafafa;
+}
+
+.upload-icon {
+	font-size: 32px;
+	color: $text-placeholder;
+	margin-bottom: 6px;
+}
+
+.upload-text {
+	font-size: $font-caption;
+	color: $text-placeholder;
+}
+
+.image-preview {
+	margin-bottom: 12px;
+	border-radius: 10px;
+	overflow: hidden;
 	border: 1px solid $border-base;
-	border-radius: 8px;
-	padding: 10px 12px;
-	margin-bottom: 12px;
 }
 
-.picker-value {
-	font-size: $font-body;
-	color: $text-primary;
+.preview-img {
+	width: 100%;
+	height: 200px;
 }
 
-.file-box {
-	border: 1px dashed #cfcfcf;
-	border-radius: 8px;
-	padding: 10px 12px;
-	margin-bottom: 12px;
+.image-info {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	background-color: #fafafa;
 }
 
 .file-name {
 	font-size: $font-caption;
 	color: $text-secondary;
+	flex: 1;
+}
+
+.change-link {
+	font-size: $font-caption;
+	color: $brand-green;
+	font-weight: bold;
 }
 
 .btn {
 	margin-top: 8px;
-	padding: 12px;
+	padding: 10px 24px;
 	border-radius: 8px;
-	font-size: $font-body;
+	font-size: 15px;
+	width: auto;
+	align-self: center;
 }
 
 .primary {

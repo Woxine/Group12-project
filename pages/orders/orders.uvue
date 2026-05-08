@@ -1082,7 +1082,8 @@ onHide(() => {
 .load-more-wrap {
 	margin-top: 8px;
 	margin-bottom: 24px;
-	text-align: center;
+	display: flex;
+	justify-content: center;
 }
 
 .load-more-btn {

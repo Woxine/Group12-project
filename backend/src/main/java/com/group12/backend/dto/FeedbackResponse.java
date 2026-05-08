@@ -13,6 +13,7 @@ public class FeedbackResponse {
     private Boolean escalated;
     private String escalatedTo;
     private String escalationStatus;
+    private String imageMimeType;
 
     public FeedbackResponse(Long id, Long userId, Long scooterId, String content, String priority, Boolean resolved) {
         this(id, userId, scooterId, content, priority, resolved, false, null, null);
@@ -49,4 +50,6 @@ public class FeedbackResponse {
     public Boolean getEscalated() { return escalated; }
     public String getEscalatedTo() { return escalatedTo; }
     public String getEscalationStatus() { return escalationStatus; }
+    public String getImageMimeType() { return imageMimeType; }
+    public void setImageMimeType(String imageMimeType) { this.imageMimeType = imageMimeType; }
 }

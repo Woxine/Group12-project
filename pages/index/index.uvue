@@ -349,6 +349,12 @@
       } catch (e) {
         console.error('moveToLocation failed', e)
       }
+      // Force map redraw on HarmonyOS where the map may black out after page re-show
+      setTimeout(() => {
+        try {
+          mapContext.value?.moveToLocation({ latitude: lat, longitude: lng })
+        } catch (e) {}
+      }, 300)
 	    },
 	    fail: (err) => {
 	      console.error('定位失败', err)
@@ -378,7 +384,10 @@
 	    } else {
 	      mapContext.value = uni.createMapContext('mainMap')
 	    }
-	    getCurrentLocation()
+	    // Delay location init on HarmonyOS to let the map component finish rendering
+	    setTimeout(() => {
+	      getCurrentLocation()
+	    }, 200)
 	  })
 	})
 

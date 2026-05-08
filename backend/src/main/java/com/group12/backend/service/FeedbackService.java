@@ -2,6 +2,8 @@ package com.group12.backend.service;
 
 import java.util.Map;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.group12.backend.dto.EscalatedFeedbackResponse;
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.ProcessFeedbackRequest;
@@ -35,4 +37,9 @@ public interface FeedbackService {
      * ID15 TODO: 查询高优先级问题列表（支持上报状态筛选）。
      */
     Map<String, Object> getHighPriorityIssues(Boolean escalated, Integer page, Integer size);
+
+    /**
+     * 为已有反馈上传图片。
+     */
+    Object uploadFeedbackImage(Long feedbackId, Long userId, MultipartFile file);
 }

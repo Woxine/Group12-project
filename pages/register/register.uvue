@@ -57,6 +57,7 @@
 					class="primary-button">
 					{{ isSubmitting ? 'Registering...' : 'Sign Up' }}
 				</button>
+				<view style="width: 12px; height: 12px;"></view>
 				<button @click="goBackToLogin" size="default" class="secondary-button">Back</button>
 			</view>
 		</view>
@@ -212,7 +213,69 @@ const handleRegister = async (): Promise<void> => {
 						welcomeName = regData['name'] as string;
 					}
 					
-					showThenNavigate('Registration successful! Welcome, ' + welcomeName + '!', '/pages/login/login', true, 2000, 'navigateTo');
+					uni.request({
+						url: BASE_URL + '/api/v1/auth/login',
+						method: 'POST',
+						data: {
+							email: formData.value.email.trim(),
+							password: formData.value.password
+						},
+						header: { 'Content-Type': 'application/json' },
+						success: (loginRes) => {
+							if (loginRes.statusCode == 200) {
+								const ret = loginRes.data as UTSJSONObject;
+								let loginData: UTSJSONObject | null = null;
+								if (ret['data'] != null) {
+									loginData = ret['data'] as UTSJSONObject;
+								} else {
+									loginData = ret;
+								}
+								
+								if (loginData != null) {
+									const token = loginData['token'] as string | null;
+									if (token != null) {
+										try { uni.setStorageSync('token', token); } catch(e){}
+										
+										const rawLoginId = loginData['id'] != null ? loginData['id'] : loginData['userId'];
+										const existingRegId = regData != null && regData['id'] != null ? regData['id'] : null;
+										let userIdToSave = '';
+										if (rawLoginId != null) {
+											userIdToSave = '' + rawLoginId;
+										} else if (existingRegId != null) {
+											userIdToSave = '' + existingRegId;
+										} else {
+											userIdToSave = formData.value.email.trim();
+										}
+										try { uni.setStorageSync('userId', userIdToSave); } catch(e){}
+										
+										const rawName = loginData['name'];
+										const userName = (rawName != null && ('' + rawName).trim().length > 0) ? (rawName as string).trim() : formData.value.name;
+										const userInfoData = { name: userName, email: formData.value.email.trim() };
+										try { uni.setStorageSync('userInfo', JSON.stringify(userInfoData)); } catch(e){}
+										
+										const rawRole = loginData['role'] != null ? loginData['role'] : loginData['userRole'];
+										const roleStr = rawRole != null ? ('' + rawRole).trim() : '';
+										const role = roleStr.length > 0 ? roleStr.toUpperCase() : 'CUSTOMER';
+										try { uni.setStorageSync('role', role); } catch(e){}
+										
+										showThenNavigate('Registration and login successful!', '/pages/index/index', true, 800, 'reLaunch');
+									} else {
+										showThenNavigate('Registration successful! Please log in.', '/pages/login/login', true, 2000, 'navigateTo');
+									}
+								} else {
+									showThenNavigate('Registration successful! Please log in.', '/pages/login/login', true, 2000, 'navigateTo');
+								}
+							} else {
+								showThenNavigate('Registration successful! Please log in manually.', '/pages/login/login', true, 2000, 'navigateTo');
+							}
+						},
+						fail: () => {
+							showThenNavigate('Registration successful! Please log in manually.', '/pages/login/login', true, 2000, 'navigateTo');
+						},
+						complete: () => {
+							isSubmitting.value = false;
+						}
+					});
 				} else {
 					let errorMessage = '';
 					switch(response.statusCode) {
@@ -255,6 +318,7 @@ const handleRegister = async (): Promise<void> => {
 					
 					console.error('Registration failed (HTTP Status):', errorMessage);
 					showError(errorMessage);
+					isSubmitting.value = false;
 				}
 			},
 			fail: (error) => {
@@ -267,9 +331,10 @@ const handleRegister = async (): Promise<void> => {
 				} else {
 					showError(networkMessage('unexpected', 'A network error occurred. Please check your connection and try again.'));
 				}
+				isSubmitting.value = false;
 			},
 			complete: () => {
-				isSubmitting.value = false;
+				// isSubmitting.value is toggled in child requests and error cases
 			}
 		});
 
@@ -405,10 +470,6 @@ const handleRegister = async (): Promise<void> => {
 			display: flex;
 			align-items: center;
 			width: 100%;
-		}
-
-		.form-actions .primary-button {
-			margin-right: 12px;
 		}
 
 		.primary-button,

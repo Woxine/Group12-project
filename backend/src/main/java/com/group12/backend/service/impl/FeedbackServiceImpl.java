@@ -9,6 +9,7 @@ import java.util.Comparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.group12.backend.dto.FeedbackRequest;
 import com.group12.backend.dto.FeedbackResponse;
@@ -24,6 +25,7 @@ import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.repository.FeedbackRepository;
 import com.group12.backend.repository.ScooterRepository;
 import com.group12.backend.repository.UserRepository;
+import com.group12.backend.service.FeedbackDocumentStorage;
 import com.group12.backend.service.FeedbackService;
 
 /**
@@ -40,6 +42,9 @@ public class FeedbackServiceImpl implements FeedbackService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private FeedbackDocumentStorage feedbackDocumentStorage;
 
     @Override
     /**
@@ -247,11 +252,31 @@ public class FeedbackServiceImpl implements FeedbackService {
         return Map.of("data", data, "total", total);
     }
 
+    @Override
+    public Object uploadFeedbackImage(Long feedbackId, Long userId, MultipartFile file) {
+        if (feedbackId == null || feedbackId <= 0) {
+            throw new BusinessException(ErrorMessages.INVALID_FEEDBACK_ID, HttpStatus.BAD_REQUEST);
+        }
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new BusinessException(ErrorMessages.feedbackNotFound(String.valueOf(feedbackId)), HttpStatus.NOT_FOUND));
+
+        if (feedback.getUser() == null || !feedback.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorMessages.UNAUTHORIZED, HttpStatus.FORBIDDEN);
+        }
+
+        FeedbackDocumentStorage.StoredFeedbackImage stored = feedbackDocumentStorage.store(userId, file);
+        feedback.setImagePath(stored.storagePath());
+        feedback.setImageMimeType(stored.mimeType());
+        feedback.setImageSizeBytes(stored.sizeBytes());
+        Feedback saved = feedbackRepository.save(feedback);
+        return mapToDTO(saved);
+    }
+
     /**
      * 将反馈实体转换为前端返回使用的 DTO。
      */
     private FeedbackResponse mapToDTO(Feedback feedback) {
-        return new FeedbackResponse(
+        FeedbackResponse dto = new FeedbackResponse(
             feedback.getId(),
             (feedback.getUser() != null) ? feedback.getUser().getId() : null,
             (feedback.getScooter() != null) ? feedback.getScooter().getId() : null,
@@ -262,6 +287,8 @@ public class FeedbackServiceImpl implements FeedbackService {
             feedback.getEscalatedTo(),
             feedback.getEscalationStatus()
         );
+        dto.setImageMimeType(feedback.getImageMimeType());
+        return dto;
     }
 
     private HighPriorityIssueItemDTO mapToHighPriorityIssueDTO(Feedback feedback) {

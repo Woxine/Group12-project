@@ -1,5 +1,6 @@
 package com.group12.backend.service.impl;
 
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -144,6 +145,18 @@ public class UserServiceImpl implements UserService {
             hasSeniorDiscount = discountService.hasSeniorDiscount(uId);
         }
 
+        BigDecimal studentRate = null;
+        BigDecimal seniorRate = null;
+        BigDecimal frequentRate = null;
+        if (billingService != null) {
+            BillingRule rule = billingService.getCurrentRule();
+            if (rule != null) {
+                studentRate = rule.studentDiscountRate();
+                seniorRate = rule.seniorDiscountRate();
+                frequentRate = rule.frequentDiscountRate();
+            }
+        }
+
         Map<String, Object> profile = new HashMap<>();
         profile.put("id", user.getId());
         profile.put("email", user.getEmail());
@@ -155,6 +168,9 @@ public class UserServiceImpl implements UserService {
         profile.put("hasFrequentDiscount", hasFrequentDiscount);
         profile.put("hasStudentDiscount", hasStudentDiscount);
         profile.put("hasSeniorDiscount", hasSeniorDiscount);
+        profile.put("studentDiscountRate", studentRate);
+        profile.put("seniorDiscountRate", seniorRate);
+        profile.put("frequentDiscountRate", frequentRate);
         return profile;
     }
 
