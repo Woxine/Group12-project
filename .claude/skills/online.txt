@@ -1,0 +1,374 @@
+# 部署运维使用手册
+
+适用于本项目（rideNow / scooter 项目）后端 + 管理员网页的日常代码更新。每次代码修改完成后，按本手册执行即可把改动同步到生产环境。
+
+---
+
+## 0. 当前部署架构
+
+| 组件 | 部署位置 | 端口 | 备注 |
+| :--- | :--- | :--- | :--- |
+| MySQL 数据库 | 阿里云 ECS（8.137.174.238） | 3306 | 仅本机访问 |
+| 后端 Spring Boot | 阿里云 ECS | 8080 | systemd 服务名 `scooter-backend` |
+| 管理员网页 | 阿里云 ECS（Nginx 静态托管） | 80 | 静态目录 `/opt/scooter-web` |
+| uniapp（手机端） | 各人手机 APK | - | 通过公网调用后端 8080 |
+
+后端 jar 位置：`/opt/scooter/backend-0.0.1-SNAPSHOT.jar`
+网页静态目录：`/opt/scooter-web`
+公网访问入口：
+
+- 后端 API：`http://8.137.174.238:8080`
+- 管理员网页：`http://8.137.174.238/`
+
+---
+
+## 1. 连接阿里云服务器
+
+### 1.1 准备信息
+
+向项目负责人索要：
+
+- 服务器公网 IP：`8.137.174.238`
+- 登录用户名：`root`
+- 登录密码：13896850673@gjkGW
+
+### 1.2 Windows 上 SSH 登录
+
+打开 PowerShell 或 CMD：
+
+```powershell
+ssh root@8.137.174.238
+```
+
+第一次连接会提示是否信任主机，输入 `yes` 回车，再输入密码即可登录。
+
+如果用密钥登录：
+
+```powershell
+ssh -i C:\path\to\your_key.pem root@8.137.174.238
+```
+
+### 1.3 macOS / Linux 同理
+
+```bash
+ssh root@8.137.174.238
+```
+
+### 1.4 Windows 上传文件用 `scp`
+
+Windows 10 / 11 自带 `scp`，无需额外安装。后续传 jar、传 dist 都用它，命令模板：
+
+```powershell
+scp 本地文件 root@8.137.174.238:服务器目标路径
+scp -r 本地目录 root@8.137.174.238:服务器目标路径
+```
+
+### 1.5 推荐图形化工具（可选）
+
+如果不习惯命令行，可装 **FinalShell** 或 **MobaXterm**，能同时做 SSH + 文件拖拽上传，比较直观。
+
+---
+
+## 2. 修改后端代码并部署
+
+### 2.1 本地修改与本地自测
+
+1. 在本地拉取最新代码并切到自己分支
+2. 修改 `backend/src/main/java` 下的代码
+3. 在 `backend` 目录下本地启动验证：
+
+```powershell
+cd C:\Users\gjk20\Desktop\work\backend
+$env:SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/scooter_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+$env:SPRING_DATASOURCE_USERNAME="你的本地MySQL用户名"
+$env:SPRING_DATASOURCE_PASSWORD="你的本地MySQL密码"
+.\mvnw.cmd spring-boot:run
+```
+
+访问 `http://localhost:8080/api/v1/scooters` 等接口确认本地工作正常。
+**本地一定要先跑通再部署，避免把坏代码推到生产。**
+
+### 2.2 本地打包 jar
+
+```powershell
+cd C:\Users\gjk20\Desktop\work\backend
+.\mvnw.cmd clean package -DskipTests
+```
+
+打包成功后会在 `backend/target/` 下生成：
+
+```
+backend-0.0.1-SNAPSHOT.jar
+```
+
+### 2.3 上传 jar 到服务器（覆盖旧版本）
+
+在 `backend` 目录里执行：
+
+```powershell
+scp .\target\backend-0.0.1-SNAPSHOT.jar root@8.137.174.238:/opt/scooter/
+```
+
+### 2.4 重启后端服务
+
+SSH 登录服务器：
+
+```powershell
+ssh root@8.137.174.238
+```
+
+重启服务：
+
+```bash
+systemctl restart scooter-backend
+systemctl status scooter-backend
+```
+
+看到 `Active: active (running)` 就 OK。
+
+实时查看日志：
+
+```bash
+tail -f /opt/scooter/app.log
+```
+
+或：
+
+```bash
+journalctl -u scooter-backend -f
+```
+
+确认日志里出现：
+
+```
+Started BackendApplication in x.x seconds
+```
+
+按 `Ctrl + C` 退出日志查看。
+
+### 2.5 验证
+
+在本地浏览器或服务器上：
+
+```bash
+curl http://8.137.174.238:8080/api/v1/scooters
+```
+
+返回 JSON 即代表新版本已生效。
+
+### 2.6 后端常用运维命令
+
+```bash
+systemctl status scooter-backend     # 查状态
+systemctl restart scooter-backend    # 重启
+systemctl stop scooter-backend       # 停止
+systemctl start scooter-backend      # 启动
+journalctl -u scooter-backend -n 200 # 查最近 200 行日志
+journalctl -u scooter-backend -f     # 实时滚动日志
+```
+
+如果改动涉及数据库连接、邮箱密码等环境变量，要修改 `/etc/systemd/system/scooter-backend.service`，改完执行：
+
+```bash
+systemctl daemon-reload
+systemctl restart scooter-backend
+```
+
+### 2.7 重要：CORS 注意事项
+
+如果新增了访问前端的来源（比如新域名、新端口），需要在 `backend/src/main/java/com/group12/backend/config/WebConfig.java` 里 `allowedOrigins(...)` 加上新地址，**否则浏览器会跨域报错**。
+
+当前生产白名单包含：
+
+- `http://localhost:5173`
+- `http://localhost:5174`
+- `http://localhost:8080`
+- `http://8.137.174.238`
+
+---
+
+## 3. 修改管理员网页代码并部署
+
+管理员网页是 `auth_web_front` 这个 Vite + Vue 项目，**纯静态部署**，不需要 Node 在服务器上跑。改完只需要重新打包后把 `dist` 目录覆盖到服务器。
+
+### 3.1 本地修改与自测
+
+```powershell
+cd C:\Users\gjk20\Desktop\work\auth_web_front
+npm install            # 第一次或新装了依赖
+npm run dev
+```
+
+浏览器打开 `http://localhost:5173`（或控制台显示的端口）。本地默认连 `http://localhost:8080` 后端，所以本地需要先把后端跑起来。
+
+### 3.2 确认 `.env.production` 内容
+
+`auth_web_front/.env.production` 必须存在，内容应该是：
+
+```
+VITE_API_BASE_URL=http://8.137.174.238:8080
+```
+
+**如果不存在或写错，打包出来的网页会请求 `localhost:8080`，部署上去就调不通后端。**
+
+### 3.3 生产打包
+
+```powershell
+cd C:\Users\gjk20\Desktop\work\auth_web_front
+npm run build
+```
+
+成功后会生成 `auth_web_front/dist/` 目录，里面是 `index.html` + `assets/...`。
+
+### 3.4 上传 dist 到服务器
+
+#### 步骤 1：先清空服务器上旧文件（避免残留）
+
+```powershell
+ssh root@8.137.174.238 "rm -rf /opt/scooter-web/*"
+```
+
+#### 步骤 2：上传新 dist 内容
+
+在 `auth_web_front` 目录里执行：
+
+```powershell
+scp -r .\dist\* root@8.137.174.238:/opt/scooter-web/
+```
+
+注意命令最后是 `\dist\*`，**不是** `\dist`。如果不带 `*` 写成 `scp -r .\dist root@...:/opt/scooter-web/`，会变成 `/opt/scooter-web/dist/index.html`（多套一层）。
+
+#### 步骤 3：修复权限（必做）
+
+`scp` 上传后默认权限可能是 `700`，Nginx 进程读不到会 403。在服务器上执行：
+
+```bash
+ssh root@8.137.174.238
+chmod -R o+rX /opt/scooter-web
+```
+
+### 3.5 不需要重启 Nginx
+
+静态文件直接覆盖即可生效，**不用** `systemctl reload nginx`。只有改了 `/etc/nginx/conf.d/scooter-web.conf` 配置时才需要：
+
+```bash
+nginx -t
+systemctl reload nginx
+```
+
+### 3.6 验证
+
+浏览器访问：
+
+```
+http://8.137.174.238/
+```
+
+强制刷新 **Ctrl + F5**（普通刷新可能命中浏览器缓存看不到改动）。
+
+如果改了 JS / CSS 但页面没变，先 Ctrl + F5；还不行就在浏览器 DevTools → Network 勾上 "Disable cache" 再刷一次。
+
+---
+
+## 4. 一次同时改了后端 + 网页的情况
+
+按这个顺序部署最稳：
+
+1. 先部署后端（先把"被依赖方"更新好）
+2. 再部署网页
+3. 网页刷新后做完整业务测试
+
+如果反过来先部署网页，可能新前端调旧后端的新接口，出现 404。
+
+---
+
+## 5. 常见问题排查
+
+### 5.1 后端启动失败
+
+```bash
+journalctl -u scooter-backend -n 200
+```
+
+常见错误：
+
+- **数据库连不上**：MySQL 是不是正常运行？`systemctl status mysqld`
+- **端口被占**：上一次的 java 没退干净。`ps -ef | grep java`，`kill -9 PID`，再 `systemctl start scooter-backend`
+- **Java 启动报 ClassNotFoundException**：jar 没传完整，重新 `scp` 一次
+
+### 5.2 网页 403 Forbidden
+
+权限问题，重新执行：
+
+```bash
+chmod -R o+rX /opt/scooter-web
+```
+
+### 5.3 网页能打开，但接口请求 CORS 错误
+
+后端 `WebConfig.java` 的 `allowedOrigins` 没加你访问网页时使用的地址（域名/IP/端口），改完重新部署后端。
+
+### 5.4 改了代码但页面没变
+
+浏览器缓存，强制刷新 Ctrl + F5。
+
+### 5.5 SSH 连不上
+
+- 确认本地网络正常
+- 确认阿里云安全组 22 端口对你 IP 开放
+- 确认服务器没欠费、没关机
+
+### 5.6 上传 jar 后服务起不来怎么办（回滚）
+
+每次部署前先在服务器上备份一份旧 jar：
+
+```bash
+cd /opt/scooter
+cp backend-0.0.1-SNAPSHOT.jar backend-0.0.1-SNAPSHOT.jar.bak
+```
+
+万一新版本有问题：
+
+```bash
+mv backend-0.0.1-SNAPSHOT.jar.bak backend-0.0.1-SNAPSHOT.jar
+systemctl restart scooter-backend
+```
+
+网页同理，可以保留一份 `dist.bak`。
+
+---
+
+## 6. 安全须知
+
+- **不要**把数据库账号、邮箱密码、阿里云密钥提交到 git
+- **不要**把 ECS root 密码发到群里、贴到聊天工具
+- 部署相关操作建议两人交叉确认，避免 `rm -rf` 写错路径
+- 服务器上的 8080 端口只提供 API，不要在上面跑别的服务
+- MySQL 不要开公网访问，仅 `localhost`
+
+---
+
+## 7. 速查表
+
+```text
+连接服务器：        ssh root@8.137.174.238
+
+后端目录：          /opt/scooter
+后端 jar：          /opt/scooter/backend-0.0.1-SNAPSHOT.jar
+后端服务：          systemctl restart scooter-backend
+后端日志：          journalctl -u scooter-backend -f
+后端测试：          curl http://8.137.174.238:8080/api/v1/scooters
+
+网页目录：          /opt/scooter-web
+网页打包命令：      npm run build（在 auth_web_front 目录）
+网页上传：          scp -r .\dist\* root@8.137.174.238:/opt/scooter-web/
+网页修权限：        chmod -R o+rX /opt/scooter-web
+网页地址：          http://8.137.174.238/
+
+打包后端：          .\mvnw.cmd clean package -DskipTests（在 backend 目录）
+上传后端：          scp .\target\backend-0.0.1-SNAPSHOT.jar root@8.137.174.238:/opt/scooter/
+```
+
+---
+
+如果遇到手册里没覆盖的情况，先看后端日志（`journalctl -u scooter-backend -n 200`）和 Nginx 日志（`tail -n 50 /var/log/nginx/error.log`），90% 的问题都能从日志里直接看出原因。

@@ -113,7 +113,7 @@ adb reverse tcp:8080 tcp:8080
 
 ## 额外说明
 
-- 数据库结构设计文档位于 `backend/DATABASE_SCHEMA.md`，其内容应与当前实体定义和 `backend/init.sql` 保持一致
+- 数据库结构设计文档位于 `docs/database-structure.md`，`backend/DATABASE_SCHEMA.md` 仅保留为历史入口
 - `init.sql` 是团队统一的可执行初始化脚本
 - 如果需要插入默认用户，请注意后端登录逻辑要求密码使用 BCrypt 哈希，而不是明文。
 
