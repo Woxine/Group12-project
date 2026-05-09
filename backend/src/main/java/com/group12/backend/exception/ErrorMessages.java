@@ -10,6 +10,7 @@ public final class ErrorMessages {
 
     public static final String UNEXPECTED_ERROR_MESSAGE = "An unexpected error occurred. Please contact support.";
     public static final String ACCESS_DENIED_MESSAGE = "Access denied. Invalid or missing token.";
+    public static final String FILE_EXCEEDS_MAX_ALLOWED_SIZE = "File exceeds max allowed size";
 
     // Authentication and user account errors.
     public static final String INVALID_EMAIL_OR_PASSWORD = "Invalid email or password";

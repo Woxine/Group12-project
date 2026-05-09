@@ -1,10 +1,12 @@
 <template>
 	<view class="container">
+		<!-- Section: Page header -->
 		<view class="title-section">
 			<text class="title">Discount Verification</text>
 			<text class="hint">Student verification is required for student discount. Senior verification is optional.</text>
 		</view>
 
+		<!-- Section: Verification form -->
 		<view class="type-card">
 			<view class="type-tabs">
 				<view :class="['type-tab', typeIndex == 0 ? 'type-tab-active' : '']" @click="selectType(0)">
@@ -33,6 +35,7 @@
 			</view>
 		</view>
 
+		<!-- Section: Submission status list -->
 		<view class="card">
 			<view class="status-header">
 				<text class="label">My Submission Status</text>
@@ -55,12 +58,14 @@
 </template>
 
 <script setup lang="uts">
+// Section: Imports
 import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showError, showInfo, showSuccess } from '../../common/appToast.uts'
 
+// Section: Types and page state
 type SubmissionItem = {
 	id: number
 	type: string
@@ -76,7 +81,10 @@ const isLoading = ref(false)
 const selectedFilePath = ref('')
 const selectedFileName = ref('')
 const submissions = ref<SubmissionItem[]>([])
+const maxUploadBytes = 5 * 1024 * 1024
+const maxUploadLabel = '5 MB'
 
+// Section: Storage and authentication helpers
 const readStorageStringOrNull = (key: string): string | null => {
 	const raw = uni.getStorageSync(key)
 	if (raw == null) return null
@@ -124,8 +132,37 @@ const getAuth = (): UTSJSONObject | null => {
 	return auth
 }
 
+// Section: Display formatting helpers
 const selectType = (index: number) => {
 	typeIndex.value = index
+}
+
+const clearSelectedFile = () => {
+	selectedFilePath.value = ''
+	selectedFileName.value = ''
+}
+
+const getFileNameFromPath = (path: string): string => {
+	const slashIndex = path.lastIndexOf('/')
+	return slashIndex >= 0 ? path.substring(slashIndex + 1) : path
+}
+
+const setSelectedFile = (path: string) => {
+	selectedFilePath.value = path
+	selectedFileName.value = getFileNameFromPath(path)
+}
+
+const getFileTooLargeMessage = (): string => {
+	return 'Image is larger than ' + maxUploadLabel + '. Please retake it or choose a smaller image.'
+}
+
+const validateAndSetSelectedFile = (path: string, size: number | null) => {
+	if (size != null && size > maxUploadBytes) {
+		clearSelectedFile()
+		showError(getFileTooLargeMessage())
+		return
+	}
+	setSelectedFile(path)
 }
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -146,21 +183,34 @@ const formatSubmittedAt = (raw: string): string => {
 	return timeStr.length > 0 ? result + ', ' + timeStr : result
 }
 
+// Section: Image selection and validation
 const chooseImageFile = () => {
 	uni.chooseImage({
 		count: 1,
+		sizeType: ['compressed'],
 		sourceType: ['album', 'camera'],
 		success: (res) => {
 			if (res.tempFilePaths.length > 0) {
-				selectedFilePath.value = res.tempFilePaths[0]
-				const path = selectedFilePath.value
-				const slashIndex = path.lastIndexOf('/')
-				selectedFileName.value = slashIndex >= 0 ? path.substring(slashIndex + 1) : path
+				let size: number | null = null
+				if (res.tempFiles.length > 0) {
+					size = parseInt('' + res.tempFiles[0].size)
+				}
+				validateAndSetSelectedFile(res.tempFilePaths[0], size)
+			} else {
+				showInfo('No image was selected')
 			}
+		},
+		fail: (err) => {
+			let msg = 'Unable to choose image'
+			if (err != null && err.errMsg != null && ('' + err.errMsg).length > 0) {
+				msg = msg + ': ' + err.errMsg
+			}
+			showError(msg)
 		}
 	})
 }
 
+// Section: Submission status loading
 const loadSubmissions = () => {
 	const auth = getAuth()
 	if (auth == null) return
@@ -207,6 +257,7 @@ const loadSubmissions = () => {
 	})
 }
 
+// Section: Verification upload submission
 const submitVerification = () => {
 	if (isSubmitting.value) return
 	const auth = getAuth()
@@ -234,8 +285,7 @@ const submitVerification = () => {
 		success: (res) => {
 			if (res.statusCode >= 200 && res.statusCode < 300) {
 				showSuccess('Verification submitted')
-				selectedFilePath.value = ''
-				selectedFileName.value = ''
+				clearSelectedFile()
 				loadSubmissions()
 			} else {
 				let msg = 'Failed to submit verification'
@@ -250,8 +300,12 @@ const submitVerification = () => {
 				showError(msg)
 			}
 		},
-		fail: () => {
-			showError(getAppMessage('network', 'requestFailed', 'Network error'))
+		fail: (err) => {
+			let msg = getAppMessage('network', 'requestFailed', 'Network error')
+			if (err != null && err.errMsg != null && ('' + err.errMsg).length > 0) {
+				msg = msg + ': ' + err.errMsg
+			}
+			showError(msg)
 		},
 		complete: () => {
 			isSubmitting.value = false
@@ -259,6 +313,7 @@ const submitVerification = () => {
 	})
 }
 
+// Section: Page lifecycle refresh
 onMounted(() => {
 	loadSubmissions()
 })
@@ -269,6 +324,7 @@ onShow(() => {
 </script>
 
 <style lang="scss">
+/* Section: Layout and shared card styles */
 .container {
 	padding: 20px;
 	background-color: $bg-page;
@@ -306,6 +362,7 @@ onShow(() => {
 	margin-bottom: 6px;
 }
 
+/* Section: Verification type tabs */
 .type-card {
 	background-color: $bg-card;
 	border-radius: 12px;
@@ -350,6 +407,7 @@ onShow(() => {
 	padding: 14px 16px;
 }
 
+/* Section: Image upload and preview */
 .upload-area {
 	border: 2px dashed $border-base;
 	border-radius: 12px;
@@ -406,6 +464,7 @@ onShow(() => {
 	font-weight: bold;
 }
 
+/* Section: Form buttons */
 .btn {
 	margin-top: 8px;
 	padding: 10px 24px;
@@ -426,6 +485,7 @@ onShow(() => {
 	border: 1px solid $brand-green;
 }
 
+/* Section: Submission status list */
 .status-header {
 	display: flex;
 	flex-direction: row;

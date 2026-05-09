@@ -11,7 +11,13 @@ import org.springframework.stereotype.Component;
 public class DiscountVerificationStorageProperties {
     private String rootDir = "uploads/discount-verifications";
     private long maxFileSizeBytes = 5 * 1024 * 1024;
-    private List<String> allowedMimeTypes = new ArrayList<>(List.of("image/jpeg", "image/png", "application/pdf"));
+    private List<String> allowedMimeTypes = new ArrayList<>(List.of(
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/heic",
+            "image/heif",
+            "application/pdf"));
 
     public String getRootDir() { return rootDir; }
     public void setRootDir(String rootDir) { this.rootDir = rootDir; }

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.group12.backend.exception.GlobalExceptionHandler;
 
@@ -68,5 +69,19 @@ class GlobalExceptionHandlerTest {
         Map<String, Object> body = (Map<String, Object>) response.getBody();
         assertThat(body).isNotNull();
         assertThat(String.valueOf(body.get("message"))).isEqualTo("Invalid value for 'limit'.");
+    }
+
+    @Test
+    @DisplayName("handleMaxUploadSizeExceededException_returnsFriendlyUploadMessage")
+    void handleMaxUploadSizeExceededException_returnsFriendlyUploadMessage() {
+        MaxUploadSizeExceededException exception = new MaxUploadSizeExceededException(5 * 1024 * 1024);
+
+        ResponseEntity<Object> response = handler.handleMaxUploadSizeExceededException(exception);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(String.valueOf(body.get("message"))).isEqualTo("File exceeds max allowed size");
     }
 }

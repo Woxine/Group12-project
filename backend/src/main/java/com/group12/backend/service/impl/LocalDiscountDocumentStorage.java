@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.group12.backend.config.DiscountVerificationStorageProperties;
 import com.group12.backend.exception.BusinessException;
+import com.group12.backend.exception.ErrorMessages;
 import com.group12.backend.service.DiscountDocumentStorage;
 
 @Component
@@ -46,12 +47,13 @@ public class LocalDiscountDocumentStorage implements DiscountDocumentStorage {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("Uploaded file is required", HttpStatus.BAD_REQUEST);
         }
-        String mimeType = file.getContentType() == null ? "" : file.getContentType().trim().toLowerCase(Locale.ROOT);
+        String contentType = file.getContentType();
+        String mimeType = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
         if (!storageProperties.getAllowedMimeTypes().contains(mimeType)) {
             throw new BusinessException("Unsupported file type", HttpStatus.BAD_REQUEST);
         }
         if (file.getSize() > storageProperties.getMaxFileSizeBytes()) {
-            throw new BusinessException("File exceeds max allowed size", HttpStatus.BAD_REQUEST);
+            throw new BusinessException(ErrorMessages.FILE_EXCEEDS_MAX_ALLOWED_SIZE, HttpStatus.BAD_REQUEST);
         }
 
         String originalFileName = sanitizeFileName(file.getOriginalFilename());

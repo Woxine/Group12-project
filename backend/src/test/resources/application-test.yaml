@@ -1,4 +1,4 @@
-# 仅用于测试：内存 H2，避免 @SpringBootTest 依赖本机 MySQL。
+﻿# 仅用于测试：内存 H2，避免 @SpringBootTest 依赖本机 MySQL。
 spring:
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
@@ -10,6 +10,10 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 discount:
   enabled: true
@@ -30,5 +34,8 @@ discount-verification:
     max-file-size-bytes: 5242880
     allowed-mime-types:
       - image/jpeg
+      - image/jpg
       - image/png
+      - image/heic
+      - image/heif
       - application/pdf

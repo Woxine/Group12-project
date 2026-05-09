@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Global exception handler for the application.
@@ -64,6 +65,16 @@ public class GlobalExceptionHandler {
                         HttpStatus.CONFLICT,
                         ErrorMessages.BUSINESS_ERROR,
                         ErrorMessages.BOOKING_CONCURRENT_CONFLICT
+                ));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.BAD_REQUEST,
+                        ErrorMessages.VALIDATION_ERROR,
+                        ErrorMessages.FILE_EXCEEDS_MAX_ALLOWED_SIZE
                 ));
     }
 
