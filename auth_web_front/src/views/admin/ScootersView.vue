@@ -7,7 +7,7 @@
           <div class="admin-page-subtitle">Manage fleet status, visibility, and bulk updates by vehicle type.</div>
         </div>
         <div class="admin-page-toolbar">
-          <el-space>
+          <div class="toolbar-row">
             <el-select
               v-model="filters.status"
               clearable
@@ -21,7 +21,8 @@
             </el-select>
             <el-button type="primary" :icon="Search" :loading="loading" aria-label="Search scooters" @click="load">Search</el-button>
             <el-button type="success" :icon="Plus" @click="openAdd">Add scooter</el-button>
-          </el-space>
+            <el-button type="warning" :icon="Upload" @click="batchDialogVisible = true">Batch Import</el-button>
+          </div>
         </div>
       </div>
     </template>
@@ -52,8 +53,17 @@
             <div class="type-meta-actions">
               <div class="type-metrics" role="group" :aria-label="`${section.type} scooter summary`">
                 <el-tag size="small" effect="plain" type="info" class="type-metric-tag">Total {{ section.total }}</el-tag>
-                <el-tag size="small" effect="plain" type="success" class="type-metric-tag">Available {{ section.availableCount }}</el-tag>
+                <el-tag size="small" effect="plain" type="success" class="type-metric-tag">Avail {{ section.availableCount }}</el-tag>
+                <el-tag size="small" effect="plain" type="primary" class="type-metric-tag">Rented {{ section.rentedCount }}</el-tag>
+                <el-tag size="small" effect="plain" type="warning" class="type-metric-tag">Maint {{ section.maintenanceCount }}</el-tag>
                 <el-tag size="small" effect="plain" type="info" class="type-metric-tag">Hidden {{ section.hiddenCount }}</el-tag>
+                <el-progress
+                  :percentage="section.usageRate"
+                  :stroke-width="14"
+                  :text-inside="true"
+                  :status="section.usageRate >= 80 ? 'exception' : section.usageRate >= 50 ? undefined : 'success'"
+                  class="type-usage-bar"
+                />
               </div>
               <el-button
                 text
@@ -71,7 +81,14 @@
 
         <div v-show="expandedTypes[section.type]">
           <div class="bulk-panel admin-panel">
-            <div class="admin-section-title">Unified Controller</div>
+            <div class="bulk-panel-header" @click="bulkCollapsed[section.type] = !bulkCollapsed[section.type]">
+              <span class="admin-section-title">Unified Controller</span>
+              <el-icon class="bulk-collapse-icon">
+                <ArrowDown v-if="!bulkCollapsed[section.type]" />
+                <ArrowRight v-else />
+              </el-icon>
+            </div>
+            <div v-show="!bulkCollapsed[section.type]">
             <el-row :gutter="12" class="bulk-row">
               <el-col :md="6" :sm="12" :xs="24">
                 <el-input-number
@@ -99,7 +116,7 @@
                 </el-select>
               </el-col>
               <el-col :md="6" :sm="12" :xs="24" class="bulk-actions">
-                <el-space>
+                <div class="bulk-actions-inner">
                   <el-button
                     :loading="bulkForms[section.type].previewing"
                     @click="previewBulk(section.type)"
@@ -113,7 +130,7 @@
                   >
                     Apply
                   </el-button>
-                </el-space>
+                </div>
               </el-col>
             </el-row>
 
@@ -125,8 +142,8 @@
                 bulkPreviews[section.type]!.risky ? 'admin-inline-notice--warning' : 'admin-inline-notice--info'
               ]"
             >
-              <el-tag size="small">Matched {{ bulkPreviews[section.type]!.matchedCount }}</el-tag>
-              <el-tag size="small">Hidden {{ bulkPreviews[section.type]!.hiddenCount }}</el-tag>
+              <el-tag size="small" type="info">Matched {{ bulkPreviews[section.type]!.matchedCount }}</el-tag>
+              <el-tag size="small" type="info">Hidden {{ bulkPreviews[section.type]!.hiddenCount }}</el-tag>
               <el-tag v-if="bulkPreviews[section.type]!.risky" size="small" type="warning">Risky change</el-tag>
               <span v-if="bulkPreviews[section.type]!.riskWarnings.length > 0" class="admin-status-text warning-text">
                 {{ bulkPreviews[section.type]!.riskWarnings.join(" ") }}
@@ -135,6 +152,7 @@
             <p v-else class="bulk-preview-hint admin-inline-notice">
               Run preview to estimate matched scooters before applying updates.
             </p>
+            </div>
           </div>
 
           <el-table :data="section.scooters" stripe class="data-table compact admin-data-table">
@@ -156,26 +174,23 @@
               <template #default="{ row }">£{{ Number(row.hourRate).toFixed(2) }}</template>
             </el-table-column>
             <el-table-column prop="locationName" label="Location Name" min-width="180" />
-            <el-table-column label="Actions" width="220" align="center" fixed="right">
+            <el-table-column label="Actions" width="80" align="center" fixed="right">
               <template #default="{ row }">
-                <el-button type="primary" link :icon="Edit" @click="openEdit(row)">Edit</el-button>
-                <el-button
-                  v-if="isListed(row)"
-                  type="warning"
-                  link
-                  @click="setFleetVisible(row, false)"
-                >
-                  Hide
-                </el-button>
-                <el-button
-                  v-else
-                  type="success"
-                  link
-                  @click="setFleetVisible(row, true)"
-                >
-                  Show
-                </el-button>
-                <el-button type="danger" link :icon="Delete" @click="confirmDelete(row)">Delete</el-button>
+                <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row)">
+                  <el-button :icon="MoreFilled" link />
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item :icon="Edit" command="edit">Edit</el-dropdown-item>
+                      <el-dropdown-item
+                        :icon="isListed(row) ? Hide : View"
+                        :command="isListed(row) ? 'hide' : 'show'"
+                      >
+                        {{ isListed(row) ? 'Hide' : 'Show' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item :icon="Delete" command="delete" divided>Delete</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </template>
             </el-table-column>
             <template #empty>
@@ -190,30 +205,42 @@
     </div>
   </el-card>
 
-  <el-dialog v-model="dialogVisible" title="Edit Scooter" width="500px" destroy-on-close>
+  <el-dialog v-model="dialogVisible" title="Edit Scooter" width="420px" destroy-on-close>
     <el-form label-position="top" :model="editForm" class="edit-form admin-dialog-form">
-      <el-form-item label="Vehicle Type">
-        <el-select v-model="editForm.type" placeholder="Select type" class="full-width">
-          <el-option label="GEN1 (Fz3)" value="GEN1" />
-          <el-option label="GEN2 (V70)" value="GEN2" />
-          <el-option label="GEN3 (M95C)" value="GEN3" />
-          <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="Visible on client map">
-        <el-switch v-model="editForm.visible" active-text="Shown" inactive-text="Hidden" />
-      </el-form-item>
-      <el-form-item label="Status">
-        <el-select v-model="editForm.status" placeholder="Select status" class="full-width">
-          <el-option label="AVAILABLE" value="AVAILABLE" />
-          <el-option label="RESERVED" value="RESERVED" />
-          <el-option label="RENTED" value="RENTED" />
-          <el-option label="MAINTENANCE" value="MAINTENANCE" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="Hourly Rate (£)">
-        <el-input-number v-model="editForm.hour_rate" :min="0" :precision="2" :step="0.5" class="full-width" />
-      </el-form-item>
+      <el-row :gutter="16">
+        <el-col :span="16">
+          <el-form-item label="Vehicle Type">
+            <el-select v-model="editForm.type" placeholder="Select type" class="full-width">
+              <el-option label="GEN1 (Fz3)" value="GEN1" />
+              <el-option label="GEN2 (V70)" value="GEN2" />
+              <el-option label="GEN3 (M95C)" value="GEN3" />
+              <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="8">
+          <el-form-item label="Visible">
+            <el-switch v-model="editForm.visible" active-text="Yes" inactive-text="No" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="Status">
+            <el-select v-model="editForm.status" placeholder="Select status" class="full-width">
+              <el-option label="AVAILABLE" value="AVAILABLE" />
+              <el-option label="RESERVED" value="RESERVED" />
+              <el-option label="RENTED" value="RENTED" />
+              <el-option label="MAINTENANCE" value="MAINTENANCE" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="Hourly Rate (£)">
+            <el-input-number v-model="editForm.hour_rate" :min="0" :precision="2" :step="0.5" class="full-width" />
+          </el-form-item>
+        </el-col>
+      </el-row>
       <el-row :gutter="16">
         <el-col :span="12">
           <el-form-item label="Latitude">
@@ -235,28 +262,40 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="addDialogVisible" title="Add Scooter" width="500px" destroy-on-close @closed="resetAddForm">
+  <el-dialog v-model="addDialogVisible" title="Add Scooter" width="420px" destroy-on-close @closed="resetAddForm">
     <el-form label-position="top" :model="addForm" class="edit-form admin-dialog-form">
-      <el-form-item label="Vehicle Type">
-        <el-select v-model="addForm.type" placeholder="Select type" class="full-width">
-          <el-option label="GEN1 (Fz3)" value="GEN1" />
-          <el-option label="GEN2 (V70)" value="GEN2" />
-          <el-option label="GEN3 (M95C)" value="GEN3" />
-          <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="Status">
-        <el-select v-model="addForm.status" placeholder="Select status" class="full-width">
-          <el-option label="AVAILABLE" value="AVAILABLE" />
-          <el-option label="MAINTENANCE" value="MAINTENANCE" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="Hourly Rate (£)" required>
-        <el-input-number v-model="addForm.hour_rate" :min="0" :precision="2" :step="0.5" class="full-width" />
-      </el-form-item>
-      <el-form-item label="Location name (optional)">
-        <el-input v-model="addForm.location_name" placeholder="e.g. Library Plaza" clearable />
-      </el-form-item>
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="Vehicle Type">
+            <el-select v-model="addForm.type" placeholder="Select type" class="full-width">
+              <el-option label="GEN1 (Fz3)" value="GEN1" />
+              <el-option label="GEN2 (V70)" value="GEN2" />
+              <el-option label="GEN3 (M95C)" value="GEN3" />
+              <el-option label="GEN3PRO (E300P MK2)" value="GEN3PRO" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="Status">
+            <el-select v-model="addForm.status" placeholder="Select status" class="full-width">
+              <el-option label="AVAILABLE" value="AVAILABLE" />
+              <el-option label="MAINTENANCE" value="MAINTENANCE" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="Hourly Rate (£)" required>
+            <el-input-number v-model="addForm.hour_rate" :min="0" :precision="2" :step="0.5" class="full-width" />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item label="Location name">
+            <el-input v-model="addForm.location_name" placeholder="e.g. Library Plaza" clearable />
+          </el-form-item>
+        </el-col>
+      </el-row>
       <el-row :gutter="16">
         <el-col :span="12">
           <el-form-item label="Latitude">
@@ -277,15 +316,93 @@
       </div>
     </template>
   </el-dialog>
+
+  <el-dialog v-model="batchDialogVisible" title="Batch Import Scooters" width="680px" destroy-on-close @closed="resetBatchForm">
+    <el-tabs v-model="batchMode" class="batch-tabs">
+      <el-tab-pane label="Manual Entry" name="manual">
+        <div class="batch-manual">
+          <el-table :data="batchRows" stripe class="batch-table" size="small">
+            <el-table-column label="Type" width="130">
+              <template #default="{ row }">
+                <el-select v-model="row.type" size="small" class="full-width">
+                  <el-option label="GEN1" value="GEN1" />
+                  <el-option label="GEN2" value="GEN2" />
+                  <el-option label="GEN3" value="GEN3" />
+                  <el-option label="GEN3PRO" value="GEN3PRO" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="Status" width="130">
+              <template #default="{ row }">
+                <el-select v-model="row.status" size="small" class="full-width">
+                  <el-option label="AVAILABLE" value="AVAILABLE" />
+                  <el-option label="MAINTENANCE" value="MAINTENANCE" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="Rate (£)" width="110">
+              <template #default="{ row }">
+                <el-input-number v-model="row.hour_rate" :min="0" :precision="2" :step="0.5" size="small" class="full-width" />
+              </template>
+            </el-table-column>
+            <el-table-column label="Count" width="90">
+              <template #default="{ row }">
+                <el-input-number v-model="row.count" :min="1" :max="100" size="small" class="full-width" />
+              </template>
+            </el-table-column>
+            <el-table-column label="Location" min-width="140">
+              <template #default="{ row }">
+                <el-input v-model="row.location_name" size="small" placeholder="Optional" clearable />
+              </template>
+            </el-table-column>
+            <el-table-column width="60" align="center">
+              <template #default="{ $index }">
+                <el-button type="danger" link :icon="Delete" @click="batchRows.splice($index, 1)" :disabled="batchRows.length <= 1" />
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-button text type="primary" :icon="Plus" class="batch-add-row" @click="addBatchRow">Add row</el-button>
+        </div>
+      </el-tab-pane>
+      <el-tab-pane label="CSV Import" name="csv">
+        <div class="batch-csv">
+          <p class="batch-csv-hint">Paste CSV data. Header: <code>type,status,hour_rate,count,location_name</code></p>
+          <el-input
+            v-model="csvText"
+            type="textarea"
+            :rows="8"
+            placeholder="GEN1,AVAILABLE,3.50,10,Library Plaza&#10;GEN2,AVAILABLE,4.00,5&#10;GEN3,MAINTENANCE,3.00,3"
+            class="batch-csv-input"
+          />
+          <el-button size="small" @click="parseCsv">Parse CSV</el-button>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
+
+    <div class="batch-summary">
+      <el-tag type="info">Total entries: {{ batchRows.length }}</el-tag>
+      <el-tag type="primary">Total scooters: {{ batchTotalCount }}</el-tag>
+    </div>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="batchDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :icon="Check" :loading="batchSubmitting" @click="submitBatch">
+          Create {{ batchTotalCount }} Scooters
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
-import { Search, Edit, Check, Plus, Delete, ArrowDown, ArrowRight } from "@element-plus/icons-vue";
+import { Search, Edit, Check, Plus, Delete, ArrowDown, ArrowRight, Upload, MoreFilled, Hide, View } from "@element-plus/icons-vue";
 
 import {
   applyBulkUpdateByType,
+  batchCreateScooters,
   createScooter,
   deleteScooter,
   getAdminScooters,
@@ -319,7 +436,29 @@ const filters = reactive<{ status?: string }>({});
 
 const dialogVisible = ref(false);
 const addDialogVisible = ref(false);
+const batchDialogVisible = ref(false);
+const batchSubmitting = ref(false);
+const batchMode = ref<"manual" | "csv">("manual");
+const csvText = ref("");
 const currentId = ref<number | null>(null);
+
+type BatchRow = {
+  type: string;
+  status: string;
+  hour_rate: number;
+  count: number;
+  location_name: string;
+};
+
+function createBatchRow(): BatchRow {
+  return { type: "GEN1", status: "AVAILABLE", hour_rate: 3.5, count: 1, location_name: "" };
+}
+
+const batchRows = ref<BatchRow[]>([createBatchRow()]);
+
+const batchTotalCount = computed(() =>
+  batchRows.value.reduce((sum, row) => sum + (row.count || 0), 0)
+);
 const editForm = reactive<{
   status?: string;
   type?: string;
@@ -359,17 +498,31 @@ const expandedTypes = reactive<Record<VehicleType, boolean>>({
   GEN3PRO: true,
 });
 
+const bulkCollapsed = reactive<Record<VehicleType, boolean>>({
+  GEN1: true,
+  GEN2: true,
+  GEN3: true,
+  GEN3PRO: true,
+});
+
 const sections = computed(() =>
   TYPE_ORDER.map((type) => {
     const scooters = rows.value.filter((row) => normalizeType(row.type) === type);
+    const total = scooters.length;
     const availableCount = scooters.filter((s) => s.status === "AVAILABLE").length;
+    const rentedCount = scooters.filter((s) => s.status === "RENTED").length;
+    const maintenanceCount = scooters.filter((s) => s.status === "MAINTENANCE").length;
     const hiddenCount = scooters.filter((s) => s.visible === false).length;
+    const usageRate = total > 0 ? Math.round((rentedCount / total) * 100) : 0;
     return {
       type,
       scooters,
-      total: scooters.length,
+      total,
       availableCount,
+      rentedCount,
+      maintenanceCount,
       hiddenCount,
+      usageRate,
     };
   })
 );
@@ -411,11 +564,28 @@ function isListed(row: Scooter) {
 
 function getTypeTagColor(type: string) {
   switch (type) {
-    case "GEN1": return "";
+    case "GEN1": return undefined;
     case "GEN2": return "success";
     case "GEN3": return "warning";
     case "GEN3PRO": return "danger";
     default: return "info";
+  }
+}
+
+function handleAction(cmd: string, row: Scooter) {
+  switch (cmd) {
+    case "edit":
+      openEdit(row);
+      break;
+    case "hide":
+      setFleetVisible(row, false);
+      break;
+    case "show":
+      setFleetVisible(row, true);
+      break;
+    case "delete":
+      confirmDelete(row);
+      break;
   }
 }
 
@@ -627,6 +797,76 @@ async function submitAdd() {
   }
 }
 
+function addBatchRow() {
+  batchRows.value.push(createBatchRow());
+}
+
+function parseCsv() {
+  const lines = csvText.value.trim().split("\n").filter((l) => l.trim());
+  if (lines.length === 0) {
+    ElMessage.warning("No CSV data to parse");
+    return;
+  }
+  const parsed: BatchRow[] = [];
+  for (const line of lines) {
+    const parts = line.split(",").map((p) => p.trim());
+    if (parts.length < 3) continue;
+    parsed.push({
+      type: parts[0] || "GEN1",
+      status: parts[1] || "AVAILABLE",
+      hour_rate: parseFloat(parts[2]) || 3.5,
+      count: parseInt(parts[3], 10) || 1,
+      location_name: parts[4] || "",
+    });
+  }
+  if (parsed.length === 0) {
+    ElMessage.warning("No valid rows found in CSV");
+    return;
+  }
+  batchRows.value = parsed;
+  batchMode.value = "manual";
+  ElMessage.success(`Parsed ${parsed.length} rows from CSV`);
+}
+
+async function submitBatch() {
+  if (batchRows.value.length === 0) {
+    ElMessage.warning("Add at least one row");
+    return;
+  }
+  for (let i = 0; i < batchRows.value.length; i++) {
+    const row = batchRows.value[i];
+    if (!row.hour_rate || row.hour_rate <= 0) {
+      ElMessage.warning(`Row ${i + 1}: hourly rate must be greater than 0`);
+      return;
+    }
+  }
+  batchSubmitting.value = true;
+  try {
+    const result = await batchCreateScooters({
+      scooters: batchRows.value.map((row) => ({
+        type: row.type,
+        status: row.status,
+        hour_rate: row.hour_rate,
+        count: row.count,
+        location_name: row.location_name || undefined,
+      })),
+    });
+    ElMessage.success(`Created ${result.totalCreated} scooters`);
+    batchDialogVisible.value = false;
+    await load();
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.message ?? "Failed to batch create scooters");
+  } finally {
+    batchSubmitting.value = false;
+  }
+}
+
+function resetBatchForm() {
+  batchRows.value = [createBatchRow()];
+  csvText.value = "";
+  batchMode.value = "manual";
+}
+
 onMounted(load);
 </script>
 
@@ -637,6 +877,13 @@ onMounted(load);
 
 .hint-banner {
   margin-bottom: var(--ui-space-4);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
 }
 
 .type-card-list {
@@ -705,6 +952,10 @@ onMounted(load);
   font-weight: 500;
 }
 
+.type-usage-bar {
+  width: 100px;
+}
+
 .type-toggle-button {
   flex-shrink: 0;
 }
@@ -716,17 +967,45 @@ onMounted(load);
   box-shadow: none;
 }
 
+.bulk-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bulk-panel-header:hover {
+  opacity: 0.8;
+}
+
+.bulk-collapse-icon {
+  font-size: 14px;
+  color: var(--ui-text-muted);
+  transition: transform 0.2s;
+}
+
 .bulk-row {
   row-gap: var(--ui-space-3);
+  align-items: center;
 }
 
 .bulk-actions {
   display: flex;
   align-items: center;
+  height: 100%;
 }
 
-.bulk-actions :deep(.el-space) {
+.bulk-actions-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.bulk-actions-inner .el-button {
+  min-width: 80px;
+  height: 32px;
 }
 
 .bulk-preview {
@@ -784,6 +1063,48 @@ onMounted(load);
   .type-meta-actions {
     width: 100%;
   }
+}
+
+.batch-manual {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.batch-table {
+  width: 100%;
+}
+
+.batch-add-row {
+  margin-top: var(--ui-space-2);
+}
+
+.batch-csv-hint {
+  font-size: 13px;
+  color: var(--ui-text-muted);
+  margin-bottom: var(--ui-space-2);
+}
+
+.batch-csv-hint code {
+  background: var(--ui-bg-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.batch-csv-input {
+  margin-bottom: var(--ui-space-2);
+}
+
+.batch-summary {
+  display: flex;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-3);
+  padding-top: var(--ui-space-3);
+  border-top: 1px solid var(--ui-border-soft);
+}
+
+.batch-tabs {
+  margin-top: var(--ui-space-2);
 }
 
 @media (max-width: 640px) {
