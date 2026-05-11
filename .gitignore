@@ -15,10 +15,21 @@ auth_web_front/node_modules/
 # IDE and Editor configurations
 .vscode/
 .idea/
-.claude/settings.local.json
+.claude/
+.hbuilderx/
+.project
 *.iml
 platformConfig.json
 *.suo
+
+# UniApp managed dependencies (like node_modules)
+uni_modules/
+
+# Python cache
+__pycache__/
+
+# Test results (auto-generated)
+auth_web_front/test-results/
 
 # Logs and test reports
 *.log
@@ -39,6 +50,7 @@ out/
 
 # Temporary files
 .tmp/
+tmp/
 
 # macOS system files
 .DS_Store
