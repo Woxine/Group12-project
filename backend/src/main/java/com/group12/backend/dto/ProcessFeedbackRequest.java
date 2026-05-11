@@ -9,7 +9,7 @@ import jakarta.validation.constraints.AssertTrue;
  */
 public class ProcessFeedbackRequest {
     @NotBlank(message = "Action is required")
-    @Pattern(regexp = "DIRECT_HANDLE|ESCALATE", message = "Action must be DIRECT_HANDLE or ESCALATE")
+    @Pattern(regexp = "DIRECT_HANDLE|ESCALATE|RESOLVE", message = "Action must be DIRECT_HANDLE, ESCALATE, or RESOLVE")
     private String action;
 
     private String escalateTo;

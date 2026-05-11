@@ -218,12 +218,6 @@ watch(
   box-shadow: inset 4px 0 0 var(--ui-color-primary-700);
 }
 
-:deep(.menu .el-menu-item.is-active::after) {
-  content: " (current)";
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ui-color-primary-700);
-}
 
 .layout-main-shell {
   min-width: 0;

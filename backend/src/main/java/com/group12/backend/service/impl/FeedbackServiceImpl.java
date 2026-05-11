@@ -160,7 +160,7 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .orElseThrow(() -> new BusinessException(ErrorMessages.feedbackNotFound(feedbackId), HttpStatus.NOT_FOUND));
 
         String action = request.getAction() == null ? "" : request.getAction().trim().toUpperCase();
-        if (!"DIRECT_HANDLE".equals(action) && !"ESCALATE".equals(action)) {
+        if (!"DIRECT_HANDLE".equals(action) && !"ESCALATE".equals(action) && !"RESOLVE".equals(action)) {
             throw new BusinessException(ErrorMessages.INVALID_FEEDBACK_PROCESS_ACTION, HttpStatus.BAD_REQUEST);
         }
 
@@ -170,7 +170,19 @@ public class FeedbackServiceImpl implements FeedbackService {
             note = null;
         }
 
-        if ("HIGH".equals(priority)) {
+        if ("RESOLVE".equals(action)) {
+            if (!"HIGH".equals(priority)) {
+                throw new BusinessException("RESOLVE action is only allowed for HIGH priority feedback", HttpStatus.BAD_REQUEST);
+            }
+            if (!Boolean.TRUE.equals(feedback.getEscalated())) {
+                throw new BusinessException("Feedback must be escalated before it can be resolved", HttpStatus.BAD_REQUEST);
+            }
+            if (Boolean.TRUE.equals(feedback.getResolved())) {
+                throw new BusinessException(ErrorMessages.FEEDBACK_ALREADY_RESOLVED, HttpStatus.CONFLICT);
+            }
+            feedback.setResolved(true);
+            feedback.setEscalationStatus("RESOLVED");
+        } else if ("HIGH".equals(priority)) {
             if (!"ESCALATE".equals(action)) {
                 throw new BusinessException(ErrorMessages.HIGH_PRIORITY_REQUIRES_ESCALATION, HttpStatus.BAD_REQUEST);
             }

@@ -102,7 +102,7 @@
     </div>
   </el-card>
 
-  <el-dialog v-model="detailDialogVisible" title="Submission Details" width="620px" append-to-body>
+  <el-dialog v-model="detailDialogVisible" title="Submission Details" width="620px" append-to-body @closed="onDetailDialogClosed">
     <div v-if="detailRow" class="admin-detail-grid">
       <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">User ID</span><span>{{ detailRow.userId }}</span></div>
@@ -246,6 +246,9 @@ async function openDetailDialog(row: DiscountVerificationSubmission) {
 
 function closeDetailDialog() {
   detailDialogVisible.value = false;
+}
+
+function onDetailDialogClosed() {
   if (filePreviewUrl.value) {
     URL.revokeObjectURL(filePreviewUrl.value);
     filePreviewUrl.value = null;

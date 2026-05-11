@@ -177,6 +177,7 @@
     title="Feedback Details"
     width="560px"
     append-to-body
+    @closed="onDetailDialogClosed"
   >
     <div v-if="detailRow" class="admin-detail-grid">
       <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
@@ -307,11 +308,14 @@ async function openDetailDialog(row: FeedbackItem) {
 }
 
 function closeDetailDialog() {
+  detailDialogVisible.value = false;
+}
+
+function onDetailDialogClosed() {
   if (filePreviewUrl.value) {
     URL.revokeObjectURL(filePreviewUrl.value);
     filePreviewUrl.value = null;
   }
-  detailDialogVisible.value = false;
 }
 
 async function load() {

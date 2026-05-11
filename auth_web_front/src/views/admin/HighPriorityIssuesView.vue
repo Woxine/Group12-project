@@ -59,18 +59,33 @@
         </div>
       </template>
     </el-table>
+
+    <div class="admin-pagination-footer">
+      <el-pagination
+        background
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        v-model:current-page="pager.page"
+        v-model:page-size="pager.size"
+        @current-change="onPageChange"
+        @size-change="onSizeChange"
+      />
+    </div>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from "element-plus";
 import { onMounted, reactive, ref } from "vue";
-import { getHighPriorityIssues, processFeedbackByPriority, updateFeedback } from "@/api/admin";
+import { getHighPriorityIssues, processFeedbackByPriority } from "@/api/admin";
 import { getAdminPriorityTagType, getAdminStatusTagType } from "@/adminStatus";
 import type { HighPriorityIssue } from "@/types/api";
 
 const loading = ref(false);
 const rows = ref<HighPriorityIssue[]>([]);
+const total = ref(0);
+const pager = reactive({ page: 1, size: 10 });
 const filters = reactive<{ escalated?: boolean }>({});
 
 async function load() {
@@ -78,15 +93,27 @@ async function load() {
   try {
     const result = await getHighPriorityIssues({
       escalated: filters.escalated,
-      page: 1,
-      size: 20
+      page: pager.page,
+      size: pager.size
     });
     rows.value = result.data;
+    total.value = result.total ?? 0;
   } catch (error: any) {
     ElMessage.error(error?.response?.data?.message ?? "Failed to load high-priority issues");
   } finally {
     loading.value = false;
   }
+}
+
+function onPageChange(page: number) {
+  pager.page = page;
+  load();
+}
+
+function onSizeChange(size: number) {
+  pager.size = size;
+  pager.page = 1;
+  load();
 }
 
 async function escalate(feedbackId: number) {
@@ -122,7 +149,7 @@ async function markResolved(feedbackId: number) {
       cancelButtonText: "Cancel",
       type: "warning"
     });
-    await updateFeedback(feedbackId, "resolved");
+    await processFeedbackByPriority(feedbackId, { action: "RESOLVE" });
     ElMessage.success(`Feedback #${feedbackId} marked as resolved`);
     await load();
   } catch (error: any) {

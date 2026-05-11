@@ -5,10 +5,12 @@ import java.util.stream.Collectors;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -23,19 +25,37 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private HttpHeaders corsHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        headers.set("Access-Control-Allow-Headers", "*");
+        headers.set("Access-Control-Max-Age", "3600");
+        return headers;
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Object> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        System.err.println("Method not supported: " + e.getMethod() + " " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .headers(corsHeaders())
+                .body(ErrorResponseFactory.build(
+                        HttpStatus.METHOD_NOT_ALLOWED,
+                        "METHOD_NOT_ALLOWED",
+                        "Request method '" + e.getMethod() + "' is not supported."
+                ));
+    }
+
     /**
      * 处理未知系统异常 (Exception)
      * 捕获所有未被专门处理的异常，防止堆栈信息泄露
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGeneralException(Exception e) {
-        // Log the full stack trace internally for debugging
-        // Logger.error("Unexpected error", e); 
         System.err.println("Unexpected error: " + e.getMessage());
-        // Minimal logging for now
-
-        // Return a generic error message to the user
+        e.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         ErrorMessages.INTERNAL_SERVER_ERROR,
@@ -51,6 +71,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleBusinessException(BusinessException e) {
         HttpStatus status = e.getStatus() != null ? e.getStatus() : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         status,
                         ErrorMessages.BUSINESS_ERROR,
@@ -61,6 +82,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Object> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.CONFLICT,
                         ErrorMessages.BUSINESS_ERROR,
@@ -71,6 +93,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.VALIDATION_ERROR,
@@ -83,8 +106,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Object> handleRuntimeException(RuntimeException e) {
-        // Avoid exposing framework/internal Java details through raw runtime messages.
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.BUSINESS_ERROR,
@@ -95,6 +118,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Object> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.VALIDATION_ERROR,
@@ -106,6 +130,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         String parameterName = e.getName() == null ? "parameter" : e.getName();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.VALIDATION_ERROR,
@@ -122,8 +147,9 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getAllErrors().stream()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(", "));
-        
+
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .headers(corsHeaders())
                 .body(ErrorResponseFactory.build(
                         HttpStatus.BAD_REQUEST,
                         ErrorMessages.VALIDATION_ERROR,

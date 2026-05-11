@@ -8,6 +8,16 @@
   3. Starts the backend Spring Boot project
 #>
 
+function Pause-Exit {
+    param([int]$Code = 0, [string]$Reason = "")
+    if ($Reason) {
+        Write-Host "`nExit reason: $Reason" -ForegroundColor $(if ($Code -eq 0) { "Green" } else { "Red" })
+    }
+    Write-Host "`nPress Enter to close this window..." -ForegroundColor DarkGray
+    Read-Host
+    exit $Code
+}
+
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "    Start Group12 Scooter Local Env       " -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -28,7 +38,7 @@ if ($LASTEXITCODE -eq 0 -and $adbOutput -notmatch "error|cannot|failed|no device
 } else {
     Write-Host "Error: Port reverse failed - $adbOutput" -ForegroundColor Red
     Write-Host "Please ensure your device is connected with USB debugging enabled." -ForegroundColor Red
-    exit 1
+    Pause-Exit 1 "adb reverse failed"
 }
 
 # 3. Start backend
@@ -38,13 +48,19 @@ $BackendPath = Join-Path -Path $PSScriptRoot -ChildPath "backend"
 if (Test-Path $BackendPath) {
     Set-Location -Path $BackendPath
     Write-Host "Running ./mvnw.cmd spring-boot:run ..." -ForegroundColor Cyan
-    
+
     if (Test-Path ".\mvnw.cmd") {
         .\mvnw.cmd spring-boot:run
     } else {
         mvn spring-boot:run
     }
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq 0) {
+        Pause-Exit 0 "Backend exited normally"
+    } else {
+        Pause-Exit $exitCode "Backend exited with code $exitCode"
+    }
 } else {
     Write-Host "Error: Cannot find 'backend' folder." -ForegroundColor Red
-    exit 1
+    Pause-Exit 1 "backend folder not found"
 }

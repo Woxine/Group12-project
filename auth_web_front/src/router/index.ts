@@ -35,7 +35,8 @@ const router = createRouter({
         { path: "billing", component: BillingSettingsView },
         { path: "vehicle-content", component: VehicleContentEditorView }
       ]
-    }
+    },
+    { path: "/:pathMatch(.*)*", redirect: "/admin/revenue" }
   ]
 });
 

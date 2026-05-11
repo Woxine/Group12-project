@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.group12.backend.dto.BatchCreateScooterRequest;
 import com.group12.backend.dto.BulkScooterUpdateRequest;
 import com.group12.backend.dto.CreateScooterRequest;
 import com.group12.backend.dto.ScooterBulkApplyResponse;
@@ -185,6 +186,31 @@ public class ScooterServiceImpl implements ScooterService {
 
         Scooter saved = scooterRepository.save(scooter);
         return mapToDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> batchCreateScooters(BatchCreateScooterRequest request) {
+        int totalCreated = 0;
+        List<Object> created = new ArrayList<>();
+
+        for (BatchCreateScooterRequest.Item item : request.getScooters()) {
+            int count = (item.getCount() != null && item.getCount() > 0) ? item.getCount() : 1;
+            for (int i = 0; i < count; i++) {
+                CreateScooterRequest single = new CreateScooterRequest();
+                single.setType(item.getType());
+                single.setStatus(item.getStatus());
+                single.setHour_rate(item.getHour_rate());
+                single.setLocation_lat(item.getLocation_lat());
+                single.setLocation_lng(item.getLocation_lng());
+                single.setLocation_name(item.getLocation_name());
+                Object result = createScooter(single);
+                created.add(result);
+                totalCreated++;
+            }
+        }
+
+        return Map.of("data", created, "totalCreated", totalCreated);
     }
 
     @Override

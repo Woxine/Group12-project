@@ -7,6 +7,7 @@ export const http = axios.create({
   timeout: 15000
 });
 
+/** 为每个请求附加管理员令牌 / Attach the admin token to every outgoing request. */
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem("admin_token");
   if (token) {
@@ -15,6 +16,7 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+/** 处理认证失效并跳转登录页 / Handle expired authentication and redirect to the login page. */
 http.interceptors.response.use(
   (response) => response,
   (error) => {

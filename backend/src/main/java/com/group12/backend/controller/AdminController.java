@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.group12.backend.dto.BillingSettingsResponse;
 import com.group12.backend.dto.BillingSettingsLogResponse;
+import com.group12.backend.dto.BatchCreateScooterRequest;
 import com.group12.backend.dto.BulkScooterUpdateRequest;
 import com.group12.backend.dto.CreateScooterRequest;
 import com.group12.backend.dto.UpdateBillingSettingsRequest;
@@ -35,6 +37,7 @@ import jakarta.validation.Valid;
 /**
  * 负责提供后台管理端的营收统计与经营分析接口。
  */
+@CrossOrigin
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
@@ -78,6 +81,25 @@ public class AdminController {
     }
 
     /**
+     * 更新指定滑板车的状态、计费规则或经纬度等基础信息。
+     */
+    @PutMapping("/scooters/{scooterId}")
+    public ResponseEntity<Object> updateScooter(
+            @PathVariable Long scooterId,
+            @RequestBody java.util.Map<String, Object> body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        String type = body.containsKey("type") ? (String) body.get("type") : null;
+        String status = body.containsKey("status") ? (String) body.get("status") : null;
+        java.math.BigDecimal hourRate = body.containsKey("hour_rate") ? new java.math.BigDecimal(body.get("hour_rate").toString()) : null;
+        Double locationLat = body.containsKey("location_lat") ? Double.valueOf(body.get("location_lat").toString()) : null;
+        Double locationLng = body.containsKey("location_lng") ? Double.valueOf(body.get("location_lng").toString()) : null;
+        Boolean visible = body.containsKey("visible") ? Boolean.valueOf(body.get("visible").toString()) : null;
+        Object updated = scooterService.updateScooter(scooterId, type, status, hourRate, locationLat, locationLng, visible);
+        return ResponseEntity.ok(Map.of("data", updated));
+    }
+
+    /**
      * 删除滑板车（存在订单记录时不允许删除）。
      */
     @DeleteMapping("/scooters/{scooterId}")
@@ -85,6 +107,17 @@ public class AdminController {
         adminAccessGuard.requireAdmin(request);
         scooterService.deleteScooter(scooterId);
         return ResponseEntity.ok(Map.of("message", "Scooter deleted"));
+    }
+
+    /**
+     * 批量创建滑板车，支持每个条目指定 count 创建多辆。
+     */
+    @PostMapping("/scooters/batch")
+    public ResponseEntity<Object> batchCreateScooters(
+            @Valid @RequestBody BatchCreateScooterRequest body,
+            HttpServletRequest request) {
+        adminAccessGuard.requireAdmin(request);
+        return ResponseEntity.ok(scooterService.batchCreateScooters(body));
     }
 
     /**

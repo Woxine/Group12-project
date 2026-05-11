@@ -142,19 +142,32 @@ async function load() {
 async function save() {
   saving.value = true;
   try {
-    for (const m of models.value) {
-      const type = API_TYPE_MAP[m.key] ?? m.key;
-      await updateVehicleDescription(type, {
-        display_name: m.name,
-        subtitle: m.subtitle,
-        description: m.description,
-        range_text: m.range,
-        speed_text: m.speed,
-        motor_text: m.motor,
-        advice: m.advice
-      });
+    const results = await Promise.allSettled(
+      models.value.map(async (m) => {
+        const type = API_TYPE_MAP[m.key] ?? m.key;
+        await updateVehicleDescription(type, {
+          display_name: m.name,
+          subtitle: m.subtitle,
+          description: m.description,
+          range_text: m.range,
+          speed_text: m.speed,
+          motor_text: m.motor,
+          advice: m.advice
+        });
+        return m.key;
+      })
+    );
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length === 0) {
+      ElMessage.success("Vehicle content saved");
+    } else {
+      const failedTypes = results
+        .map((r, i) => (r.status === "rejected" ? models.value[i].key : null))
+        .filter(Boolean)
+        .join(", ");
+      ElMessage.warning(`Saved ${succeeded}/${results.length} types. Failed: ${failedTypes}`);
     }
-    ElMessage.success("Vehicle content saved");
   } catch (error: any) {
     ElMessage.error(error?.response?.data?.message ?? "Failed to save vehicle descriptions");
   } finally {

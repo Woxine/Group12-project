@@ -100,7 +100,7 @@ export interface FeedbackItem {
 }
 
 export interface ProcessFeedbackPayload {
-  action: "DIRECT_HANDLE" | "ESCALATE";
+  action: "DIRECT_HANDLE" | "ESCALATE" | "RESOLVE";
   escalateTo?: string;
   note?: string;
 }
@@ -193,4 +193,18 @@ export interface VehicleDescription {
   speedText: string;
   motorText: string;
   advice: string;
+}
+
+export interface BatchCreateScooterItem {
+  type: string;
+  status: string;
+  hour_rate: number;
+  count: number;
+  location_lat?: number;
+  location_lng?: number;
+  location_name?: string;
+}
+
+export interface BatchCreateScooterPayload {
+  scooters: BatchCreateScooterItem[];
 }

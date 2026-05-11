@@ -3,6 +3,7 @@ package com.group12.backend.service;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import com.group12.backend.dto.BatchCreateScooterRequest;
 import com.group12.backend.dto.BulkScooterUpdateRequest;
 import com.group12.backend.dto.CreateScooterRequest;
 import com.group12.backend.dto.ScooterBulkApplyResponse;
@@ -36,6 +37,11 @@ public interface ScooterService {
      * 管理员新增车辆。
      */
     Object createScooter(CreateScooterRequest request);
+
+    /**
+     * 批量创建车辆，每个条目可指定 count 创建多辆相同配置的车辆。
+     */
+    Map<String, Object> batchCreateScooters(BatchCreateScooterRequest request);
 
     /**
      * 预览按车型批量更新将影响的车辆范围与风险信息。

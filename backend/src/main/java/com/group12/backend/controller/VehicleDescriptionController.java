@@ -37,7 +37,7 @@ public class VehicleDescriptionController {
 
     @PutMapping("/{type}")
     public ResponseEntity<Object> updateDescription(@PathVariable String type,
-                                                     @RequestBody VehicleDescriptionRequest request,
+                                                     @Valid @RequestBody VehicleDescriptionRequest request,
                                                      HttpServletRequest httpRequest) {
         adminAccessGuard.requireAdmin(httpRequest);
         VehicleDescription updated = vehicleDescriptionService.updateDescription(type.toUpperCase(), request);
