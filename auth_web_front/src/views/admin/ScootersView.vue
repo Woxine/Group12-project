@@ -200,6 +200,14 @@
               </div>
             </template>
           </el-table>
+          <el-pagination
+            v-if="section.total > PAGE_SIZE"
+            v-model:current-page="currentPages[section.type]"
+            :page-size="PAGE_SIZE"
+            :total="section.total"
+            layout="prev, pager, next"
+            class="scooter-pagination"
+          />
         </div>
       </el-card>
     </div>
@@ -505,6 +513,14 @@ const bulkCollapsed = reactive<Record<VehicleType, boolean>>({
   GEN3PRO: true,
 });
 
+const PAGE_SIZE = 10;
+const currentPages = reactive<Record<VehicleType, number>>({
+  GEN1: 1,
+  GEN2: 1,
+  GEN3: 1,
+  GEN3PRO: 1,
+});
+
 const sections = computed(() =>
   TYPE_ORDER.map((type) => {
     const scooters = rows.value.filter((row) => normalizeType(row.type) === type);
@@ -514,9 +530,11 @@ const sections = computed(() =>
     const maintenanceCount = scooters.filter((s) => s.status === "MAINTENANCE").length;
     const hiddenCount = scooters.filter((s) => s.visible === false).length;
     const usageRate = total > 0 ? Math.round((rentedCount / total) * 100) : 0;
+    const page = currentPages[type];
+    const paged = scooters.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     return {
       type,
-      scooters,
+      scooters: paged,
       total,
       availableCount,
       rentedCount,
@@ -687,6 +705,10 @@ async function load() {
       size: 1000
     });
     rows.value = result.data;
+    for (const type of TYPE_ORDER) {
+      const maxPage = Math.ceil(rows.value.filter((r) => normalizeType(r.type) === type).length / PAGE_SIZE) || 1;
+      if (currentPages[type] > maxPage) currentPages[type] = maxPage;
+    }
   } catch (error: any) {
     ElMessage.error(error?.response?.data?.message ?? "Failed to load scooters");
   } finally {
@@ -1028,6 +1050,11 @@ onMounted(load);
 
 .data-table {
   margin-top: var(--ui-space-2);
+}
+
+.scooter-pagination {
+  margin-top: var(--ui-space-3);
+  justify-content: flex-end;
 }
 
 .edit-form {
