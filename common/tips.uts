@@ -1,0 +1,219 @@
+/**
+ * Homepage tip evaluation engine.
+ * Evaluates user context and returns sorted tips by priority.
+ */
+
+export type TipItem = {
+    id: string
+    category: string   // 'safety' | 'context' | 'promo' | 'greeting'
+    text: string
+    icon: string       // icon path
+    priority: number   // lower = higher priority
+}
+
+export type TipContext = {
+    isLoggedIn: boolean
+    username: string
+    hasPaymentCard: boolean
+    hasDiscountVerified: boolean
+    discountType: string   // 'STUDENT' | 'SENIOR' | 'FREQUENT' or ''
+    discountRate: number   // e.g. 80 means 20% off
+    nearbyScooters: number
+    hasActiveBooking: boolean
+    remainingMinutes: number
+    announcements: AnnouncementTip[]
+}
+
+export type AnnouncementTip = {
+    id: string
+    content: string
+}
+
+// Priority constants (lower number = shown first)
+const PRIORITY_LOGIN = 10
+const PRIORITY_CARD = 20
+const PRIORITY_DISCOUNT_VERIFY = 30
+const PRIORITY_DISCOUNT_ACTIVE = 40
+const PRIORITY_SCOOTERS = 50
+const PRIORITY_PROMO = 60
+const PRIORITY_SAFETY = 70
+const PRIORITY_GREETING = 80
+
+const SAFETY_TIPS: string[] = [
+    'Before cycling, check the brakes, seat, and pedals.',
+    'Remember to return the e-Scooter when the ride is over.',
+    'Always wear a helmet when riding.',
+    'Ride on designated bike lanes when available.',
+    'Reduce speed in crowded areas and at intersections.',
+    'Do not ride under the influence of alcohol or drugs.',
+    'Use lights and reflectors when riding at night.',
+    'Keep both hands on the handlebars while riding.',
+]
+
+const MAX_TIPS = 5
+
+const readStorageString = (key: string): string => {
+    const raw = uni.getStorageSync(key)
+    return raw == null ? '' : ('' + raw).trim()
+}
+
+const readStorageStringOrNull = (key: string): string | null => {
+    const value = readStorageString(key)
+    return value.length < 1 ? null : value
+}
+
+const getTimeGreeting = (): string => {
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) return 'Good morning'
+    if (hour >= 12 && hour < 18) return 'Good afternoon'
+    if (hour >= 18 && hour < 22) return 'Good evening'
+    return 'Good night'
+}
+
+const buildContext = (scooterCount: number, announcements: AnnouncementTip[]): TipContext => {
+    const token = readStorageStringOrNull('token')
+    const isLoggedIn = token != null
+    const username = readStorageString('username')
+    const paymentCardId = readStorageStringOrNull('paymentCardId')
+
+    return {
+        isLoggedIn: isLoggedIn,
+        username: username,
+        hasPaymentCard: paymentCardId != null,
+        hasDiscountVerified: readStorageString('discountVerified') == 'true',
+        discountType: readStorageString('discountType'),
+        discountRate: 80,
+        nearbyScooters: scooterCount,
+        hasActiveBooking: false,
+        remainingMinutes: 0,
+        announcements: announcements,
+    }
+}
+
+const evaluateTips = (ctx: TipContext): TipItem[] => {
+    const tips: TipItem[] = []
+
+    // Not logged in → only show login tip
+    if (!ctx.isLoggedIn) {
+        tips.push({
+            id: 'login',
+            category: 'context',
+            text: 'Log in to unlock all features',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_LOGIN,
+        })
+        return tips
+    }
+
+    // No payment card
+    if (!ctx.hasPaymentCard) {
+        tips.push({
+            id: 'no-card',
+            category: 'context',
+            text: 'Bind a payment card to start riding',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_CARD,
+        })
+    }
+
+    // Discount eligible but not verified
+    if (!ctx.hasDiscountVerified && ctx.discountType.length > 0) {
+        tips.push({
+            id: 'discount-verify',
+            category: 'context',
+            text: 'You may qualify for a discount — verify now',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_DISCOUNT_VERIFY,
+        })
+    }
+
+    // Discount active
+    if (ctx.hasDiscountVerified && ctx.discountType.length > 0) {
+        const discountPercent = 100 - ctx.discountRate
+        const typeLabel = ctx.discountType.charAt(0).toUpperCase() + ctx.discountType.slice(1).toLowerCase()
+        tips.push({
+            id: 'discount-active',
+            category: 'context',
+            text: 'Your ' + typeLabel + ' discount is active — ' + discountPercent + '% off',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_DISCOUNT_ACTIVE,
+        })
+    }
+
+    // Nearby scooters
+    if (ctx.nearbyScooters > 0) {
+        tips.push({
+            id: 'scooters-nearby',
+            category: 'context',
+            text: '' + ctx.nearbyScooters + ' scooters available near you',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_SCOOTERS,
+        })
+    } else {
+        tips.push({
+            id: 'no-scooters',
+            category: 'context',
+            text: 'No scooters nearby — try moving to a new area',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_SCOOTERS,
+        })
+    }
+
+    // Active booking remaining time
+    if (ctx.hasActiveBooking && ctx.remainingMinutes > 0) {
+        tips.push({
+            id: 'ride-remaining',
+            category: 'context',
+            text: '' + ctx.remainingMinutes + ' min remaining in your ride',
+            icon: '/static/icons/tip-context.svg',
+            priority: PRIORITY_SCOOTERS + 1,
+        })
+    }
+
+    // Announcements (promo)
+    for (let i = 0; i < ctx.announcements.length; i++) {
+        const ann = ctx.announcements[i]
+        tips.push({
+            id: 'promo-' + ann.id,
+            category: 'promo',
+            text: ann.content,
+            icon: '/static/icons/tip-promo.svg',
+            priority: PRIORITY_PROMO + i,
+        })
+    }
+
+    // Safety tip (rotate daily based on day of year)
+    const dayOfYear = Math.floor(Date.now() / 86400000)
+    const safetyIndex = dayOfYear % SAFETY_TIPS.length
+    tips.push({
+        id: 'safety-' + safetyIndex,
+        category: 'safety',
+        text: SAFETY_TIPS[safetyIndex],
+        icon: '/static/icons/tip-safety.svg',
+        priority: PRIORITY_SAFETY,
+    })
+
+    // Greeting (only for logged-in users with username)
+    if (ctx.isLoggedIn && ctx.username.length > 0) {
+        const greeting = getTimeGreeting()
+        tips.push({
+            id: 'greeting',
+            category: 'greeting',
+            text: greeting + ', ' + ctx.username + '! Ready to ride?',
+            icon: '/static/icons/tip-greeting.svg',
+            priority: PRIORITY_GREETING,
+        })
+    }
+
+    // Sort by priority and truncate
+    tips.sort((a: TipItem, b: TipItem): number => {
+        return a.priority - b.priority
+    })
+
+    if (tips.length > MAX_TIPS) {
+        return tips.slice(0, MAX_TIPS)
+    }
+    return tips
+}
+
+export { evaluateTips, buildContext, readStorageStringOrNull, getTimeGreeting, PRIORITY_LOGIN, PRIORITY_CARD, PRIORITY_DISCOUNT_VERIFY, PRIORITY_DISCOUNT_ACTIVE, PRIORITY_SCOOTERS, PRIORITY_PROMO, PRIORITY_SAFETY, PRIORITY_GREETING, MAX_TIPS, SAFETY_TIPS }
