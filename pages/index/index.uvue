@@ -15,17 +15,25 @@
 			<text class="order-chevron">></text>
 		</view>
 		<view v-else class="top-notice-pill">
-			<image src="/static/icons/broadcast.png" mode="aspectFit" class="notice-icon"></image>
-			<swiper class="notice-swiper" vertical="true" autoplay="true" circular :interval="3000" :duration="1000">
-				<swiper-item><text class="notice-text">Before cycling, check the brakes, seat, and pedals.</text></swiper-item>
-				<swiper-item><text class="notice-text">Remember to return the e-Scooter when the ride is over.</text></swiper-item>
+			<swiper class="notice-swiper" vertical="true" autoplay="true" circular
+					:interval="3000" :duration="1000">
+				<swiper-item v-for="tip in activeTips" :key="tip.id">
+					<view :class="['notice-item', 'notice-' + tip.category]">
+						<view :class="['notice-icon-box', 'icon-' + tip.category]">
+							<image :src="tip.icon" mode="aspectFit" class="notice-icon-svg"></image>
+						</view>
+						<text class="notice-text">{{ tip.text }}</text>
+					</view>
+				</swiper-item>
 			</swiper>
 		</view>
 
 		<!-- 3. 底部操作卡片 -->
 		<view class="bottom-action-card">
 			<view class="card-header">
-				<text class="card-title">We offer you a variety of options.</text>
+				<scroll-view scroll-x="true" class="title-scroll">
+					<text class="card-title">We offer you a variety of options.</text>
+				</scroll-view>
 				<text class="link-text" @click="showVehicleIntro">View Details ></text>
 			</view>
 			
@@ -60,6 +68,8 @@
 	import { BASE_URL } from '../../common/api.uts'
 	import { getAppMessage } from '../../common/messages.uts'
 	import { showSuccess, showError, showInfo, showThenNavigate } from '../../common/appToast.uts'
+	import { evaluateTips, buildContext, TipItem, AnnouncementTip } from '../../common/tips.uts'
+	import { ANNOUNCEMENTS_ACTIVE_URL } from '../../common/api.uts'
 
 	const longitude = ref(116.392325)
 	const latitude = ref(40.01811)
@@ -77,10 +87,13 @@
 		status: string
 		scooterId: string
 		startTime: string
+		endTime: string
 	}
 
 	const activeBooking = ref<ActiveBookingInfo | null>(null)
 	const elapsedText = ref('')
+	const activeTips = ref([] as TipItem[])
+	const announcements = ref([] as AnnouncementTip[])
 	let elapsedTimer: number | null = null
 
 	const readStorageString = (key: string): string => {
@@ -104,6 +117,14 @@
 		const m = diffMin % 60
 		const mStr = m < 10 ? ('0' + m) : '' + m
 		return h + 'h ' + mStr + 'm'
+	}
+
+	const computeRemainingMinutes = (endTimeStr: string): number => {
+		const endMs = Date.parse(endTimeStr)
+		if (isNaN(endMs)) return 0
+		const nowMs = Date.now()
+		const diffMin = Math.floor((endMs - nowMs) / 60000)
+		return diffMin > 0 ? diffMin : 0
 	}
 
 	const clearElapsedTimer = () => {
@@ -169,7 +190,9 @@
 						const scooterId = rawScooterId != null ? ('' + rawScooterId) : ''
 						const rawStart = item['start_time'] != null ? item['start_time'] : item['startTime']
 						const startTime = rawStart != null ? ('' + rawStart) : ''
-						found = { id: id, status: status, scooterId: scooterId, startTime: startTime }
+						const rawEnd = item['end_time'] != null ? item['end_time'] : item['endTime']
+						const endTime = rawEnd != null ? ('' + rawEnd) : ''
+						found = { id: id, status: status, scooterId: scooterId, startTime: startTime, endTime: endTime }
 						break
 					}
 				}
@@ -186,6 +209,55 @@
 				clearElapsedTimer()
 			}
 		})
+	}
+
+	const fetchAnnouncements = () => {
+		uni.request({
+			url: BASE_URL + ANNOUNCEMENTS_ACTIVE_URL + '?_t=' + Date.now(),
+			method: 'GET',
+			success: (res) => {
+				if (res.statusCode != 200 || res.data == null) {
+					announcements.value = []
+					return
+				}
+				const raw = res.data as UTSJSONObject
+				let arr: UTSJSONObject[] = []
+				if (raw['data'] != null && Array.isArray(raw['data'])) {
+					arr = raw['data'] as UTSJSONObject[]
+				}
+				const result: AnnouncementTip[] = []
+				for (let i = 0; i < arr.length; i++) {
+					const item = arr[i] as UTSJSONObject
+					const rawId = item['id']
+					const rawContent = item['content']
+					if (rawId != null && rawContent != null) {
+						result.push({
+							id: '' + rawId,
+							content: '' + rawContent,
+						})
+					}
+				}
+				announcements.value = result
+			},
+			fail: () => {
+				announcements.value = []
+			}
+		})
+	}
+
+	const refreshTips = () => {
+		const scooterCount = markers.value.length
+		const booking = activeBooking.value
+		let remainingMin = 0
+		let hasBooking = false
+		if (booking != null && booking.status == 'CONFIRMED' && booking.endTime.length > 0) {
+			hasBooking = true
+			remainingMin = computeRemainingMinutes(booking.endTime)
+		}
+		const ctx = buildContext(scooterCount, announcements.value)
+		ctx.hasActiveBooking = hasBooking
+		ctx.remainingMinutes = remainingMin
+		activeTips.value = evaluateTips(ctx)
 	}
 
 	const showVehicleIntro = () => {
@@ -333,6 +405,7 @@
 		}
 		regionDebounceTimer = setTimeout(() => {
 			refreshMarkersByViewportCenter()
+			refreshTips()
 		}, 500) as number
 	}
 	
@@ -376,6 +449,7 @@
 	
 	onShow(() => {
 	  checkActiveBooking()
+	  fetchAnnouncements()
 	  applyMarkers(latitude.value, longitude.value)
 	  nextTick(() => {
 	    const instance = getCurrentInstance()
@@ -387,6 +461,7 @@
 	    // Delay location init on HarmonyOS to let the map component finish rendering
 	    setTimeout(() => {
 	      getCurrentLocation()
+	      refreshTips()
 	    }, 200)
 	  })
 	})
@@ -442,33 +517,79 @@
 		left: 5%;
 		width: 90%;
 		height: 44px;
-		background-color: rgba(255, 255, 255, 0.9);
+		background-color: transparent;
 		border-radius: 22px;
-		flex-direction: row;
-		align-items: center;
-		padding: 0 16px;
-		box-sizing: border-box;
 		z-index: 10;
-		box-shadow: $shadow-card;
-	}
-
-	.notice-icon {
-		width: 20px;
-		height: 20px;
-		margin-right: 12px;
 	}
 
 	.notice-swiper {
-		flex: 1;
-		height: 100%;
+		width: 100%;
+		height: 44px;
+	}
+
+	.notice-item {
+		flex-direction: row;
+		align-items: center;
+		padding: 0 14px;
+		height: 44px;
+		border-radius: 22px;
+		background-color: rgba(255, 255, 255, 0.95);
+		box-shadow: $shadow-card;
+	}
+
+	.notice-safety {
+		border-left: 3px solid #4CAF50;
+	}
+
+	.notice-context {
+		border-left: 3px solid #2196F3;
+	}
+
+	.notice-promo {
+		border-left: 3px solid #FF9800;
+	}
+
+	.notice-greeting {
+		border-left: 3px solid #9C27B0;
+	}
+
+	.notice-icon-box {
+		width: 28px;
+		height: 28px;
+		border-radius: 8px;
+		align-items: center;
+		justify-content: center;
+		margin-right: 10px;
+	}
+
+	.icon-safety {
+		background-color: #E8F5E9;
+	}
+
+	.icon-context {
+		background-color: #E3F2FD;
+	}
+
+	.icon-promo {
+		background-color: #FFF3E0;
+	}
+
+	.icon-greeting {
+		background-color: #F3E5F5;
+	}
+
+	.notice-icon-svg {
+		width: 16px;
+		height: 16px;
 	}
 
 	.notice-text {
-		line-height: 44px;
+		flex: 1;
 		font-size: $font-hint;
 		color: $text-primary;
 		lines: 1;
 		text-overflow: ellipsis;
+		overflow: hidden;
 	}
 
 	.order-overview-pill {
@@ -558,17 +679,25 @@
 		margin-bottom: 14px;
 		display: flex;
 		flex-direction: row;
-		justify-content: space-between;
 		align-items: center;
+	}
+
+	.title-scroll {
+		flex: 1;
+		height: 24px;
+		margin-right: 12px;
 	}
 
 	.card-title {
 		font-size: $font-body;
 		font-weight: $fw-bold;
 		color: $text-primary;
+		lines: 1;
+		white-space: nowrap;
 	}
 
 	.link-text {
+		flex-shrink: 0;
 		font-size: $font-caption;
 		color: $brand-green;
 		font-weight: $fw-normal;
