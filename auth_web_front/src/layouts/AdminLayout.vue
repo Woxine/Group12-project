@@ -1,11 +1,14 @@
 <template>
+  <!-- 管理后台整体布局 / Overall admin console layout. -->
   <el-container class="layout">
+    <!-- 移动端侧边栏遮罩 / Mobile sidebar backdrop. -->
     <div
       v-if="sidebarOpen"
       class="aside-backdrop"
       @click="sidebarOpen = false"
       aria-hidden="true"
     />
+    <!-- 左侧品牌和主导航 / Left-side brand area and primary navigation. -->
     <el-aside width="248px" :class="['aside', { 'aside--open': sidebarOpen }]" aria-label="Admin sidebar">
       <div class="brand">
         <el-icon class="brand-icon"><Platform /></el-icon>
@@ -48,11 +51,16 @@
             <el-icon><EditPen /></el-icon>
             <span>Vehicle Content</span>
           </el-menu-item>
+          <el-menu-item index="/admin/announcements">
+            <el-icon><Bell /></el-icon>
+            <span>Announcements</span>
+          </el-menu-item>
         </el-menu>
       </nav>
     </el-aside>
 
     <el-container class="layout-main-shell">
+      <!-- 顶部用户栏和退出操作 / Top user bar and sign-out action. -->
       <el-header class="header" role="banner">
         <div class="header-left">
           <button
@@ -80,6 +88,7 @@
           </el-space>
         </div>
       </el-header>
+      <!-- 子路由内容区域，路由切换后会自动聚焦 / Child route content area, focused after route changes. -->
       <el-main id="main-content" ref="mainContentRef" class="main-content" tabindex="-1">
         <div class="content-inner">
           <router-view />
@@ -101,6 +110,7 @@ import {
   DocumentChecked,
   Setting,
   EditPen,
+  Bell,
   Platform,
   SwitchButton,
   Expand,
@@ -115,11 +125,13 @@ const authStore = useAuthStore();
 const mainContentRef = ref<HTMLElement | null>(null);
 const sidebarOpen = ref(false);
 
+/** 退出管理员会话并回到登录页 / End the admin session and return to login. */
 function logout() {
   authStore.signOut();
   router.push("/login");
 }
 
+/** 路由切换后聚焦主内容区，提升键盘导航体验 / Focus the main content after route changes for keyboard navigation. */
 watch(
   () => route.fullPath,
   async () => {
@@ -130,6 +142,7 @@ watch(
 </script>
 
 <style scoped>
+/* 布局外壳和侧边导航 / Layout shell and side navigation. */
 .layout {
   min-height: 100vh;
   background: var(--ui-bg-app);
@@ -219,6 +232,7 @@ watch(
 }
 
 
+/* 主内容顶部栏 / Main content header bar. */
 .layout-main-shell {
   min-width: 0;
 }
@@ -270,6 +284,7 @@ watch(
   font-weight: 500;
 }
 
+/* 内容区域和移动端侧边栏按钮 / Content area and mobile sidebar controls. */
 .main-content {
   background-color: var(--ui-bg-app);
   padding: 18px;
@@ -304,6 +319,7 @@ watch(
   display: none;
 }
 
+/* 移动端抽屉式导航 / Mobile drawer navigation. */
 @media (max-width: 768px) {
   .sidebar-toggle {
     display: inline-flex;
@@ -333,6 +349,7 @@ watch(
   }
 }
 
+/* 中小屏布局压缩 / Medium and small screen layout compaction. */
 @media (max-width: 1080px) {
   .aside {
     width: 220px !important;

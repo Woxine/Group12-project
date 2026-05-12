@@ -5,6 +5,7 @@ import LoginView from "@/views/LoginView.vue";
 import UnauthorizedView from "@/views/UnauthorizedView.vue";
 import { useAuthStore } from "@/stores/auth";
 
+/** 管理页按路由懒加载，减少初始包体积 / Admin views are lazy-loaded by route to reduce the initial bundle. */
 const AnalyticsView = () => import("@/views/admin/AnalyticsView.vue");
 const RevenueView = () => import("@/views/admin/RevenueView.vue");
 const ScootersView = () => import("@/views/admin/ScootersView.vue");
@@ -13,7 +14,9 @@ const HighPriorityIssuesView = () => import("@/views/admin/HighPriorityIssuesVie
 const DiscountVerificationsView = () => import("@/views/admin/DiscountVerificationsView.vue");
 const BillingSettingsView = () => import("@/views/admin/BillingSettingsView.vue");
 const VehicleContentEditorView = () => import("@/views/admin/VehicleContentEditorView.vue");
+const AnnouncementsView = () => import("@/views/admin/AnnouncementsView.vue");
 
+/** 前端路由表，管理端子路由统一挂在 AdminLayout 下 / Frontend route table with admin child routes under AdminLayout. */
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -33,13 +36,15 @@ const router = createRouter({
         { path: "high-priority-issues", component: HighPriorityIssuesView },
         { path: "discount-verifications", component: DiscountVerificationsView },
         { path: "billing", component: BillingSettingsView },
-        { path: "vehicle-content", component: VehicleContentEditorView }
+        { path: "vehicle-content", component: VehicleContentEditorView },
+        { path: "announcements", component: AnnouncementsView }
       ]
     },
     { path: "/:pathMatch(.*)*", redirect: "/admin/revenue" }
   ]
 });
 
+/** 全局路由守卫，拦截未登录或非管理员用户 / Global route guard for unauthenticated or non-admin users. */
 router.beforeEach((to) => {
   const authStore = useAuthStore();
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
