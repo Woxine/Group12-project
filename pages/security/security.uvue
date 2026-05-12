@@ -19,5 +19,5 @@ const submitSecuritySettings = () => {
 
 <style>
 .container { padding: 20px; }
-.title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+.title { font-size: $font-section; font-weight: bold; margin-bottom: 12px; }
 </style>

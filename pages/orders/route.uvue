@@ -561,7 +561,7 @@ onLoad((options: UTSJSONObject) => {
 }
 
 .control-btn-text-minus {
-	font-size: 26px;
+	font-size: $font-title-lg;
 }
 
 .route-map {

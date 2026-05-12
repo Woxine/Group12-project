@@ -184,7 +184,7 @@ const handleChangeEmail = () => {
 }
 
 .title {
-	font-size: 20px;
+	font-size: $font-title-sm;
 	font-weight: 700;
 	color: $text-inverse;
 }

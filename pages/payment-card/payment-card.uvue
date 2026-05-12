@@ -275,8 +275,8 @@ onShow(() => {
 .scroll-area { width: 100%; padding: 0 $page-padding-h $page-padding-bottom; box-sizing: border-box; }
 .header_row { display: flex; align-items: center; margin-bottom: 12px; }
 .add_card_entry { width: 34px; height: 34px; border-radius: 17px; background: $brand-green; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
-.add_card_text { color: $bg-card; font-size: 26px; line-height: 30px; font-weight: 400; }
-.title { font-size: 20px; font-weight: bold; color: $text-primary; }
+.add_card_text { color: $bg-card; font-size: $font-title-lg; line-height: 30px; font-weight: 400; }
+.title { font-size: $font-title-sm; font-weight: bold; color: $text-primary; }
 .guest_btn { margin-bottom: 12px; background: $color-info; color: $bg-card; border-width: 0; height: 44px; border-radius: 8px; }
 .section { background: $bg-card; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
 .section_title { font-size: $font-body; font-weight: bold; color: $text-primary; margin-bottom: 8px; display: flex; }

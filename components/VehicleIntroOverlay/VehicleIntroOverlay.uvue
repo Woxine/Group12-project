@@ -216,7 +216,7 @@ onMounted(() => {
 	}
 
 	.close-btn {
-		font-size: 20px;
+		font-size: $font-title-sm;
 		color: $text-placeholder;
 		padding: 4px;
 	}
