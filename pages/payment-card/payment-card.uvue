@@ -143,6 +143,7 @@ const loadCards = () => {
 				const responseData = res.data as UTSJSONObject | null
 				const dataField = responseData != null ? responseData['data'] : null
 				cards.value = parseCardList(dataField)
+				uni.setStorageSync('hasPaymentCard', cards.value.length > 0 ? 'true' : 'false')
 				return
 			}
 			showError(getResponseMessage(res.data, getAppMessage('paymentCard', 'loadFailed', 'Failed to load cards')))

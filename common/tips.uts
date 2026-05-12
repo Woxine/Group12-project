@@ -74,7 +74,8 @@ const buildContext = (scooterCount: number, announcements: AnnouncementTip[]): T
     const token = readStorageStringOrNull('token')
     const isLoggedIn = token != null
     const username = readStorageString('username')
-    const paymentCardId = readStorageStringOrNull('paymentCardId')
+    const hasCardFlag = readStorageString('hasPaymentCard')
+    const paymentCardId = hasCardFlag == 'true' ? '1' : null
 
     return {
         isLoggedIn: isLoggedIn,
