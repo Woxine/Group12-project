@@ -7,6 +7,8 @@ export type TrajectoryPointData = {
 	seq: number
 }
 
+export type FlushTrackingCallback = (success: boolean) => void
+
 // Module-level state (persists across page navigations within app process)
 let isTracking = false
 let currentBookingId = ''
@@ -71,11 +73,20 @@ const getToken = (): string | null => {
 	return val.length > 0 ? val : null
 }
 
-const flushPoints = (): void => {
-	if (pendingPoints.length == 0) return
+const flushPoints = (onComplete: FlushTrackingCallback | null = null): void => {
+	if (pendingPoints.length == 0) {
+		if (onComplete != null) onComplete(true)
+		return
+	}
 	const token = getToken()
-	if (token == null || token.length == 0) return
-	if (currentBookingId.length == 0) return
+	if (token == null || token.length == 0) {
+		if (onComplete != null) onComplete(false)
+		return
+	}
+	if (currentBookingId.length == 0) {
+		if (onComplete != null) onComplete(false)
+		return
+	}
 
 	const pointsToSend: TrajectoryPointData[] = []
 	for (let i = 0; i < pendingPoints.length; i++) {
@@ -93,7 +104,8 @@ const flushPoints = (): void => {
 			'Authorization': 'Bearer ' + token
 		},
 		success: (res) => {
-			if (res.statusCode >= 200 && res.statusCode < 300) {
+			const ok = res.statusCode >= 200 && res.statusCode < 300
+			if (ok) {
 				const sentSeqs = new Set<number>()
 				for (let i = 0; i < pointsToSend.length; i++) {
 					sentSeqs.add(pointsToSend[i].seq)
@@ -106,11 +118,17 @@ const flushPoints = (): void => {
 				}
 				pendingPoints = remaining
 			}
+			if (onComplete != null) onComplete(ok)
 		},
 		fail: () => {
 			// Points stay in pendingPoints for next attempt
+			if (onComplete != null) onComplete(false)
 		}
 	})
+}
+
+export const flushTrackingPoints = (onComplete: FlushTrackingCallback): void => {
+	flushPoints(onComplete)
 }
 
 export const startTracking = (bookingId: string): void => {
@@ -149,6 +167,7 @@ export const startTracking = (bookingId: string): void => {
 
 export const stopTracking = (): void => {
 	if (!isTracking) return
+	const stoppingBookingId = currentBookingId
 
 	if (locationChangeCallback != null) {
 		uni.offLocationChange(locationChangeCallback!)
@@ -164,11 +183,12 @@ export const stopTracking = (): void => {
 		uploadTimer = null
 	}
 
-	flushPoints()
-
 	isTracking = false
-	currentBookingId = ''
-	pendingPoints = []
+	flushPoints((success: boolean) => {
+		if (currentBookingId == stoppingBookingId && (success || pendingPoints.length == 0)) {
+			currentBookingId = ''
+		}
+	})
 }
 
 export const getTrackingBookingId = (): string => {

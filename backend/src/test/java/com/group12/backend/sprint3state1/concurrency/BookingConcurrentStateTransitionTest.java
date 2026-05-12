@@ -25,10 +25,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import com.group12.backend.dto.ExtendBookingRequest;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
+import com.group12.backend.entity.TrajectoryPoint;
 import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
+import com.group12.backend.repository.TrajectoryPointRepository;
 import com.group12.backend.service.BillingRule;
 import com.group12.backend.service.BillingService;
 import com.group12.backend.service.BookingCompletionService;
@@ -46,6 +48,8 @@ class BookingConcurrentStateTransitionTest {
     private BookingRepository bookingRepository;
     @Mock
     private ScooterRepository scooterRepository;
+    @Mock
+    private TrajectoryPointRepository trajectoryPointRepository;
     @Mock
     private BillingService billingService;
 
@@ -130,6 +134,81 @@ class BookingConcurrentStateTransitionTest {
         assertThat(booking.getScooter().getStatus()).isEqualTo("AVAILABLE");
     }
 
+    @Test
+    @DisplayName("completeBooking_withoutEndLocation_usesLatestTrajectoryPoint")
+    void completeBooking_withoutEndLocation_usesLatestTrajectoryPoint() {
+        Booking booking = buildConfirmedBooking(801L, 4001L);
+        TrajectoryPoint latestPoint = buildTrajectoryPoint(booking, 53.801, -1.551, 12);
+        when(bookingRepository.findByIdForUpdate(801L)).thenReturn(Optional.of(booking));
+        when(trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(801L)).thenReturn(Optional.of(latestPoint));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Object result = bookingService.completeBooking("801", 9001L, null, null);
+
+        assertThat(result).isEqualTo("Booking completed successfully");
+        assertThat(booking.getEndLat()).isEqualTo(53.801);
+        assertThat(booking.getEndLng()).isEqualTo(-1.551);
+        assertThat(booking.getScooter().getLocationLat()).isEqualTo(53.801);
+        assertThat(booking.getScooter().getLocationLng()).isEqualTo(-1.551);
+    }
+
+    @Test
+    @DisplayName("cancelBooking_withoutEndLocation_usesLatestTrajectoryPoint")
+    void cancelBooking_withoutEndLocation_usesLatestTrajectoryPoint() {
+        Booking booking = buildConfirmedBooking(802L, 4002L);
+        TrajectoryPoint latestPoint = buildTrajectoryPoint(booking, 53.802, -1.552, 13);
+        when(bookingRepository.findByIdForUpdate(802L)).thenReturn(Optional.of(booking));
+        when(trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(802L)).thenReturn(Optional.of(latestPoint));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Object result = bookingService.cancelBooking("802", 9001L, null, null);
+
+        assertThat(result).isEqualTo("Booking cancelled successfully");
+        assertThat(booking.getEndLat()).isEqualTo(53.802);
+        assertThat(booking.getEndLng()).isEqualTo(-1.552);
+        assertThat(booking.getScooter().getLocationLat()).isEqualTo(53.802);
+        assertThat(booking.getScooter().getLocationLng()).isEqualTo(-1.552);
+    }
+
+    @Test
+    @DisplayName("completeBooking_explicitEndLocation_winsOverTrajectoryFallback")
+    void completeBooking_explicitEndLocation_winsOverTrajectoryFallback() {
+        Booking booking = buildConfirmedBooking(803L, 4003L);
+        TrajectoryPoint latestPoint = buildTrajectoryPoint(booking, 53.803, -1.553, 14);
+        when(bookingRepository.findByIdForUpdate(803L)).thenReturn(Optional.of(booking));
+        lenient().when(trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(803L)).thenReturn(Optional.of(latestPoint));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        bookingService.completeBooking("803", 9001L, 53.900, -1.600);
+
+        assertThat(booking.getEndLat()).isEqualTo(53.900);
+        assertThat(booking.getEndLng()).isEqualTo(-1.600);
+        assertThat(booking.getScooter().getLocationLat()).isEqualTo(53.900);
+        assertThat(booking.getScooter().getLocationLng()).isEqualTo(-1.600);
+    }
+
+    @Test
+    @DisplayName("schedulerAutoComplete_withoutEndLocation_usesLatestTrajectoryPoint")
+    void schedulerAutoComplete_withoutEndLocation_usesLatestTrajectoryPoint() {
+        Booking booking = buildConfirmedBooking(804L, 4004L);
+        TrajectoryPoint latestPoint = buildTrajectoryPoint(booking, 53.804, -1.554, 15);
+        when(bookingRepository.findByIdForUpdate(804L)).thenReturn(Optional.of(booking));
+        when(trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(804L)).thenReturn(Optional.of(latestPoint));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(scooterRepository.save(any(Scooter.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        bookingCompletionService.completeSingleBooking(booking);
+
+        assertThat(booking.getStatus()).isEqualTo("COMPLETED");
+        assertThat(booking.getEndLat()).isEqualTo(53.804);
+        assertThat(booking.getEndLng()).isEqualTo(-1.554);
+        assertThat(booking.getScooter().getLocationLat()).isEqualTo(53.804);
+        assertThat(booking.getScooter().getLocationLng()).isEqualTo(-1.554);
+    }
+
     private List<Object> runParallel(Callable<Object> left, Callable<Object> right) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
@@ -189,6 +268,16 @@ class BookingConcurrentStateTransitionTest {
         booking.setDiscountAmount(BigDecimal.ZERO);
         booking.setDiscountType("NONE");
         return booking;
+    }
+
+    private TrajectoryPoint buildTrajectoryPoint(Booking booking, Double lat, Double lng, Integer seq) {
+        TrajectoryPoint point = new TrajectoryPoint();
+        point.setBooking(booking);
+        point.setLat(lat);
+        point.setLng(lng);
+        point.setSeq(seq);
+        point.setRecordedAt(LocalDateTime.now());
+        return point;
     }
 
     private BillingRule defaultRule() {

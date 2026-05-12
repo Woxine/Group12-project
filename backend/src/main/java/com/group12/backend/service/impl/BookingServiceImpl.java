@@ -24,6 +24,7 @@ import com.group12.backend.dto.PayBookingRequest;
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Payment;
 import com.group12.backend.entity.Scooter;
+import com.group12.backend.entity.TrajectoryPoint;
 import com.group12.backend.entity.User;
 import com.group12.backend.exception.BusinessException;
 import com.group12.backend.exception.ErrorMessages;
@@ -31,6 +32,7 @@ import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.PaymentCardRepository;
 import com.group12.backend.repository.PaymentRepository;
 import com.group12.backend.repository.ScooterRepository;
+import com.group12.backend.repository.TrajectoryPointRepository;
 import com.group12.backend.repository.UserRepository;
 import com.group12.backend.service.BillingRule;
 import com.group12.backend.service.BillingService;
@@ -72,6 +74,9 @@ public class BookingServiceImpl implements BookingService {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private TrajectoryPointRepository trajectoryPointRepository;
 
     @Override
     @Transactional
@@ -347,17 +352,18 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
 
+        Double[] resolvedEndLocation = resolveEndLocation(id, endLat, endLng);
         booking.setStatus("CANCELLED");
         booking.setEndTime(LocalDateTime.now());
         booking.setPaymentDeadline(null);
-        if (endLat != null) booking.setEndLat(endLat);
-        if (endLng != null) booking.setEndLng(endLng);
+        if (resolvedEndLocation[0] != null) booking.setEndLat(resolvedEndLocation[0]);
+        if (resolvedEndLocation[1] != null) booking.setEndLng(resolvedEndLocation[1]);
         bookingRepository.save(booking);
 
         Scooter scooter = booking.getScooter();
         scooter.setStatus("AVAILABLE");
-        if (endLat != null) scooter.setLocationLat(endLat);
-        if (endLng != null) scooter.setLocationLng(endLng);
+        if (resolvedEndLocation[0] != null) scooter.setLocationLat(resolvedEndLocation[0]);
+        if (resolvedEndLocation[1] != null) scooter.setLocationLng(resolvedEndLocation[1]);
         scooterRepository.save(scooter);
 
         return "Booking cancelled successfully";
@@ -380,17 +386,32 @@ public class BookingServiceImpl implements BookingService {
         if (!"CONFIRMED".equals(booking.getStatus())) {
             throw new BusinessException(ErrorMessages.bookingStateChanged(booking.getStatus()), HttpStatus.CONFLICT);
         }
+        Double[] resolvedEndLocation = resolveEndLocation(id, endLat, endLng);
         booking.setStatus("COMPLETED");
         booking.setEndTime(LocalDateTime.now());
-        if (endLat != null) booking.setEndLat(endLat);
-        if (endLng != null) booking.setEndLng(endLng);
+        if (resolvedEndLocation[0] != null) booking.setEndLat(resolvedEndLocation[0]);
+        if (resolvedEndLocation[1] != null) booking.setEndLng(resolvedEndLocation[1]);
         bookingRepository.save(booking);
         Scooter scooter = booking.getScooter();
         scooter.setStatus("AVAILABLE");
-        if (endLat != null) scooter.setLocationLat(endLat);
-        if (endLng != null) scooter.setLocationLng(endLng);
+        if (resolvedEndLocation[0] != null) scooter.setLocationLat(resolvedEndLocation[0]);
+        if (resolvedEndLocation[1] != null) scooter.setLocationLng(resolvedEndLocation[1]);
         scooterRepository.save(scooter);
         return "Booking completed successfully";
+    }
+
+    private Double[] resolveEndLocation(Long bookingId, Double endLat, Double endLng) {
+        Double resolvedLat = endLat;
+        Double resolvedLng = endLng;
+        if ((resolvedLat == null || resolvedLng == null) && trajectoryPointRepository != null) {
+            Optional<TrajectoryPoint> latestPoint = trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(bookingId);
+            if (latestPoint.isPresent()) {
+                TrajectoryPoint point = latestPoint.get();
+                if (resolvedLat == null) resolvedLat = point.getLat();
+                if (resolvedLng == null) resolvedLng = point.getLng();
+            }
+        }
+        return new Double[] { resolvedLat, resolvedLng };
     }
 
     private static double resolveDurationHours(String durationRequest) {

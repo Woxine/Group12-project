@@ -126,7 +126,7 @@ import { onLoad, onShow, onHide } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
-import { startTracking, stopTracking, getTrackingBookingId, isActive as isTrackingActive } from '../../common/trajectoryTracker.uts'
+import { startTracking, stopTracking, flushTrackingPoints, getTrackingBookingId, isActive as isTrackingActive } from '../../common/trajectoryTracker.uts'
 import {
 	DURATION_PRESETS,
 	findPresetByMinutes,
@@ -347,7 +347,7 @@ const findFirstConfirmedBookingId = (): string | null => {
 const syncTrajectoryTracking = (): void => {
 	const confirmedId = findFirstConfirmedBookingId()
 	if (confirmedId != null) {
-		if (getTrackingBookingId() != confirmedId) {
+		if (getTrackingBookingId() != confirmedId || !isTrackingActive()) {
 			startTracking(confirmedId)
 		}
 	} else {
@@ -355,6 +355,21 @@ const syncTrajectoryTracking = (): void => {
 			stopTracking()
 		}
 	}
+}
+
+const runAfterFinalTrajectoryFlush = (next: () => void): void => {
+	let finished = false
+	const finish = () => {
+		if (finished) return
+		finished = true
+		next()
+	}
+	setTimeout(() => {
+		finish()
+	}, 3000)
+	flushTrackingPoints((_success: boolean) => {
+		finish()
+	})
 }
 
 const clearAutoRefresh = () => {
@@ -826,8 +841,20 @@ const cancelOrder = (booking: Booking) => {
 				}
 				uni.getLocation({
 					type: 'gcj02',
-					success: (loc) => { doCancel(loc.latitude, loc.longitude) },
-					fail: () => { doCancel(null, null) }
+					success: (loc) => {
+						if (cs == 'CONFIRMED') {
+							runAfterFinalTrajectoryFlush(() => { doCancel(loc.latitude, loc.longitude) })
+						} else {
+							doCancel(loc.latitude, loc.longitude)
+						}
+					},
+					fail: () => {
+						if (cs == 'CONFIRMED') {
+							runAfterFinalTrajectoryFlush(() => { doCancel(null, null) })
+						} else {
+							doCancel(null, null)
+						}
+					}
 				})
 			}
 		}
@@ -858,27 +885,29 @@ const endRide = (booking: Booking) => {
 			uni.getLocation({
 				type: 'gcj02',
 				success: (loc) => {
-					uni.request({
-						url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
-						method: 'PATCH',
-						data: { endLat: loc.latitude, endLng: loc.longitude },
-						header: {
-							'Content-Type': 'application/json',
-							'Authorization': 'Bearer ' + token
-						},
-						success: (resp) => {
-							if (resp.statusCode >= 200 && resp.statusCode < 300) {
-								stopTracking()
-								showSuccess(bookingMessage('endRideSuccess', 'Ride ended'))
-								fetchBookings(false)
-							} else {
-								const msg = getResponseMessage(resp.data, bookingMessage('endRideFailed', 'Failed to end ride'))
-								showError(msg, 3000)
+					runAfterFinalTrajectoryFlush(() => {
+						uni.request({
+							url: BASE_URL + '/api/v1/bookings/' + bid + '/complete',
+							method: 'PATCH',
+							data: { endLat: loc.latitude, endLng: loc.longitude },
+							header: {
+								'Content-Type': 'application/json',
+								'Authorization': 'Bearer ' + token
+							},
+							success: (resp) => {
+								if (resp.statusCode >= 200 && resp.statusCode < 300) {
+									stopTracking()
+									showSuccess(bookingMessage('endRideSuccess', 'Ride ended'))
+									fetchBookings(false)
+								} else {
+									const msg = getResponseMessage(resp.data, bookingMessage('endRideFailed', 'Failed to end ride'))
+									showError(msg, 3000)
+								}
+							},
+							fail: () => {
+								showError(networkMessage('requestFailed', 'Network error, please try again'))
 							}
-						},
-						fail: () => {
-							showError(networkMessage('requestFailed', 'Network error, please try again'))
-						}
+						})
 					})
 				},
 				fail: () => {

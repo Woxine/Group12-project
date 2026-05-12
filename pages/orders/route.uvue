@@ -15,8 +15,8 @@
 			<view class="no-route-icon-wrap">
 				<text class="no-route-icon-text">✕</text>
 			</view>
-			<text class="no-route-text">No route information available.</text>
-			<text class="no-route-hint">GPS data for this ride is missing or incomplete.</text>
+			<text class="no-route-text">Route information is incomplete.</text>
+			<text class="no-route-hint">GPS data can be interrupted by location permission, network issues, or app background limits.</text>
 			<button class="back-btn" @click="goBack">Back to Bookings</button>
 		</view>
 		<view v-else class="map-wrap">

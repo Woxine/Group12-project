@@ -2,8 +2,11 @@ package com.group12.backend.service;
 
 import com.group12.backend.entity.Booking;
 import com.group12.backend.entity.Scooter;
+import com.group12.backend.entity.TrajectoryPoint;
 import com.group12.backend.repository.BookingRepository;
 import com.group12.backend.repository.ScooterRepository;
+import com.group12.backend.repository.TrajectoryPointRepository;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +29,9 @@ public class BookingCompletionService {
     @Autowired
     private ScooterRepository scooterRepository;
 
+    @Autowired(required = false)
+    private TrajectoryPointRepository trajectoryPointRepository;
+
     /**
      * 在独立事务中完成单个预约订单，避免批处理时单条失败影响整体任务。
      */
@@ -40,12 +46,26 @@ public class BookingCompletionService {
             return;
         }
 
+        Optional<TrajectoryPoint> latestPoint = trajectoryPointRepository == null
+                ? Optional.empty()
+                : trajectoryPointRepository.findTopByBooking_IdOrderBySeqDesc(fresh.getId());
+        latestPoint.ifPresent(point -> {
+            if (fresh.getEndLat() == null) fresh.setEndLat(point.getLat());
+            if (fresh.getEndLng() == null) fresh.setEndLng(point.getLng());
+        });
+
         fresh.setStatus("COMPLETED");
         bookingRepository.save(fresh);
 
         Scooter scooter = fresh.getScooter();
-        if (scooter != null && !"AVAILABLE".equals(scooter.getStatus())) {
-            scooter.setStatus("AVAILABLE");
+        if (scooter != null) {
+            latestPoint.ifPresent(point -> {
+                if (scooter.getLocationLat() == null) scooter.setLocationLat(point.getLat());
+                if (scooter.getLocationLng() == null) scooter.setLocationLng(point.getLng());
+            });
+            if (!"AVAILABLE".equals(scooter.getStatus())) {
+                scooter.setStatus("AVAILABLE");
+            }
             scooterRepository.save(scooter);
             log.info("BookingScheduler: Released Scooter ID: {}", scooter.getId());
         }
