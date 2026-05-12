@@ -1,4 +1,5 @@
 <template>
+  <!-- 车辆展示内容编辑页 / Vehicle display content editor page. -->
   <el-card shadow="never" class="editor-container admin-page-card">
     <template #header>
       <div class="admin-page-header">
@@ -21,6 +22,7 @@
       class="hint admin-hint"
     />
 
+    <!-- 左侧编辑表单与右侧实时预览 / Left editing form with right-side live preview. -->
     <el-row :gutter="20" class="content-row">
       <el-col :xs="24" :lg="14">
         <el-card shadow="never" class="admin-panel">
@@ -87,6 +89,7 @@ import { ref, onMounted } from "vue";
 import { getVehicleDescriptions, updateVehicleDescription } from "@/api/admin";
 import type { VehicleDescription } from "@/types/api";
 
+/** 前端编辑表单使用的车辆文案结构 / Vehicle copy shape used by the frontend editor form. */
 type VehicleContent = {
   key: string;
   name: string;
@@ -98,6 +101,7 @@ type VehicleContent = {
   advice: string;
 };
 
+/** 后端不可用时的本地默认文案 / Local fallback copy used when backend data is unavailable. */
 const defaults: VehicleContent[] = [
   { key: "GEN1", name: "GEN1", subtitle: "Ninebot Fz3", description: "Best for beginners and short daily trips.", range: "115km/92km", speed: "25km/h", motor: "400W", advice: "Best for beginners and short daily trips." },
   { key: "GEN2", name: "GEN2", subtitle: "Ninebot V70", description: "Balanced choice for mid-range commuting.", range: "70km", speed: "47km/h", motor: "800W", advice: "Balanced choice for mid-range commuting." },
@@ -105,6 +109,7 @@ const defaults: VehicleContent[] = [
   { key: "GEN3PRO", name: "GEN3 PRO", subtitle: "Ninebot E300P MK2", description: "Performance-first choice for advanced riders.", range: "125km", speed: "135km/h", motor: "29kW peak", advice: "Performance-first choice for advanced riders." }
 ];
 
+/** 当前编辑模型、标签页和请求状态 / Current editable models, active tab, and request state. */
 const models = ref<VehicleContent[]>(JSON.parse(JSON.stringify(defaults)));
 const activeKey = ref("GEN1");
 const loading = ref(false);
@@ -112,6 +117,7 @@ const saving = ref(false);
 
 const API_TYPE_MAP: Record<string, string> = { GEN1: "GEN1", GEN2: "GEN2", GEN3: "GEN3", GEN3PRO: "GEN3PRO" };
 
+/** 将后端字段映射为编辑器字段 / Map backend fields into editor fields. */
 function toContent(d: VehicleDescription): VehicleContent {
   return {
     key: d.vehicleType,
@@ -125,6 +131,7 @@ function toContent(d: VehicleDescription): VehicleContent {
   };
 }
 
+/** 加载后端车辆文案，失败时保留默认值 / Load vehicle copy from backend and keep defaults on failure. */
 async function load() {
   loading.value = true;
   try {
@@ -139,6 +146,7 @@ async function load() {
   }
 }
 
+/** 批量保存所有车型文案并反馈部分失败 / Save copy for all vehicle types and report partial failures. */
 async function save() {
   saving.value = true;
   try {
@@ -175,6 +183,7 @@ async function save() {
   }
 }
 
+/** 重置为默认文案，但仍需手动保存持久化 / Reset to default copy, requiring Save to persist. */
 function resetDefaults() {
   models.value = JSON.parse(JSON.stringify(defaults));
   ElMessage.success("Default content restored (click Save to persist)");
@@ -184,6 +193,7 @@ onMounted(load);
 </script>
 
 <style scoped>
+/* 编辑页容器和两栏布局 / Editor container and two-column layout. */
 .editor-container {
   border-radius: var(--ui-radius-lg);
 }
@@ -201,6 +211,7 @@ onMounted(load);
   margin-top: var(--ui-space-2);
 }
 
+/* 预览卡片视觉层级 / Preview card visual hierarchy. */
 .preview-item {
   border: 1px solid var(--ui-border-soft);
   border-radius: var(--ui-radius-sm);

@@ -1,7 +1,9 @@
 import axios from "axios";
 
+/** API 基础地址，生产环境由 Vite 环境变量覆盖 / API base URL, overridden by the Vite environment variable in production. */
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
+/** 共享 Axios 实例，统一超时和拦截器 / Shared Axios instance with common timeout and interceptors. */
 export const http = axios.create({
   baseURL,
   timeout: 15000

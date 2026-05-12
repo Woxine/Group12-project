@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+/** 模拟收入相关接口，覆盖统计、租期拆分和热门日期 / Mock revenue APIs for stats, duration breakdowns, and popular dates. */
 async function mockRevenueApis(page: Page) {
   await page.route("**/api/v1/admin/revenue**", async (route) => {
     const url = new URL(route.request().url());
@@ -67,8 +68,10 @@ async function mockRevenueApis(page: Page) {
   });
 }
 
+/** 收入页可访问性回归 / Revenue page accessibility regression tests. */
 test.describe("Revenue view accessibility", () => {
   test.beforeEach(async ({ page }) => {
+    /** 注入管理员会话，绕过登录流程进入受保护路由 / Inject an admin session to enter protected routes without login. */
     await page.addInitScript(() => {
       localStorage.setItem("admin_token", "test-token");
       localStorage.setItem("admin_role", "ADMIN");
@@ -78,6 +81,7 @@ test.describe("Revenue view accessibility", () => {
     await mockRevenueApis(page);
   });
 
+  /** 使用 axe 检查严重和关键级别问题 / Use axe to check serious and critical violations. */
   test("has no serious or critical axe violations", async ({ page }) => {
     await page.goto("/admin/revenue");
     await expect(page.getByRole("heading", { name: "Revenue Overview" })).toBeVisible();
@@ -89,6 +93,7 @@ test.describe("Revenue view accessibility", () => {
     expect(severeViolations).toEqual([]);
   });
 
+  /** 确认日期范围和搜索控件可键盘访问 / Ensure date-range and search controls are keyboard reachable. */
   test("keeps date range and search controls keyboard reachable", async ({ page }) => {
     await page.goto("/admin/revenue");
 

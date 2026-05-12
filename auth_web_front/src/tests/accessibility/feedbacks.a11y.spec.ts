@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+/** 模拟反馈接口和优先级处理接口 / Mock feedback list and priority-processing APIs. */
 async function mockFeedbackApis(page: Page) {
   await page.route("**/api/v1/feedbacks**", async (route) => {
     const url = new URL(route.request().url());
@@ -51,8 +52,10 @@ async function mockFeedbackApis(page: Page) {
   });
 }
 
+/** 反馈管理页可访问性回归 / Feedback management accessibility regression tests. */
 test.describe("Feedback management accessibility", () => {
   test.beforeEach(async ({ page }) => {
+    /** 注入管理员会话，直接访问受保护页面 / Inject an admin session before visiting the protected page. */
     await page.addInitScript(() => {
       localStorage.setItem("admin_token", "test-token");
       localStorage.setItem("admin_role", "ADMIN");
@@ -62,6 +65,7 @@ test.describe("Feedback management accessibility", () => {
     await mockFeedbackApis(page);
   });
 
+  /** 使用 axe 检查严重和关键级别问题 / Use axe to check serious and critical violations. */
   test("has no serious or critical axe violations", async ({ page }) => {
     await page.goto("/admin/feedbacks");
     await expect(page.getByRole("heading", { name: "Feedback Management" })).toBeVisible();
@@ -76,6 +80,7 @@ test.describe("Feedback management accessibility", () => {
     expect(severeViolations).toEqual([]);
   });
 
+  /** 确认核心控件可通过键盘访问并有可见焦点 / Ensure core controls are keyboard reachable with visible focus. */
   test("supports keyboard navigation to core controls with visible focus", async ({ page }) => {
     await page.goto("/admin/feedbacks");
 

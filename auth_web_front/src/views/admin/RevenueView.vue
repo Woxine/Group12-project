@@ -1,6 +1,8 @@
 <template>
+  <!-- 收入概览页 / Revenue overview page. -->
   <el-card shadow="never" class="revenue-container admin-page-card" role="region" aria-labelledby="revenue-overview-heading">
     <template #header>
+      <!-- 日期筛选工具栏 / Date-range filter toolbar. -->
       <div class="header admin-page-header">
         <div>
           <h1 id="revenue-overview-heading" class="page-title admin-page-title">Revenue Overview</h1>
@@ -21,6 +23,7 @@
       </div>
     </template>
 
+    <!-- 收入、订单和客单价核心指标 / Revenue, order, and average-order-value KPIs. -->
     <el-row :gutter="24" v-loading="loading" class="stats-row admin-loading-section" :aria-busy="loading">
       <el-col :xs="24" :md="8">
         <el-card shadow="never" class="stat-card admin-kpi-card">
@@ -51,6 +54,7 @@
       </el-col>
     </el-row>
 
+    <!-- 租期收入拆分和热门日期表格 / Duration revenue breakdown and popular-date tables. -->
     <div class="tables">
       <el-card shadow="never" class="table-card admin-panel">
         <template #header>
@@ -131,6 +135,7 @@ const weeklyDurationData = ref<DurationRevenue[]>([]);
 const popularDatesData = ref<PopularRentalDate[]>([]);
 const liveMessage = ref("");
 
+/** 向屏幕阅读器播报收入数据加载结果 / Announce revenue data load results to screen readers. */
 function announce(message: string) {
   liveMessage.value = "";
   window.setTimeout(() => {
@@ -138,6 +143,7 @@ function announce(message: string) {
   }, 0);
 }
 
+/** 并行加载收入统计、租期拆分和本周热门日期 / Load revenue stats, duration breakdowns, and weekly popular dates in parallel. */
 async function load() {
   loading.value = true;
   try {
@@ -169,6 +175,7 @@ async function load() {
 
 onMounted(load);
 
+/** 计算当前周的周一到周日日期范围 / Calculate the current Monday-to-Sunday date range. */
 function getCurrentWeekRange() {
   const now = new Date();
   const day = now.getDay();
@@ -183,6 +190,7 @@ function getCurrentWeekRange() {
   };
 }
 
+/** 格式化为接口查询使用的 YYYY-MM-DD / Format a date as YYYY-MM-DD for API queries. */
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -192,6 +200,7 @@ function formatDate(date: Date) {
 </script>
 
 <style scoped>
+/* 页面容器和核心指标间距 / Page container and KPI spacing. */
 .revenue-container {
   border-radius: var(--ui-radius-lg);
 }
@@ -205,6 +214,7 @@ function formatDate(date: Date) {
   min-height: 132px;
 }
 
+/* 收入明细表格布局 / Revenue detail table layout. */
 .tables {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

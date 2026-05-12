@@ -1,6 +1,8 @@
 <template>
+  <!-- 折扣资格审核列表页 / Discount eligibility verification review page. -->
   <el-card shadow="never" class="verify-container admin-page-card">
     <template #header>
+      <!-- 认证类型和审核状态筛选 / Verification type and review status filters. -->
       <div class="admin-page-header">
         <div>
           <h1 class="admin-page-title">Discount Verification Review</h1>
@@ -21,6 +23,7 @@
       </div>
     </template>
 
+    <!-- 申请列表，点击行可查看提交材料 / Submission list; clicking a row opens submitted material details. -->
     <el-table
       :data="rows"
       stripe
@@ -102,6 +105,7 @@
     </div>
   </el-card>
 
+  <!-- 申请详情和附件预览弹窗 / Submission detail and attachment preview dialog. -->
   <el-dialog v-model="detailDialogVisible" title="Submission Details" width="620px" append-to-body @closed="onDetailDialogClosed">
     <div v-if="detailRow" class="admin-detail-grid">
       <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
@@ -133,6 +137,7 @@
     </template>
   </el-dialog>
 
+  <!-- 驳回原因输入弹窗 / Reject reason input dialog. -->
   <el-dialog v-model="rejectDialogVisible" title="Reject Submission" width="480px" append-to-body>
     <el-input
       v-model="rejectReason"
@@ -181,6 +186,7 @@ const rejectReason = ref("");
 const filePreviewUrl = ref<string | null>(null);
 const fileLoading = ref(false);
 
+/** 加载折扣认证申请列表 / Load discount verification submissions. */
 async function load() {
   loading.value = true;
   try {
@@ -199,28 +205,33 @@ async function load() {
   }
 }
 
+/** 搜索时回到第一页 / Reset to the first page before searching. */
 function onSearch() {
   pager.page = 1;
   load();
 }
 
+/** 切换页码后重新加载 / Reload after the current page changes. */
 function onPageChange(page: number) {
   pager.page = page;
   load();
 }
 
+/** 切换每页数量后回到第一页 / Return to the first page after page size changes. */
 function onSizeChange(size: number) {
   pager.size = size;
   pager.page = 1;
   load();
 }
 
+/** 表格中压缩过长文件名 / Truncate long filenames in the table. */
 function summarizeFilename(name: string) {
   if (!name) return "-";
   if (name.length <= 36) return name;
   return `${name.slice(0, 36)}...`;
 }
 
+/** 将附件大小转成人类可读格式 / Convert attachment size into a human-readable format. */
 function formatBytes(size: number) {
   if (!size) return "0 B";
   if (size < 1024) return `${size} B`;
@@ -228,6 +239,7 @@ function formatBytes(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** 打开详情弹窗，并加载图片或 PDF 预览地址 / Open details and load preview URLs for images or PDFs. */
 async function openDetailDialog(row: DiscountVerificationSubmission) {
   detailRow.value = row;
   detailDialogVisible.value = true;
@@ -244,10 +256,12 @@ async function openDetailDialog(row: DiscountVerificationSubmission) {
   }
 }
 
+/** 关闭详情弹窗 / Close the detail dialog. */
 function closeDetailDialog() {
   detailDialogVisible.value = false;
 }
 
+/** 弹窗关闭后释放临时附件 URL / Revoke temporary attachment URLs after the dialog closes. */
 function onDetailDialogClosed() {
   if (filePreviewUrl.value) {
     URL.revokeObjectURL(filePreviewUrl.value);
@@ -255,6 +269,7 @@ function onDetailDialogClosed() {
   }
 }
 
+/** 通过认证申请并刷新列表 / Approve a submission and refresh the list. */
 async function approve(id: number) {
   try {
     await approveDiscountVerification(id);
@@ -265,12 +280,14 @@ async function approve(id: number) {
   }
 }
 
+/** 打开驳回弹窗并记录目标申请 / Open the reject dialog and remember the target submission. */
 function openRejectDialog(id: number) {
   rejectTargetId.value = id;
   rejectReason.value = "";
   rejectDialogVisible.value = true;
 }
 
+/** 校验驳回原因并提交驳回请求 / Validate reject reason and submit the rejection. */
 async function confirmReject() {
   if (!rejectTargetId.value) return;
   if (!rejectReason.value.trim()) {
@@ -294,6 +311,7 @@ onMounted(load);
 </script>
 
 <style scoped>
+/* 页面容器与行交互 / Page container and row interaction. */
 .verify-container {
   border-radius: var(--ui-radius-lg);
 }
@@ -302,6 +320,7 @@ onMounted(load);
   cursor: pointer;
 }
 
+/* 附件预览和弹窗滚动 / Attachment preview and dialog scrolling. */
 .file-preview-image {
   width: 100%;
   max-height: 70vh;

@@ -1,4 +1,5 @@
 <template>
+  <!-- 折扣入口卡片 / Clickable entry card for a discount setting. -->
   <el-card
     shadow="hover"
     class="discount-card admin-clickable-card"
@@ -18,18 +19,21 @@
 </template>
 
 <script setup lang="ts">
+/** 父页面传入的折扣展示内容 / Discount display content passed by the parent page. */
 const props = defineProps<{
   title: string;
   summary: string;
   tag: string;
 }>();
 
+/** 通知父页面打开对应设置弹窗 / Ask the parent page to open the matching settings dialog. */
 const emit = defineEmits<{
   (e: "click"): void;
 }>();
 </script>
 
 <style scoped>
+/* 卡片基础布局 / Base card layout. */
 .discount-card {
   min-height: 132px;
 }
@@ -42,6 +46,7 @@ const emit = defineEmits<{
   margin-bottom: var(--ui-space-3);
 }
 
+/* 文本层级与摘要换行 / Text hierarchy and summary line wrapping. */
 .title {
   font-size: 16px;
 }
@@ -52,6 +57,7 @@ const emit = defineEmits<{
   white-space: pre-line;
 }
 
+/* Element Plus 内部样式微调 / Element Plus inner style adjustments. */
 :deep(.el-card__body) {
   padding: var(--ui-space-4);
 }

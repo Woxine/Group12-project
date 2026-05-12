@@ -1,6 +1,8 @@
 <template>
+  <!-- 车辆管理主页面 / Main scooter management page. -->
   <el-card shadow="never" class="scooters-container admin-page-card">
     <template #header>
+      <!-- 状态筛选与新增、批量导入操作 / Status filters with add and batch-import actions. -->
       <div class="admin-page-header">
         <div>
           <h1 class="page-title admin-page-title">Scooter Management</h1>
@@ -35,6 +37,7 @@
       title="Bulk controls apply to all scooters in the selected vehicle type."
     />
 
+    <!-- 按车型分组的车辆列表 / Scooter list grouped by vehicle type. -->
     <div v-loading="loading" class="type-card-list admin-loading-section" :aria-busy="loading">
       <el-card
         v-for="section in sections"
@@ -80,6 +83,7 @@
         </template>
 
         <div v-show="expandedTypes[section.type]">
+          <!-- 统一控制器用于预览并应用同车型批量更新 / Unified controller for previewing and applying same-type bulk updates. -->
           <div class="bulk-panel admin-panel">
             <div class="bulk-panel-header" @click="bulkCollapsed[section.type] = !bulkCollapsed[section.type]">
               <span class="admin-section-title">Unified Controller</span>
@@ -155,6 +159,7 @@
             </div>
           </div>
 
+          <!-- 当前车型的分页车辆表 / Paginated scooter table for the current type. -->
           <el-table :data="section.scooters" stripe class="data-table compact admin-data-table">
             <el-table-column prop="id" label="ID" width="90" align="center" />
             <el-table-column prop="status" label="Status" width="150" align="center">
@@ -213,6 +218,7 @@
     </div>
   </el-card>
 
+  <!-- 单车编辑弹窗 / Dialog for editing one scooter. -->
   <el-dialog v-model="dialogVisible" title="Edit Scooter" width="420px" destroy-on-close>
     <el-form label-position="top" :model="editForm" class="edit-form admin-dialog-form">
       <el-row :gutter="16">
@@ -270,6 +276,7 @@
     </template>
   </el-dialog>
 
+  <!-- 新增单车弹窗 / Dialog for creating one scooter. -->
   <el-dialog v-model="addDialogVisible" title="Add Scooter" width="420px" destroy-on-close @closed="resetAddForm">
     <el-form label-position="top" :model="addForm" class="edit-form admin-dialog-form">
       <el-row :gutter="16">
@@ -325,6 +332,7 @@
     </template>
   </el-dialog>
 
+  <!-- 批量创建弹窗，支持手动和 CSV 输入 / Batch creation dialog supporting manual rows and CSV input. -->
   <el-dialog v-model="batchDialogVisible" title="Batch Import Scooters" width="680px" destroy-on-close @closed="resetBatchForm">
     <el-tabs v-model="batchMode" class="batch-tabs">
       <el-tab-pane label="Manual Entry" name="manual">
@@ -424,6 +432,7 @@ import type {
   ScooterBulkPreview
 } from "@/types/api";
 
+/** 支持的车型顺序和批量表单类型 / Supported vehicle type order and bulk form types. */
 const TYPE_ORDER = ["GEN1", "GEN2", "GEN3", "GEN3PRO"] as const;
 type VehicleType = (typeof TYPE_ORDER)[number];
 type VisibleChoice = "UNCHANGED" | "SHOW" | "HIDE";
@@ -436,6 +445,7 @@ type BulkFormState = {
   applying: boolean;
 };
 
+/** 页面加载、弹窗、筛选和原始车辆数据状态 / Page loading, dialog, filter, and raw scooter data state. */
 const loading = ref(false);
 const saving = ref(false);
 const creating = ref(false);
@@ -450,6 +460,7 @@ const batchMode = ref<"manual" | "csv">("manual");
 const csvText = ref("");
 const currentId = ref<number | null>(null);
 
+/** 批量创建表格的一行输入 / One input row in the batch creation table. */
 type BatchRow = {
   type: string;
   status: string;
@@ -458,15 +469,18 @@ type BatchRow = {
   location_name: string;
 };
 
+/** 创建一行默认批量导入数据 / Create one default batch import row. */
 function createBatchRow(): BatchRow {
   return { type: "GEN1", status: "AVAILABLE", hour_rate: 3.5, count: 1, location_name: "" };
 }
 
 const batchRows = ref<BatchRow[]>([createBatchRow()]);
 
+/** 当前批量导入将创建的车辆总数 / Total scooters that will be created by the batch import. */
 const batchTotalCount = computed(() =>
   batchRows.value.reduce((sum, row) => sum + (row.count || 0), 0)
 );
+/** 单车编辑表单状态 / Form state for editing one scooter. */
 const editForm = reactive<{
   status?: string;
   type?: string;
@@ -476,6 +490,7 @@ const editForm = reactive<{
   visible?: boolean;
 }>({});
 
+/** 新增单车表单状态 / Form state for creating one scooter. */
 const addForm = reactive({
   status: "AVAILABLE",
   type: "GEN1",
@@ -485,6 +500,7 @@ const addForm = reactive({
   location_name: "",
 });
 
+/** 每个车型各自的批量更新表单和预览结果 / Per-type bulk update forms and preview results. */
 const bulkForms = reactive<Record<VehicleType, BulkFormState>>({
   GEN1: createBulkForm(),
   GEN2: createBulkForm(),
@@ -499,6 +515,7 @@ const bulkPreviews = reactive<Record<VehicleType, ScooterBulkPreview | null>>({
   GEN3PRO: null,
 });
 
+/** 每个车型卡片和统一控制器的展开状态 / Expansion state for each type card and unified controller. */
 const expandedTypes = reactive<Record<VehicleType, boolean>>({
   GEN1: true,
   GEN2: true,
@@ -513,6 +530,7 @@ const bulkCollapsed = reactive<Record<VehicleType, boolean>>({
   GEN3PRO: true,
 });
 
+/** 每个车型表格的本地分页状态 / Local pagination state for each vehicle type table. */
 const PAGE_SIZE = 10;
 const currentPages = reactive<Record<VehicleType, number>>({
   GEN1: 1,
@@ -521,6 +539,7 @@ const currentPages = reactive<Record<VehicleType, number>>({
   GEN3PRO: 1,
 });
 
+/** 将车辆按车型分组并计算每组指标 / Group scooters by type and compute per-type metrics. */
 const sections = computed(() =>
   TYPE_ORDER.map((type) => {
     const scooters = rows.value.filter((row) => normalizeType(row.type) === type);
@@ -545,6 +564,7 @@ const sections = computed(() =>
   })
 );
 
+/** 创建默认批量更新表单 / Create a default bulk update form. */
 function createBulkForm(): BulkFormState {
   return {
     hour_rate: null,
@@ -555,6 +575,7 @@ function createBulkForm(): BulkFormState {
   };
 }
 
+/** 兼容后端或导入数据中的车型写法差异 / Normalize backend or imported vehicle type variants. */
 function normalizeType(type: string | undefined): VehicleType {
   const value = (type ?? "").trim().toUpperCase();
   if (value === "GEN3 PRO" || value === "GEN3_PRO" || value === "GEN-3-PRO") {
@@ -563,6 +584,7 @@ function normalizeType(type: string | undefined): VehicleType {
   return TYPE_ORDER.includes(value as VehicleType) ? (value as VehicleType) : "GEN1";
 }
 
+/** 车型副标题映射 / Vehicle type subtitle mapping. */
 function getTypeSubtitle(type: VehicleType) {
   switch (type) {
     case "GEN1":
@@ -576,10 +598,12 @@ function getTypeSubtitle(type: VehicleType) {
   }
 }
 
+/** 后端未明确隐藏时默认展示在客户端 / Treat scooters as client-visible unless explicitly hidden. */
 function isListed(row: Scooter) {
   return row.visible !== false;
 }
 
+/** 车型标签颜色映射 / Vehicle type tag color mapping. */
 function getTypeTagColor(type: string) {
   switch (type) {
     case "GEN1": return undefined;
@@ -590,6 +614,7 @@ function getTypeTagColor(type: string) {
   }
 }
 
+/** 表格操作菜单分发 / Dispatch table action menu commands. */
 function handleAction(cmd: string, row: Scooter) {
   switch (cmd) {
     case "edit":
@@ -607,10 +632,12 @@ function handleAction(cmd: string, row: Scooter) {
   }
 }
 
+/** 展开或收起某个车型分组 / Toggle one vehicle type section. */
 function toggleSection(type: VehicleType) {
   expandedTypes[type] = !expandedTypes[type];
 }
 
+/** 根据统一控制器输入构造批量更新请求体 / Build a bulk update payload from unified-controller input. */
 function buildBulkPayload(type: VehicleType, confirmRisky = false): BulkScooterUpdatePayload | null {
   const state = bulkForms[type];
   const payload: BulkScooterUpdatePayload = { type };
@@ -634,6 +661,7 @@ function buildBulkPayload(type: VehicleType, confirmRisky = false): BulkScooterU
   return hasAnyField ? payload : null;
 }
 
+/** 请求批量更新预览，先展示匹配数量和风险 / Request a bulk update preview before applying changes. */
 async function previewBulk(type: VehicleType) {
   const payload = buildBulkPayload(type);
   if (!payload) {
@@ -652,6 +680,7 @@ async function previewBulk(type: VehicleType) {
   }
 }
 
+/** 应用批量更新，风险操作需要额外确认 / Apply bulk updates with extra confirmation for risky changes. */
 async function applyBulk(type: VehicleType) {
   const basePayload = buildBulkPayload(type);
   if (!basePayload) {
@@ -696,6 +725,7 @@ async function applyBulk(type: VehicleType) {
   }
 }
 
+/** 加载车辆列表并修正各车型分页边界 / Load scooters and clamp each type's pagination. */
 async function load() {
   loading.value = true;
   try {
@@ -716,6 +746,7 @@ async function load() {
   }
 }
 
+/** 打开编辑弹窗并填充当前车辆数据 / Open edit dialog and populate current scooter values. */
 function openEdit(row: Scooter) {
   currentId.value = row.id;
   editForm.status = row.status;
@@ -727,11 +758,13 @@ function openEdit(row: Scooter) {
   dialogVisible.value = true;
 }
 
+/** 打开新增弹窗前重置默认值 / Reset defaults before opening the create dialog. */
 function openAdd() {
   resetAddForm();
   addDialogVisible.value = true;
 }
 
+/** 重置新增单车表单 / Reset the create-scooter form. */
 function resetAddForm() {
   addForm.status = "AVAILABLE";
   addForm.type = "GEN1";
@@ -741,6 +774,7 @@ function resetAddForm() {
   addForm.location_name = "";
 }
 
+/** 保存单车编辑结果 / Save edits for one scooter. */
 async function save() {
   if (!currentId.value) {
     return;
@@ -765,6 +799,7 @@ async function save() {
   }
 }
 
+/** 单独切换车辆在客户端地图中的可见性 / Toggle one scooter's visibility on the client map. */
 async function setFleetVisible(row: Scooter, visible: boolean) {
   try {
     await updateScooter(row.id, { visible });
@@ -775,6 +810,7 @@ async function setFleetVisible(row: Scooter, visible: boolean) {
   }
 }
 
+/** 删除单车前二次确认 / Confirm before deleting one scooter. */
 async function confirmDelete(row: Scooter) {
   try {
     await ElMessageBox.confirm(
@@ -793,6 +829,7 @@ async function confirmDelete(row: Scooter) {
   }
 }
 
+/** 创建单辆新车 / Create one new scooter. */
 async function submitAdd() {
   if (addForm.hour_rate == null || Number.isNaN(Number(addForm.hour_rate))) {
     ElMessage.warning("Please set an hourly rate");
@@ -819,10 +856,12 @@ async function submitAdd() {
   }
 }
 
+/** 批量导入表格新增一行 / Add one row to the batch import table. */
 function addBatchRow() {
   batchRows.value.push(createBatchRow());
 }
 
+/** 解析管理员粘贴的简单 CSV 批量数据 / Parse simple CSV batch data pasted by an admin. */
 function parseCsv() {
   const lines = csvText.value.trim().split("\n").filter((l) => l.trim());
   if (lines.length === 0) {
@@ -850,6 +889,7 @@ function parseCsv() {
   ElMessage.success(`Parsed ${parsed.length} rows from CSV`);
 }
 
+/** 校验并提交批量创建请求 / Validate and submit the batch create request. */
 async function submitBatch() {
   if (batchRows.value.length === 0) {
     ElMessage.warning("Add at least one row");
@@ -883,6 +923,7 @@ async function submitBatch() {
   }
 }
 
+/** 关闭批量弹窗后恢复初始输入 / Restore initial batch input after closing the dialog. */
 function resetBatchForm() {
   batchRows.value = [createBatchRow()];
   csvText.value = "";
@@ -893,6 +934,7 @@ onMounted(load);
 </script>
 
 <style scoped>
+/* 页面容器和工具栏 / Page container and toolbar. */
 .scooters-container {
   border-radius: var(--ui-radius-lg);
 }
@@ -908,6 +950,7 @@ onMounted(load);
   flex-wrap: wrap;
 }
 
+/* 车型卡片网格和头部指标 / Type card grid and header metrics. */
 .type-card-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -982,6 +1025,7 @@ onMounted(load);
   flex-shrink: 0;
 }
 
+/* 同车型批量控制器 / Same-type bulk controller. */
 .bulk-panel {
   padding: var(--ui-space-4);
   margin-bottom: var(--ui-space-3);
@@ -1048,6 +1092,7 @@ onMounted(load);
   font-size: 12px;
 }
 
+/* 车辆表格、分页和编辑表单 / Scooter table, pagination, and edit forms. */
 .data-table {
   margin-top: var(--ui-space-2);
 }
@@ -1065,6 +1110,7 @@ onMounted(load);
   width: 100%;
 }
 
+/* 车型卡片响应式布局 / Responsive layout for type cards. */
 @media (max-width: 1280px) {
   .type-card-list {
     grid-template-columns: 1fr;
@@ -1092,6 +1138,7 @@ onMounted(load);
   }
 }
 
+/* 批量创建弹窗 / Batch creation dialog. */
 .batch-manual {
   max-height: 360px;
   overflow-y: auto;

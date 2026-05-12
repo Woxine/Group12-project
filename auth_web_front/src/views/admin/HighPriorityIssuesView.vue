@@ -1,6 +1,8 @@
 <template>
+  <!-- 高优先级问题处理页 / High-priority issue handling page. -->
   <el-card shadow="never" class="high-priority-container admin-page-card">
     <template #header>
+      <!-- 升级状态筛选 / Escalation status filter. -->
       <div class="admin-page-header">
         <div>
           <h1 class="admin-page-title">High Priority Issues</h1>
@@ -16,6 +18,7 @@
       </div>
     </template>
 
+    <!-- 高优先级反馈表格和处理动作 / High-priority feedback table and workflow actions. -->
     <el-table :data="rows" stripe v-loading="loading" class="admin-data-table admin-loading-section" :aria-busy="loading">
       <el-table-column prop="feedbackId" label="Feedback ID" width="120" />
       <el-table-column prop="priority" label="Priority" width="120">
@@ -88,6 +91,7 @@ const total = ref(0);
 const pager = reactive({ page: 1, size: 10 });
 const filters = reactive<{ escalated?: boolean }>({});
 
+/** 加载高优先级问题列表 / Load high-priority issue records. */
 async function load() {
   loading.value = true;
   try {
@@ -105,17 +109,20 @@ async function load() {
   }
 }
 
+/** 切换页码后重新加载 / Reload after the current page changes. */
 function onPageChange(page: number) {
   pager.page = page;
   load();
 }
 
+/** 切换每页数量后回到第一页 / Return to the first page after page size changes. */
 function onSizeChange(size: number) {
   pager.size = size;
   pager.page = 1;
   load();
 }
 
+/** 将未升级的紧急反馈升级到指定团队 / Escalate an urgent feedback item to a selected team. */
 async function escalate(feedbackId: number) {
   try {
     const { value } = await ElMessageBox.prompt(
@@ -142,6 +149,7 @@ async function escalate(feedbackId: number) {
   }
 }
 
+/** 对已升级反馈执行完成确认 / Mark an escalated feedback item as resolved after confirmation. */
 async function markResolved(feedbackId: number) {
   try {
     await ElMessageBox.confirm(`Mark feedback #${feedbackId} as resolved?`, "Confirm Resolve", {
@@ -164,6 +172,7 @@ onMounted(load);
 </script>
 
 <style scoped>
+/* 页面容器 / Page container. */
 .high-priority-container {
   border-radius: var(--ui-radius-lg);
 }

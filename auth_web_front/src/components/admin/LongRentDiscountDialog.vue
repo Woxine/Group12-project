@@ -1,5 +1,6 @@
 <template>
   <el-dialog :model-value="visible" title="Long-Rent Discount Adjustment" width="1080px" @close="handleClose">
+    <!-- 倍率输入与折线预览 / Multiplier inputs paired with the interactive line preview. -->
     <el-row :gutter="24">
       <el-col :xs="24" :sm="10">
         <el-form label-position="top" class="form-panel admin-dialog-form">
@@ -52,6 +53,7 @@
     </el-row>
 
     <el-divider />
+    <!-- 计费设置审计日志 / Billing settings audit log. -->
     <div class="log-header">
       <span class="log-title admin-section-title">Multiplier Adjustment Logs</span>
       <el-button size="small" @click="emit('refresh-logs')">Refresh logs</el-button>
@@ -82,6 +84,7 @@
     </template>
   </el-dialog>
 
+  <!-- 保存前影响预览 / Impact preview shown before persisting multiplier changes. -->
   <el-dialog v-model="previewVisible" title="Confirm Multiplier Update" width="720px" append-to-body class="preview-dialog">
     <el-alert
       title="Please review the pricing impact before applying the new multipliers."
@@ -143,6 +146,7 @@ import type { BillingSettings, BillingSettingsLog } from "@/types/api";
 
 use([CanvasRenderer, LineChart, GridComponent, MarkLineComponent, TooltipComponent, LegendComponent]);
 
+/** 折扣曲线和保存预览使用的固定业务参数 / Fixed business parameters for the discount curve and save preview. */
 const H_MAX = 168;
 const PREVIEW_BASE_RATE = 3.5;
 const PREVIEW_HOURS = [24, 48, 72, 100, 168];
@@ -151,6 +155,7 @@ const MAX_MULTIPLIER = 1;
 const DEFAULT_M1 = 0.85;
 const DEFAULT_M2 = 0.75;
 
+/** 父页面提供当前计费设置、日志和加载状态 / Parent page provides billing settings, logs, and loading states. */
 const props = defineProps<{
   visible: boolean;
   settings: BillingSettings | null;
@@ -159,12 +164,14 @@ const props = defineProps<{
   saving: boolean;
 }>();
 
+/** 向父页面同步弹窗状态、保存请求和日志刷新请求 / Sync dialog state, save requests, and log refresh requests to the parent page. */
 const emit = defineEmits<{
   (e: "update:visible", value: boolean): void;
   (e: "save", payload: { longRentHourRateMultiplier: number; extraLongRentHourRateMultiplier: number }): void;
   (e: "refresh-logs"): void;
 }>();
 
+/** 本地编辑状态，保存前与原始状态对比 / Local edit state compared with the original state before saving. */
 const chartRef = ref<InstanceType<typeof VChart> | null>(null);
 const previewVisible = ref(false);
 const lastEditedField = ref<"m1" | "m2">("m1");
@@ -180,6 +187,7 @@ const originalState = reactive({
   extraLongRentHourRateMultiplier: DEFAULT_M2
 });
 
+/** 单个倍率范围校验 / Per-multiplier range validation. */
 const m1RangeError = computed(() => {
   const m1 = state.longRentHourRateMultiplier;
   if (m1 < MIN_MULTIPLIER || m1 > MAX_MULTIPLIER) {
@@ -196,6 +204,7 @@ const m2RangeError = computed(() => {
   return "";
 });
 
+/** 根据设计令牌读取图表颜色 / Read chart colors from design tokens. */
 function uiColor(tokenName: string, fallback: string) {
   if (typeof window === "undefined") {
     return fallback;
@@ -203,6 +212,7 @@ function uiColor(tokenName: string, fallback: string) {
   return getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim() || fallback;
 }
 
+/** 跨区间关系校验，确保更长租期不会更贵 / Cross-segment validation so longer rentals do not become more expensive. */
 const relationError = computed(() => {
   if (state.extraLongRentHourRateMultiplier > state.longRentHourRateMultiplier) {
     return "The >72h multiplier should not be higher than the 24h-72h multiplier.";
@@ -210,6 +220,7 @@ const relationError = computed(() => {
   return "";
 });
 
+/** 仅展示最近编辑字段的即时提示 / Show inline feedback for the most recently edited field. */
 const inlineValidationMessage = computed(() => {
   if (lastEditedField.value === "m1") {
     return m1RangeError.value;
@@ -220,6 +231,7 @@ const inlineValidationMessage = computed(() => {
   return "";
 });
 
+/** 将用户输入压到后端接受的倍率范围 / Clamp user input into the backend-accepted multiplier range. */
 function clampMultiplier(v: number) {
   if (Number.isNaN(v)) return MAX_MULTIPLIER;
   if (v < MIN_MULTIPLIER) return MIN_MULTIPLIER;
@@ -227,6 +239,7 @@ function clampMultiplier(v: number) {
   return Math.round(v * 10000) / 10000;
 }
 
+/** 读取后端值，异常时回落到安全默认值 / Read backend values and fall back safely when malformed. */
 function readNumberOrFallback(value: unknown, fallback: number) {
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return fallback;
@@ -234,6 +247,7 @@ function readNumberOrFallback(value: unknown, fallback: number) {
   return clampMultiplier(num);
 }
 
+/** 按 T1/T2 分段计算长租费用 / Calculate long-rent cost by T1/T2 pricing segments. */
 function computeSegmentedTotal(rate: number, hours: number, m1: number, m2: number) {
   const t1 = state.longRentThresholdHours;
   const t2 = state.extraLongRentThresholdHours;
@@ -242,6 +256,7 @@ function computeSegmentedTotal(rate: number, hours: number, m1: number, m2: numb
   return rate * t1 + rate * m1 * (t2 - t1) + rate * m2 * (hours - t2);
 }
 
+/** 保存预览表，比较修改前后的典型租期费用 / Save preview rows comparing before and after totals for typical durations. */
 const previewRows = computed(() => {
   return PREVIEW_HOURS.map((hours) => {
     const before = computeSegmentedTotal(
@@ -265,6 +280,7 @@ const previewRows = computed(() => {
   });
 });
 
+/** 图表拖拽手柄的横向锚点 / Horizontal anchors for the draggable chart handles. */
 function secondAnchorX() {
   return state.longRentThresholdHours + (state.extraLongRentThresholdHours - state.longRentThresholdHours) / 2;
 }
@@ -273,6 +289,7 @@ function thirdAnchorX() {
   return state.extraLongRentThresholdHours + (H_MAX - state.extraLongRentThresholdHours) / 2;
 }
 
+/** ECharts 阶梯线数据，表达不同租期区间的有效倍率 / ECharts step-line data for effective multipliers across duration segments. */
 const stepSeriesData = computed(() => {
   const t1 = state.longRentThresholdHours;
   const t2 = state.extraLongRentThresholdHours;
@@ -288,6 +305,7 @@ const stepSeriesData = computed(() => {
   ];
 });
 
+/** 折扣曲线配置和可拖拽控制点 / Discount curve option with draggable control handles. */
 const chartOption = computed<EChartsOption>(() => {
   const primary = uiColor("--ui-color-primary-600", "#2563eb");
   const success = uiColor("--ui-color-success-600", "#16a34a");
@@ -350,6 +368,7 @@ const chartOption = computed<EChartsOption>(() => {
   };
 });
 
+/** 根据当前坐标系刷新拖拽手柄位置 / Refresh handle positions from the current chart coordinate system. */
 function refreshHandlePositions() {
   const chart = (chartRef.value as any)?.chart;
   if (!chart) return;
@@ -363,6 +382,7 @@ function refreshHandlePositions() {
   });
 }
 
+/** 单字段输入规整，不隐式改动另一个倍率 / Normalize one field without implicitly changing the other multiplier. */
 function applySingleFieldNormalization(source: "m1" | "m2", value: number) {
   const normalized = clampMultiplier(value);
   if (source === "m1") {
@@ -372,6 +392,7 @@ function applySingleFieldNormalization(source: "m1" | "m2", value: number) {
   state.extraLongRentHourRateMultiplier = normalized;
 }
 
+/** 处理图表手柄拖拽，将像素坐标转换回倍率 / Handle chart dragging by converting pixel position back to a multiplier. */
 function onHandleDrag(kind: "m1" | "m2", target: { x: number; y: number }) {
   const chart = (chartRef.value as any)?.chart;
   if (!chart) return;
@@ -384,12 +405,14 @@ function onHandleDrag(kind: "m1" | "m2", target: { x: number; y: number }) {
   syncChartFromInputs();
 }
 
+/** 输入框和图表之间保持双向同步 / Keep form inputs and the chart in sync. */
 function syncChartFromInputs() {
   state.longRentHourRateMultiplier = clampMultiplier(state.longRentHourRateMultiplier);
   state.extraLongRentHourRateMultiplier = clampMultiplier(state.extraLongRentHourRateMultiplier);
   nextTick(() => refreshHandlePositions());
 }
 
+/** 记录最后编辑字段并刷新曲线 / Track the last edited field and refresh the curve. */
 function onInputChange(kind: "m1" | "m2") {
   lastEditedField.value = kind;
   if (kind === "m1") {
@@ -400,6 +423,7 @@ function onInputChange(kind: "m1" | "m2") {
   syncChartFromInputs();
 }
 
+/** 判断当前输入是否真的改变了设置 / Detect whether current inputs changed the original settings. */
 function hasPendingChanges() {
   return (
     Math.abs(state.longRentHourRateMultiplier - originalState.longRentHourRateMultiplier) > 0.00001 ||
@@ -407,6 +431,7 @@ function hasPendingChanges() {
   );
 }
 
+/** 打开保存预览前执行所有阻塞校验 / Run blocking validation before opening the save preview. */
 function openPreview() {
   const blockingError = m1RangeError.value || m2RangeError.value || relationError.value;
   if (blockingError) {
@@ -420,6 +445,7 @@ function openPreview() {
   previewVisible.value = true;
 }
 
+/** 确认保存时只提交两个可编辑倍率 / Submit only the two editable multipliers after confirmation. */
 function confirmSave() {
   const blockingError = m1RangeError.value || m2RangeError.value || relationError.value;
   if (blockingError) {
@@ -432,6 +458,7 @@ function confirmSave() {
   });
 }
 
+/** 将父组件传入的后端设置同步到本地编辑状态 / Sync backend settings from props into local edit state. */
 function syncStateFromProps() {
   if (!props.settings) return;
   state.longRentThresholdHours = Number(props.settings.longRentThresholdHours);
@@ -446,16 +473,19 @@ function syncStateFromProps() {
   syncChartFromInputs();
 }
 
+/** 关闭主弹窗并清理预览层 / Close the main dialog and reset the preview layer. */
 function handleClose() {
   previewVisible.value = false;
   emit("update:visible", false);
 }
 
+/** 日志时间展示格式化 / Format timestamps for the audit log. */
 function formatDateTime(v: string) {
   if (!v) return "-";
   return String(v).replace("T", " ").substring(0, 19);
 }
 
+/** 打开弹窗时刷新表单和日志 / Refresh form state and logs when the dialog opens. */
 watch(
   () => props.visible,
   (visible) => {
@@ -468,6 +498,7 @@ watch(
   }
 );
 
+/** 后端设置异步更新时刷新打开中的弹窗 / Refresh an open dialog when backend settings update asynchronously. */
 watch(
   () => props.settings,
   () => {
@@ -478,6 +509,7 @@ watch(
   { deep: true }
 );
 
+/** 窗口尺寸变化后重新定位图表手柄 / Reposition chart handles after window resizing. */
 onMounted(() => {
   window.addEventListener("resize", refreshHandlePositions);
 });
@@ -488,6 +520,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 表单与图表布局 / Form and chart layout. */
 .form-panel {
   padding: var(--ui-space-4);
 }
@@ -504,6 +537,7 @@ onUnmounted(() => {
   background: var(--ui-bg-surface);
 }
 
+/* 状态提示与日志区域 / Status hints and audit log area. */
 .updated-at {
   margin-top: var(--ui-space-3);
   display: inline-block;
@@ -534,6 +568,7 @@ onUnmounted(() => {
   margin-top: var(--ui-space-2);
 }
 
+/* 保存预览与价格差异标记 / Save preview and price-delta markers. */
 .preview-alert {
   margin-bottom: var(--ui-space-3);
 }
@@ -552,6 +587,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* Element Plus 间距和响应式调整 / Element Plus spacing and responsive adjustments. */
 :deep(.el-divider--horizontal) {
   margin: var(--ui-space-5) 0 var(--ui-space-4);
 }

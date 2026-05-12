@@ -1,4 +1,5 @@
 <template>
+  <!-- 折扣设置总览页 / Overview page for all billing discount settings. -->
   <el-card shadow="never" class="billing-container admin-page-card">
     <template #header>
       <div class="admin-page-header">
@@ -12,6 +13,7 @@
       </div>
     </template>
 
+    <!-- 四类折扣入口卡片 / Entry cards for the four discount categories. -->
     <el-row :gutter="16" v-loading="loading" class="billing-grid admin-loading-section" :aria-busy="loading">
       <el-col :xs="24" :sm="12" :lg="12" :xl="12" class="billing-grid-item">
         <DiscountOverviewCard
@@ -48,6 +50,7 @@
     </el-row>
   </el-card>
 
+  <!-- 长租折扣使用专用曲线编辑弹窗 / Long-rent discount uses a dedicated curve editor dialog. -->
   <LongRentDiscountDialog
     :visible="longRentDialogVisible"
     :settings="settings"
@@ -59,6 +62,7 @@
     @save="saveLongRent"
   />
 
+  <!-- 单倍率折扣共用轻量弹窗 / Single-rate discounts share a lightweight dialog. -->
   <SimpleDiscountRateDialog
     :visible="studentDialogVisible"
     title="Student Discount Adjustment"
@@ -103,6 +107,7 @@ import DiscountOverviewCard from "@/components/admin/DiscountOverviewCard.vue";
 import LongRentDiscountDialog from "@/components/admin/LongRentDiscountDialog.vue";
 import SimpleDiscountRateDialog from "@/components/admin/SimpleDiscountRateDialog.vue";
 
+/** 页面级加载、保存和弹窗可见状态 / Page-level loading, saving, and dialog visibility state. */
 const loading = ref(false);
 const logsLoading = ref(false);
 const settings = ref<BillingSettings | null>(null);
@@ -114,6 +119,7 @@ const studentDialogVisible = ref(false);
 const seniorDialogVisible = ref(false);
 const frequentDialogVisible = ref(false);
 
+/** 各折扣卡片的当前值摘要 / Current-value summaries for each discount card. */
 const longRentSummary = computed(() => {
   if (!settings.value) return "Loading...";
   return [
@@ -137,6 +143,7 @@ const frequentSummary = computed(() => {
   return `Current rate: ${settings.value.frequentDiscountRate.toFixed(4)}`;
 });
 
+/** 将后端技术错误转换为管理员可读提示 / Convert backend technical errors into admin-friendly messages. */
 function normalizeBillingErrorMessage(error: any, fallback: string) {
   const rawMessage = error?.response?.data?.message;
   if (typeof rawMessage !== "string" || !rawMessage.trim()) {
@@ -155,6 +162,7 @@ function normalizeBillingErrorMessage(error: any, fallback: string) {
   return rawMessage;
 }
 
+/** 加载当前计费设置 / Load current billing settings. */
 async function load() {
   loading.value = true;
   try {
@@ -166,6 +174,7 @@ async function load() {
   }
 }
 
+/** 加载计费设置变更日志 / Load recent billing setting change logs. */
 async function loadLogs() {
   logsLoading.value = true;
   try {
@@ -178,6 +187,7 @@ async function loadLogs() {
   }
 }
 
+/** 保存长租两个分段倍率并刷新审计日志 / Save the two long-rent multipliers and refresh audit logs. */
 async function saveLongRent(payload: { longRentHourRateMultiplier: number; extraLongRentHourRateMultiplier: number }) {
   savingKind.value = "longRent";
   try {
@@ -192,6 +202,7 @@ async function saveLongRent(payload: { longRentHourRateMultiplier: number; extra
   }
 }
 
+/** 保存学生、老人或高频用户的单项折扣率 / Save one single-rate discount for student, senior, or frequent users. */
 async function saveSingleRate(
   key: "studentDiscountRate" | "seniorDiscountRate" | "frequentDiscountRate",
   value: number,
@@ -212,6 +223,7 @@ async function saveSingleRate(
   }
 }
 
+/** 首次进入页面时同时准备设置和日志 / Prepare both settings and logs on first page entry. */
 onMounted(async () => {
   await load();
   await loadLogs();
@@ -219,6 +231,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 页面容器与折扣卡片网格 / Page container and discount card grid. */
 .billing-container {
   border-radius: var(--ui-radius-lg);
   overflow: hidden;

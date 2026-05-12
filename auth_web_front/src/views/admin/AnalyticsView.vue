@@ -1,5 +1,7 @@
 <template>
+  <!-- 管理端分析仪表盘 / Admin analytics dashboard. -->
   <section class="analytics-container" role="region" aria-labelledby="analytics-heading">
+    <!-- 日期筛选与刷新操作 / Date filter and refresh action. -->
     <el-card shadow="never" class="control-card admin-page-card">
       <div class="header admin-page-header">
         <div>
@@ -21,6 +23,7 @@
       </div>
     </el-card>
 
+    <!-- 核心运营指标卡片 / Core operational KPI cards. -->
     <div v-loading="loading" class="kpi-grid admin-loading-section" :aria-busy="loading">
       <el-card shadow="never" class="kpi-card admin-kpi-card">
         <div class="admin-kpi-icon admin-kpi-icon--primary"><el-icon><Tickets /></el-icon></div>
@@ -56,6 +59,7 @@
       </el-card>
     </div>
 
+    <!-- 可视化图表区 / Data visualization chart area. -->
     <div v-loading="loading" class="analytics-grid admin-loading-section" :aria-busy="loading">
       <el-card shadow="never" class="big-card admin-chart-card">
         <template #header>
@@ -152,6 +156,7 @@
       </el-card>
     </div>
 
+    <!-- 屏幕阅读器和无图表场景的文字摘要 / Text summary for screen readers and no-chart contexts. -->
     <el-card shadow="never" class="chart-summary-card" aria-labelledby="chart-summary-heading">
       <h2 id="chart-summary-heading" class="admin-section-title">Text summary of key analytics</h2>
       <ul>
@@ -208,6 +213,7 @@ use([
   CalendarComponent
 ]);
 
+/** 页面请求状态、筛选条件和仪表盘数据 / Page request state, filters, and dashboard data. */
 const loading = ref(false);
 const dateRange = ref<[string, string] | null>(getDefaultRange());
 const hotDatesLoading = ref(false);
@@ -242,8 +248,10 @@ const overview = reactive<DashboardOverview>({
   dailyTrend: []
 });
 
+/** 车辆使用率展示值 / Display value for fleet usage rate. */
 const usageRatePercent = computed(() => Number(((overview.vehicleStats.usageRate ?? 0) * 100).toFixed(2)));
 
+/** 从设计令牌读取图表颜色 / Read chart colors from design tokens. */
 function uiColor(tokenName: string, fallback: string) {
   if (typeof window === "undefined") {
     return fallback;
@@ -251,11 +259,13 @@ function uiColor(tokenName: string, fallback: string) {
   return getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim() || fallback;
 }
 
+/** 将管理状态颜色映射到图表颜色 / Map admin semantic color keys into chart colors. */
 function chartColor(key: AdminChartColorKey) {
   const color = ADMIN_CHART_COLOR_TOKENS[key];
   return uiColor(color.token, color.fallback);
 }
 
+/** 从 CSS 变量读取数值型图表间距 / Read numeric chart spacing from CSS variables. */
 function uiNumberToken(tokenName: string, fallback: number) {
   if (typeof window === "undefined") {
     return fallback;
@@ -265,6 +275,7 @@ function uiNumberToken(tokenName: string, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/** 统一图表 tooltip 配置 / Shared chart tooltip configuration. */
 function chartTooltip(trigger: "axis" | "item", options: Record<string, unknown> = {}) {
   return {
     trigger,
@@ -274,6 +285,7 @@ function chartTooltip(trigger: "axis" | "item", options: Record<string, unknown>
   };
 }
 
+/** 统一图例配置 / Shared chart legend configuration. */
 function chartLegend(options: Record<string, unknown> = {}) {
   return {
     top: uiNumberToken("--ui-space-2", 8),
@@ -282,6 +294,7 @@ function chartLegend(options: Record<string, unknown> = {}) {
   };
 }
 
+/** 统一图表网格配置 / Shared chart grid configuration. */
 function chartGrid(options: Record<string, unknown> = {}) {
   return {
     left: "3%",
@@ -292,6 +305,7 @@ function chartGrid(options: Record<string, unknown> = {}) {
   };
 }
 
+/** 骑行活动平均值和峰值 / Average and peak riding activity values. */
 const averageDailyRides = computed(() => {
   if (overview.dailyTrend.length === 0) return 0;
   const sum = overview.dailyTrend.reduce((acc, curr) => acc + curr.orderCount, 0);
@@ -307,6 +321,7 @@ const topHotDate = computed(() => hotDates.value[0]);
 const topHotDateLabel = computed(() => topHotDate.value?.date ?? "-");
 const topHotOrders = computed(() => topHotDate.value?.orderCount ?? 0);
 
+/** 图表数据的可访问文字摘要 / Accessible text summary for chart data. */
 const chartSummary = computed(() => ({
   totalOrders: `Total orders: ${overview.orderStats.totalOrders}.`,
   totalRevenue: `Total revenue: ${overview.revenueStats.totalRevenue.toFixed(2)} pounds.`,
@@ -315,6 +330,7 @@ const chartSummary = computed(() => ({
   activity: `Riding activity averages ${averageDailyRides.value} rides per day and peaks at ${maxDailyRides.value} rides in a day.`
 }));
 
+/** 向辅助技术播报异步加载结果 / Announce async load results to assistive technologies. */
 function announce(message: string) {
   liveMessage.value = "";
   window.setTimeout(() => {
@@ -322,7 +338,7 @@ function announce(message: string) {
   }, 0);
 }
 
-// 1. Orders & Revenue Trend Option
+/** 订单和收入趋势图配置 / Orders and revenue trend chart option. */
 const trendChartOption = computed(() => {
   const dates = overview.dailyTrend.map(d => d.date);
   const orders = overview.dailyTrend.map(d => d.orderCount);
@@ -361,7 +377,7 @@ const trendChartOption = computed(() => {
   };
 });
 
-// 2. Vehicle Status Donut Chart Option
+/** 车辆状态环形图配置 / Vehicle status donut chart option. */
 const vehicleStatusOption = computed(() => {
   const availableColor = chartColor(getScooterStatusTagType("AVAILABLE"));
   const rentedColor = chartColor(getScooterStatusTagType("RENTED"));
@@ -397,7 +413,7 @@ const vehicleStatusOption = computed(() => {
   };
 });
 
-// 3. Fault Resolution Pie Chart Option
+/** 故障处理状态饼图配置 / Fault resolution pie chart option. */
 const faultResolutionOption = computed(() => {
   const success = chartColor("success");
   const warning = chartColor("warning");
@@ -427,14 +443,14 @@ const faultResolutionOption = computed(() => {
   };
 });
 
-// 4. Fault Priority Horizontal Bar Chart Option
+/** 故障优先级横向柱状图配置 / Fault priority horizontal bar chart option. */
 const faultPriorityOption = computed(() => {
   const distribution = overview.faultStats.priorityDistribution || {};
   let priorities = Object.keys(distribution);
   let counts = Object.values(distribution);
   
   if (priorities.length === 0) {
-    // Show default empty categories if no data
+    // 无数据时保留空分类，避免图表塌陷 / Keep empty categories so the chart frame remains stable.
     priorities = ['LOW', 'HIGH'];
     counts = [0, 0];
   }
@@ -457,7 +473,7 @@ const faultPriorityOption = computed(() => {
   };
 });
 
-// 5. Activity Heatmap Option
+/** 骑行活动日历热力图配置 / Riding activity calendar heatmap option. */
 const heatmapOption = computed(() => {
   const data = overview.dailyTrend.map(d => [d.date, d.orderCount]);
   const surface = uiColor("--ui-bg-surface", "#ffffff");
@@ -515,6 +531,7 @@ const heatmapOption = computed(() => {
   };
 });
 
+/** 加载仪表盘总览数据 / Load dashboard overview data. */
 async function load() {
   loading.value = true;
   try {
@@ -533,6 +550,7 @@ async function load() {
   }
 }
 
+/** 加载热门租赁日期排行 / Load popular rental date rankings. */
 async function loadHotDates() {
   hotDatesLoading.value = true;
   const [start, end] = getHotRangeDates(hotRangeKey.value);
@@ -547,6 +565,7 @@ async function loadHotDates() {
   }
 }
 
+/** 切换热门日期范围后重新加载排行 / Reload rankings after changing the hot-date range. */
 function onHotRangeChange() {
   loadHotDates();
 }
@@ -554,13 +573,15 @@ function onHotRangeChange() {
 onMounted(load);
 onMounted(loadHotDates);
 
+/** 默认展示最近 30 天，便于热力图有足够数据 / Default to last 30 days so the heatmap has enough data. */
 function getDefaultRange(): [string, string] {
   const end = new Date();
   const start = new Date();
-  start.setDate(end.getDate() - 30); // Default to last 30 days for better heatmap
+  start.setDate(end.getDate() - 30);
   return [formatDate(start), formatDate(end)];
 }
 
+/** 格式化为后端接口接受的 YYYY-MM-DD / Format dates as YYYY-MM-DD for backend APIs. */
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -568,6 +589,7 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+/** 根据快捷范围计算热门日期查询窗口 / Convert hot-date quick ranges into API date windows. */
 function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [string, string] {
   const end = new Date();
   const start = new Date();
@@ -584,6 +606,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
 </script>
 
 <style scoped>
+/* 页面主布局与控制区 / Page layout and control area. */
 .analytics-container {
   display: flex;
   flex-direction: column;
@@ -594,6 +617,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   border-radius: var(--ui-radius-lg);
 }
 
+/* KPI 与图表网格 / KPI and chart grids. */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -618,6 +642,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   grid-column: span 1;
 }
 
+/* 热门日期卡片与图表摘要 / Popular dates card and chart summaries. */
 .hot-header {
   display: flex;
   flex-direction: column;
@@ -672,6 +697,7 @@ function getHotRangeDates(range: "WEEK" | "HALF_MONTH" | "MONTH" | "QUARTER"): [
   border: 1px solid var(--ui-border-soft);
 }
 
+/* 响应式图表列数调整 / Responsive chart column adjustments. */
 @media (max-width: 1200px) {
   .analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

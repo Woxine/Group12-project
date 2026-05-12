@@ -1,3 +1,4 @@
+/* 全局设计令牌，供页面、组件和图表共享 / Global design tokens shared by pages, components, and charts. */
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #1f2937;
@@ -53,6 +54,7 @@
   --ui-shadow-lg: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 
+/* 基础盒模型和页面根节点 / Base box model and page root nodes. */
 * {
   box-sizing: border-box;
 }
@@ -71,6 +73,7 @@ body {
   background: var(--ui-bg-app);
 }
 
+/* 无障碍辅助类和跳转链接 / Accessibility utility classes and skip link. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -105,6 +108,7 @@ body {
   outline-offset: 2px;
 }
 
+/* Element Plus 全局焦点和按钮主题覆盖 / Global Element Plus focus and button theme overrides. */
 .el-button:focus-visible,
 .el-input__wrapper:focus-within,
 .el-select__wrapper:focus-within,
@@ -139,6 +143,7 @@ body {
   border-color: var(--ui-color-danger-600);
 }
 
+/* Element Plus 表格、输入框和弹窗的基础视觉覆盖 / Base visual overrides for Element Plus tables, inputs, and dialogs. */
 .el-table th.el-table__cell {
   color: var(--ui-text-default);
   font-weight: 600;
@@ -186,6 +191,7 @@ body {
   padding: 12px 20px 18px;
 }
 
+/* 管理端页面骨架和标题工具栏 / Admin page skeleton, headings, and toolbars. */
 .admin-page-card {
   border: 1px solid var(--ui-border-soft);
   border-radius: var(--ui-radius-lg);
@@ -245,6 +251,7 @@ body {
   justify-content: flex-end;
 }
 
+/* 通用面板、加载态、表格和分页 / Shared panels, loading states, tables, and pagination. */
 .admin-panel {
   border: 1px solid var(--ui-border-soft);
   border-radius: var(--ui-radius-md);
@@ -293,6 +300,7 @@ body {
   padding: var(--ui-space-2) 0;
 }
 
+/* 管理端表单、提示和内联通知 / Admin forms, hints, and inline notices. */
 .admin-filter-select {
   width: 160px;
 }
@@ -334,6 +342,7 @@ body {
   color: var(--ui-color-danger-600);
 }
 
+/* 卡片标题、详情网格和状态文本 / Card titles, detail grids, and status text. */
 .admin-card-title {
   display: flex;
   align-items: center;
@@ -383,6 +392,7 @@ body {
   color: var(--ui-text-subtle);
 }
 
+/* KPI 卡片和语义图标色 / KPI cards and semantic icon colors. */
 .admin-kpi-card {
   height: 100%;
   border: 1px solid var(--ui-border-soft);
@@ -462,6 +472,7 @@ body {
   background: var(--ui-bg-subtle);
 }
 
+/* 可点击卡片交互状态 / Clickable card interaction states. */
 .admin-clickable-card {
   cursor: pointer;
   border: 1px solid var(--ui-border-soft);
@@ -487,6 +498,7 @@ body {
   transform: translateY(0);
 }
 
+/* 图表卡片和图表说明 / Chart cards and chart descriptions. */
 .admin-chart-card {
   border: 1px solid var(--ui-border-soft);
   border-radius: var(--ui-radius-md);
@@ -517,6 +529,7 @@ body {
   width: 100%;
 }
 
+/* 表格空状态 / Table empty states. */
 .admin-table-empty-state {
   padding: var(--ui-space-5) var(--ui-space-3);
   text-align: center;
@@ -535,6 +548,7 @@ body {
   color: var(--ui-text-muted);
 }
 
+/* 平板和移动端通用压缩布局 / Shared tablet and mobile layout compaction. */
 @media (max-width: 768px) {
   .admin-page-header {
     flex-direction: column;
@@ -624,6 +638,7 @@ body {
   }
 }
 
+/* 窄屏 KPI 和页面内边距压缩 / Narrow-screen KPI and page padding compaction. */
 @media (max-width: 480px) {
   .admin-kpi-card > .el-card__body {
     padding: var(--ui-space-3);

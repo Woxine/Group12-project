@@ -1,5 +1,10 @@
+# 依赖与构建产物 / Dependencies and build outputs.
 node_modules
 dist
+
+# 本地系统和 IDE 文件 / Local system and IDE files.
 .DS_Store
 .idea
+
+# 防止生成的 JavaScript 混入 TypeScript/Vue 源码 / Prevent generated JavaScript from entering TypeScript/Vue source.
 src/**/*.js
