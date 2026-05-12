@@ -619,7 +619,7 @@ onShow(() => {
 
 .title {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 
@@ -668,7 +668,7 @@ onShow(() => {
 .picker-value {
 	font-size: $font-body;
 	color: $text-primary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .wheel-picker {
@@ -695,7 +695,7 @@ onShow(() => {
 
 .wheel-pill-text {
 	font-size: $font-hint;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 
@@ -733,7 +733,7 @@ onShow(() => {
 .section-title {
 	font-size: $font-caption;
 	color: $text-secondary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .validation-note {

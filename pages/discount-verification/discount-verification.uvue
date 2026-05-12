@@ -337,7 +337,7 @@ onShow(() => {
 
 .title {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 6px;
 }
@@ -357,7 +357,7 @@ onShow(() => {
 
 .label {
 	font-size: $font-caption;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 6px;
 }
@@ -395,7 +395,7 @@ onShow(() => {
 
 .type-tab-text {
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-secondary;
 }
 
@@ -461,7 +461,7 @@ onShow(() => {
 .change-link {
 	font-size: $font-caption;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 /* Section: Form buttons */
@@ -531,7 +531,7 @@ onShow(() => {
 
 .type-badge {
 	font-size: $font-hint;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $color-info;
 	background-color: #dbeafe;
 	padding: 5px 10px;
@@ -540,7 +540,7 @@ onShow(() => {
 
 .status-badge {
 	font-size: $font-hint;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	padding: 5px 10px;
 	border-radius: 999px;
 }

@@ -277,7 +277,7 @@ onShow(() => {
 
 .title-text {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 8px;
 }
@@ -310,7 +310,7 @@ onShow(() => {
 
 .label {
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 8px;
 }
@@ -365,7 +365,7 @@ onShow(() => {
 .error-text {
 	font-size: $font-body;
 	color: #b91c1c;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .warning-row {
@@ -392,7 +392,7 @@ onShow(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .submit-btn-disabled {
@@ -438,7 +438,7 @@ onShow(() => {
 
 .priority-text-active {
 	color: white;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .upload-area {
@@ -492,6 +492,6 @@ onShow(() => {
 .change-link {
 	font-size: $font-caption;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 </style>

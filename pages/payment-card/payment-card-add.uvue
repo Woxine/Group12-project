@@ -418,7 +418,7 @@ onLoad((options) => {
 .scroll-wrap { width: 100%; }
 .scroll-area { width: 100%; padding: 0 $page-padding-h $page-padding-bottom; box-sizing: border-box; }
 .form_card { background: $bg-card; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
-.section_title { font-size: $font-body; font-weight: bold; color: $text-primary; margin-bottom: 8px; display: flex; }
+.section_title { font-size: $font-body; font-weight: $fw-bold; color: $text-primary; margin-bottom: 8px; display: flex; }
 .validation_note { color: #7a7a7a; font-size: $font-hint; line-height: 1.4; margin-bottom: 8px; display: flex; }
 .input { width: 100%; height: 44px; border: 1px solid $border-input; border-radius: 8px; padding: 0 12px; box-sizing: border-box; margin-bottom: 8px; background-color: $bg-card; font-size: $font-body; color: $text-primary; }
 .field_label { font-size: $font-hint; color: $text-secondary; margin-bottom: 6px; display: flex; }
@@ -429,7 +429,7 @@ onLoad((options) => {
 .brand_logo_box { width: 42px; height: 28px; border-radius: 6px; background: $bg-card; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; }
 .brand_logo { width: 34px; height: 20px; }
 .brand_fallback { padding: 4px 8px; border-radius: 6px; background: #eef3ff; margin-right: 10px; flex-shrink: 0; }
-.brand_fallback_text { font-size: $font-micro; font-weight: 600; color: #3355aa; }
+.brand_fallback_text { font-size: $font-micro; font-weight: $fw-bold; color: #3355aa; }
 .picker_text { color: $text-primary; font-size: $font-body; flex: 1; }
 .picker_placeholder_text { color: $text-placeholder; }
 .picker_arrow { color: $text-placeholder; font-size: $font-hint; margin-left: 8px; }

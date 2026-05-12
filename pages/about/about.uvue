@@ -155,7 +155,7 @@ const copyValue = (value: string, label: string) => {
 
 .hero-title {
 	font-size: $font-title-lg;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: white;
 	margin-bottom: 8px;
 }
@@ -178,7 +178,7 @@ const copyValue = (value: string, label: string) => {
 
 .section-title {
 	font-size: $font-title-sm;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 8px;
 }
@@ -192,7 +192,7 @@ const copyValue = (value: string, label: string) => {
 
 .repo-name {
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 6px;
 }
@@ -281,7 +281,7 @@ const copyValue = (value: string, label: string) => {
 
 .developer-name {
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-right: 8px;
 }

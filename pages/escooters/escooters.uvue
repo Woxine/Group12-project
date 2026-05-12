@@ -747,7 +747,7 @@ const bookScooter = () => {
 
 	.title-text {
 		font-size: $font-title;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		display: flex;
 	}
@@ -761,7 +761,7 @@ const bookScooter = () => {
 	.link-text {
 		font-size: $font-caption;
 		color: $brand-green;
-		font-weight: 500;
+		font-weight: $fw-normal;
 		flex-shrink: 0;
 		margin-left: 12px;
 	}
@@ -776,7 +776,7 @@ const bookScooter = () => {
 	.filter-hint-text {
 		font-size: $font-caption;
 		color: $brand-green-dark;
-		font-weight: 600;
+		font-weight: $fw-normal;
 	}
 
 	.loading-section,
@@ -822,7 +822,7 @@ const bookScooter = () => {
 
 	.empty-text {
 		font-size: $font-title-sm;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		margin-bottom: 8px;
 	}
@@ -869,7 +869,7 @@ const bookScooter = () => {
 
 	.placeholder-corner-badge-text {
 		font-size: $font-micro;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: #ffffff;
 		letter-spacing: 0.8px;
 	}
@@ -890,7 +890,7 @@ const bookScooter = () => {
 	.group-name {
 		display: flex;
 		font-size: $font-title-sm;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		margin-bottom: 4px;
 	}
@@ -913,7 +913,7 @@ const bookScooter = () => {
 
 	.group-badge-text {
 		font-size: $font-hint;
-		font-weight: 600;
+		font-weight: $fw-normal;
 		color: $text-secondary;
 	}
 
@@ -970,7 +970,7 @@ const bookScooter = () => {
 	.scooter-id {
 		display: flex;
 		font-size: $font-section;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		margin-bottom: 8px;
 	}
@@ -984,7 +984,7 @@ const bookScooter = () => {
 
 	.scooter-status {
 		font-size: $font-caption;
-		font-weight: 600;
+		font-weight: $fw-normal;
 	}
 
 	.status-available {
@@ -1041,7 +1041,7 @@ const bookScooter = () => {
 
 	.pager-button-text {
 		font-size: $font-title-sm;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 	}
 
@@ -1049,7 +1049,7 @@ const bookScooter = () => {
 		margin: 0 10px;
 		font-size: $font-caption;
 		color: $text-secondary;
-		font-weight: 600;
+		font-weight: $fw-normal;
 	}
 
 	.select-button {
@@ -1061,7 +1061,7 @@ const bookScooter = () => {
 		border-width: 0;
 		border-radius: 999px;
 		font-size: $font-body;
-		font-weight: 700;
+		font-weight: $fw-bold;
 	}
 
 	.select-button.selected {
@@ -1100,7 +1100,7 @@ const bookScooter = () => {
 		margin-bottom: 2px;
 		font-size: $font-hint;
 		color: $text-primary;
-		font-weight: 600;
+		font-weight: $fw-normal;
 	}
 
 	.booking-hint-text {
@@ -1118,7 +1118,7 @@ const bookScooter = () => {
 		border-width: 0;
 		border-radius: 10px;
 		font-size: $font-body;
-		font-weight: bold;
+		font-weight: $fw-bold;
 	}
 
 	.booking-button.disabled {

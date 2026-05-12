@@ -975,7 +975,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .scroll-wrap {
@@ -994,7 +994,7 @@ onHide(() => {
 
 .title-text {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 
@@ -1026,7 +1026,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .empty-section {
@@ -1042,7 +1042,7 @@ onHide(() => {
 
 .empty-text {
 	font-size: $font-title-sm;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 8px;
 }
@@ -1061,7 +1061,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .bookings-list {
@@ -1123,7 +1123,7 @@ onHide(() => {
 
 .booking-id {
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 
@@ -1131,7 +1131,7 @@ onHide(() => {
 	font-size: $font-hint;
 	padding: 4px 10px;
 	border-radius: 6px;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .status-Confirmed {
@@ -1190,7 +1190,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	text-align: center;
 }
 
@@ -1205,7 +1205,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	text-align: center;
 }
 
@@ -1220,7 +1220,7 @@ onHide(() => {
 	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	text-align: center;
 }
 
@@ -1237,7 +1237,7 @@ onHide(() => {
 	border-color: $status-completed;
 	border-radius: 8px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	text-align: center;
 }
 
@@ -1256,7 +1256,7 @@ onHide(() => {
 .detail-row .value {
 	font-size: $font-body;
 	color: $text-primary;
-	font-weight: 400;
+	font-weight: $fw-normal;
 }
 
 .extend-wheel-panel {
@@ -1293,7 +1293,7 @@ onHide(() => {
 
 .wheel-pill-text {
 	font-size: $font-hint;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: #2b3a55;
 }
 

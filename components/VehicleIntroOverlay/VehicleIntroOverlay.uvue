@@ -211,7 +211,7 @@ onMounted(() => {
 
 	.intro-title {
 		font-size: $font-title-sm;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 	}
 
@@ -257,7 +257,7 @@ onMounted(() => {
 
 	.intro-name {
 		font-size: $font-micro;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-secondary;
 		letter-spacing: 0.8px;
 		margin-bottom: 2px;
@@ -265,7 +265,7 @@ onMounted(() => {
 
 	.intro-subtitle {
 		font-size: $font-section;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		margin-bottom: 8px;
 	}
@@ -295,14 +295,14 @@ onMounted(() => {
 
 	.meta-label {
 		font-size: $font-micro;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-secondary;
 		margin-bottom: 3px;
 	}
 
 	.meta-value {
 		font-size: $font-micro;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 	}
 

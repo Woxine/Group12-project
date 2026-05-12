@@ -105,7 +105,7 @@ onUnmounted(() => {
 
 	.modal-title {
 		font-size: $font-section;
-		font-weight: 700;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		margin-bottom: 12px;
 		text-align: center;
@@ -145,7 +145,7 @@ onUnmounted(() => {
 
 	.modal-btn-text {
 		font-size: $font-body;
-		font-weight: 700;
+		font-weight: $fw-bold;
 	}
 
 	.modal-btn-cancel-text {

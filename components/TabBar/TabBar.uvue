@@ -96,6 +96,6 @@ const switchTab = (tab: string) => {
 
 .tab-label-active {
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 </style>

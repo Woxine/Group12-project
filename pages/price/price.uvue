@@ -772,7 +772,7 @@ const goGuestBooking = () => {
 
 	.title-text {
 		font-size: $font-title-lg;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		text-align: center;
 	}
@@ -791,7 +791,7 @@ const goGuestBooking = () => {
 
 	.section-title-text {
 		font-size: $font-body;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-secondary;
 	}
 
@@ -813,7 +813,7 @@ const goGuestBooking = () => {
 	.time-value {
 		font-size: $font-body;
 		color: $text-primary;
-		font-weight: bold;
+		font-weight: $fw-bold;
 	}
 
 	.picker-inline {
@@ -834,7 +834,7 @@ const goGuestBooking = () => {
 
 	.picker-inline-value {
 		font-size: $font-body;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: #2b3a55;
 	}
 
@@ -858,7 +858,7 @@ const goGuestBooking = () => {
 
 	.wheel-pill-text {
 		font-size: $font-hint;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: #2b3a55;
 	}
 
@@ -903,13 +903,13 @@ const goGuestBooking = () => {
 
 	.estimated-total-label {
 		font-size: $font-section;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-primary;
 	}
 
 	.estimated-total-value {
 		font-size: $font-title;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $brand-green;
 	}
 
@@ -929,7 +929,7 @@ const goGuestBooking = () => {
 		border-width: 0;
 		border-radius: 8px;
 		font-size: $font-section;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		margin-bottom: 15px;
 	}
 
@@ -941,7 +941,7 @@ const goGuestBooking = () => {
 		border-width: 0;
 		border-radius: 8px;
 		font-size: $font-section;
-		font-weight: bold;
+		font-weight: $fw-bold;
 	}
 
 	.guest-btn {
@@ -952,7 +952,7 @@ const goGuestBooking = () => {
 		border-width: 0;
 		border-radius: 8px;
 		font-size: $font-section;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		margin-bottom: 15px;
 	}
 
@@ -965,7 +965,7 @@ const goGuestBooking = () => {
 
 	.pricing-ref-title-text {
 		font-size: $font-section;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-placeholder;
 	}
 
@@ -991,7 +991,7 @@ const goGuestBooking = () => {
 
 	.duration {
 		font-size: $font-title-sm;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $text-primary;
 		text-align: center;
 	}
@@ -1003,7 +1003,7 @@ const goGuestBooking = () => {
 
 	.price {
 		font-size: $font-title-sm;
-		font-weight: bold;
+		font-weight: $fw-bold;
 		color: $brand-green;
 		text-align: center;
 	}

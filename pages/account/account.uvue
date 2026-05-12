@@ -235,13 +235,13 @@ onShow(() => {
 
 .title {
 	font-size: $font-title;
-	font-weight: 700;
+	font-weight: $fw-bold;
 	color: $text-inverse;
 }
 
 .hero-name {
 	font-size: $font-section;
-	font-weight: 700;
+	font-weight: $fw-bold;
 	color: rgba(255, 255, 255, 0.98);
 	margin-top: 6px;
 }
@@ -261,7 +261,7 @@ onShow(() => {
 
 .section-title {
 	font-size: $font-caption;
-	font-weight: 700;
+	font-weight: $fw-bold;
 	color: $text-secondary;
 	letter-spacing: 0.5px;
 	margin-bottom: 8px;
@@ -307,7 +307,7 @@ onShow(() => {
 
 .menu-title {
 	font-size: $font-section;
-	font-weight: 600;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 

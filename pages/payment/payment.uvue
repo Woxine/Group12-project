@@ -676,7 +676,7 @@ onShow(() => {
 
 .title_text {
 	font-size: $font-title-lg;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: rgba(60, 60, 60, 0.95);
 	font-family: Arial, sans-serif;
 	letter-spacing: 0.5px;
@@ -704,7 +704,7 @@ onShow(() => {
 .order_label {
 	font-size: $font-caption;
 	color: $text-secondary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.3px;
 }
 
@@ -717,13 +717,13 @@ onShow(() => {
 .order_item .label {
 	font-size: $font-caption;
 	color: $text-secondary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .order_item .amount {
 	font-size: $font-title;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.3px;
 }
 
@@ -744,7 +744,7 @@ onShow(() => {
 .discount_summary_text {
 	font-size: $font-caption;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .discount_arrow {
@@ -774,7 +774,7 @@ onShow(() => {
 .detail_value {
 	font-size: $font-hint;
 	color: $text-primary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .discount_negative {
@@ -815,7 +815,7 @@ onShow(() => {
 	flex-direction: column;
 	font-size: $font-body;
 	color: $text-primary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
 }
@@ -842,7 +842,7 @@ onShow(() => {
 .section_title_text {
 	font-size: $font-section;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.5px;
 }
 
@@ -860,7 +860,7 @@ onShow(() => {
 	flex-direction: column;
 	font-size: $font-body;
 	color: $text-primary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	margin-bottom: 10px;
 	letter-spacing: 0.3px;
 }
@@ -916,7 +916,7 @@ onShow(() => {
 .picker_text {
 	font-size: $font-caption;
 	color: $text-primary;
-	font-weight: 400;
+	font-weight: $fw-normal;
 }
 
 .saved_cards_header {
@@ -948,7 +948,7 @@ onShow(() => {
 .saved_card_main {
 	font-size: $font-caption;
 	color: $text-primary;
-	font-weight: bold;
+	font-weight: $fw-bold;
 }
 
 .saved_card_sub {
@@ -982,7 +982,7 @@ onShow(() => {
 .info_text {
 	font-size: $font-title-sm;
 	color: $brand-green;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.5px;
 }
 
@@ -1034,7 +1034,7 @@ onShow(() => {
 	border-width: 0 !important;
 	border-radius: 10px;
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.5px;
 	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
 	transition: all 0.3s ease;
@@ -1066,7 +1066,7 @@ onShow(() => {
 	border-width: 0;
 	border-radius: 10px;
 	font-size: $font-section;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	letter-spacing: 0.3px;
 	transition: all 0.3s ease;
 }

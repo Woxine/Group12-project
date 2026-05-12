@@ -271,7 +271,7 @@ const onSubmit = () => {
 	margin-bottom: 6px;
 	color: $text-primary;
 	font-size: $font-body;
-	font-weight: 600;
+	font-weight: $fw-normal;
 }
 
 .input{
@@ -307,7 +307,7 @@ const onSubmit = () => {
 .text-button {
 	width: 100%;
 	font-size: $font-section;
-	font-weight: 600;
+	font-weight: $fw-bold;
 	border-radius: 8px;
 	box-sizing: border-box;
 }
@@ -318,7 +318,7 @@ const onSubmit = () => {
 	height: 44px;
 	margin-left: 0;
 	margin-right: 0;
-	font-weight: 700;
+	font-weight: $fw-bold;
 }
 
 .signup-action-button {

@@ -368,7 +368,7 @@ onShow(() => {
 
 .title {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 10px;
 }
@@ -388,7 +388,7 @@ onShow(() => {
 
 .section-title {
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-secondary;
 }
 

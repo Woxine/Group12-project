@@ -378,7 +378,7 @@ onLoad((options: UTSJSONObject) => {
 
 .title-text {
 	font-size: $font-title;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	color: $text-primary;
 }
 
@@ -434,7 +434,7 @@ onLoad((options: UTSJSONObject) => {
 .no-route-icon-text {
 	font-size: 44px;
 	line-height: 1;
-	font-weight: 700;
+	font-weight: $fw-bold;
 	color: $color-danger;
 }
 
@@ -448,7 +448,7 @@ onLoad((options: UTSJSONObject) => {
 	border-color: rgba(15, 23, 42, 0.08);
 	border-radius: 12px;
 	font-size: $font-body;
-	font-weight: bold;
+	font-weight: $fw-bold;
 	min-width: 180px;
 	box-shadow: $shadow-overlay;
 }
@@ -487,7 +487,7 @@ onLoad((options: UTSJSONObject) => {
 .summary-label {
 	font-size: $font-hint;
 	color: $text-secondary;
-	font-weight: 600;
+	font-weight: $fw-normal;
 	letter-spacing: 0.3px;
 	margin-bottom: 4px;
 }
@@ -495,7 +495,7 @@ onLoad((options: UTSJSONObject) => {
 .summary-value {
 	font-size: $font-body;
 	color: $text-primary;
-	font-weight: 700;
+	font-weight: $fw-bold;
 }
 
 .summary-divider {
@@ -553,7 +553,7 @@ onLoad((options: UTSJSONObject) => {
 	line-height: 44px;
 	text-align: center;
 	color: $text-primary;
-	font-weight: 600;
+	font-weight: $fw-normal;
 }
 
 .control-btn-text-plus {
@@ -595,7 +595,7 @@ onLoad((options: UTSJSONObject) => {
 	display: flex;
 	flex-direction: column;
 	font-size: $font-body;
-	font-weight: 700;
+	font-weight: $fw-bold;
 	color: $text-primary;
 	margin-bottom: 12px;
 }
@@ -620,7 +620,7 @@ onLoad((options: UTSJSONObject) => {
 	font-size: $font-hint;
 	color: $text-secondary;
 	margin-bottom: 4px;
-	font-weight: 600;
+	font-weight: $fw-normal;
 	letter-spacing: 0.3px;
 }
 

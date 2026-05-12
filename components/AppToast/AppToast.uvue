@@ -113,7 +113,7 @@ onUnmounted(() => {
 	.toast-icon-text {
 		color: $text-inverse;
 		font-size: $font-hint;
-		font-weight: 700;
+		font-weight: $fw-bold;
 	}
 
 	.toast-message {

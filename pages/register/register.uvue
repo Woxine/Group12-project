@@ -381,7 +381,7 @@ const handleRegister = async (): Promise<void> => {
 		.title_text {
 			height: 100%;
 			font-size: $font-title-lg;
-			font-weight: bold;
+			font-weight: $fw-bold;
 			color: white;
 			text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
 		}
@@ -409,7 +409,7 @@ const handleRegister = async (): Promise<void> => {
 			margin-bottom: 6px;
 			color: $text-primary;
 			font-size: $font-body;
-			font-weight: 600;
+			font-weight: $fw-normal;
 		}
 		
 		.input {
@@ -458,12 +458,12 @@ const handleRegister = async (): Promise<void> => {
 
 		.validation-message.valid {
 			color: $brand-green; // Green color
-			font-weight: bold;
+			font-weight: $fw-bold;
 		}
 
 		.validation-message.invalid {
 			color: $color-danger; // Red color
-			font-weight: bold;
+			font-weight: $fw-bold;
 		}
 
 		.form-actions {
@@ -477,7 +477,7 @@ const handleRegister = async (): Promise<void> => {
 			flex: 1;
 			width: 100%;
 			font-size: $font-section;
-			font-weight: 600;
+			font-weight: $fw-bold;
 			border-radius: 8px;
 			box-sizing: border-box;
 		}
