@@ -1,6 +1,8 @@
 <template>
+  <!-- 用户反馈管理页 / User feedback management page. -->
   <el-card shadow="never" class="feedbacks-container admin-page-card" role="region" aria-labelledby="feedback-management-heading">
     <template #header>
+      <!-- 优先级和处理状态筛选 / Priority and resolution status filters. -->
       <div class="admin-page-header">
         <div>
           <h1 id="feedback-management-heading" class="admin-page-title">Feedback Management</h1>
@@ -47,6 +49,7 @@
       </div>
     </template>
 
+    <!-- 反馈列表，点击行可查看详情 / Feedback table; clicking a row opens details. -->
     <p id="feedback-table-help" class="sr-only">
       Feedback table with priority, resolution status, escalation status, and actions for direct handling or escalation.
     </p>
@@ -64,6 +67,11 @@
       <el-table-column prop="id" label="ID" width="80" align="center" />
       <el-table-column prop="userId" label="User ID" width="100" align="center" />
       <el-table-column prop="scooterId" label="Scooter ID" width="120" align="center" />
+      <el-table-column prop="bookingId" label="Booking ID" width="120" align="center">
+        <template #default="{ row }">
+          <span>{{ row.bookingId ? '#' + row.bookingId : '-' }}</span>
+        </template>
+      </el-table-column>
 
       <el-table-column prop="priority" label="Priority" width="120" align="center">
         <template #default="{ row }">
@@ -172,6 +180,7 @@
     </div>
   </el-card>
 
+  <!-- 反馈详情和图片预览弹窗 / Feedback detail and image preview dialog. -->
   <el-dialog
     v-model="detailDialogVisible"
     title="Feedback Details"
@@ -183,6 +192,7 @@
       <div class="admin-detail-field"><span class="admin-detail-label">ID</span><span>#{{ detailRow.id }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">User ID</span><span>{{ detailRow.userId ?? "-" }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Scooter ID</span><span>{{ detailRow.scooterId ?? "-" }}</span></div>
+      <div class="admin-detail-field"><span class="admin-detail-label">Booking ID</span><span>{{ detailRow.bookingId ? '#' + detailRow.bookingId : "-" }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Priority</span><span>{{ detailRow.priority }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Resolved</span><span>{{ detailRow.resolved ? "Yes" : "No" }}</span></div>
       <div class="admin-detail-field"><span class="admin-detail-label">Escalated</span><span>{{ detailRow.escalated ? "Yes" : "No" }}</span></div>
@@ -206,6 +216,7 @@
     </template>
   </el-dialog>
 
+  <!-- 高优先级反馈升级弹窗 / Escalation dialog for high-priority feedback. -->
   <el-dialog
     v-model="escalateDialog.visible"
     title="Escalate High Priority Feedback"
@@ -273,10 +284,12 @@ const escalateDialog = reactive({
   submitting: false
 });
 
+/** 同步分辨率筛选到接口参数 / Sync the resolution selector into API filters. */
 function onResolvedChange(value?: boolean) {
   filters.resolved = value;
 }
 
+/** 向屏幕阅读器播报异步操作结果 / Announce async operation results to screen readers. */
 function announce(message: string) {
   liveMessage.value = "";
   window.setTimeout(() => {
@@ -284,6 +297,7 @@ function announce(message: string) {
   }, 0);
 }
 
+/** 表格中压缩长反馈内容 / Compress long feedback text for table display. */
 function summarizeContent(content: string) {
   if (!content) return "-";
   const plain = content.replace(/\s+/g, " ").trim();
@@ -291,6 +305,7 @@ function summarizeContent(content: string) {
   return `${plain.slice(0, 80)}...`;
 }
 
+/** 打开详情弹窗，并按需加载图片附件 / Open details and load image attachment when available. */
 async function openDetailDialog(row: FeedbackItem) {
   detailRow.value = row;
   detailDialogVisible.value = true;
@@ -307,10 +322,12 @@ async function openDetailDialog(row: FeedbackItem) {
   }
 }
 
+/** 关闭详情弹窗 / Close the detail dialog. */
 function closeDetailDialog() {
   detailDialogVisible.value = false;
 }
 
+/** 详情弹窗关闭后释放临时文件 URL / Revoke temporary file URLs after the detail dialog closes. */
 function onDetailDialogClosed() {
   if (filePreviewUrl.value) {
     URL.revokeObjectURL(filePreviewUrl.value);
@@ -318,6 +335,7 @@ function onDetailDialogClosed() {
   }
 }
 
+/** 加载反馈列表和分页总数 / Load feedback rows and pagination total. */
 async function load() {
   loading.value = true;
   try {
@@ -339,17 +357,20 @@ async function load() {
   }
 }
 
+/** 切换页码后重新加载 / Reload after current page changes. */
 function onPageChange(page: number) {
   pager.page = page;
   load();
 }
 
+/** 切换每页数量后回到第一页 / Return to the first page after page size changes. */
 function onSizeChange(size: number) {
   pager.size = size;
   pager.page = 1;
   load();
 }
 
+/** 低优先级反馈直接处理闭环 / Directly close the loop for low-priority feedback. */
 async function directHandle(feedbackId: number) {
   try {
     await processFeedbackByPriority(feedbackId, { action: "DIRECT_HANDLE" });
@@ -363,6 +384,7 @@ async function directHandle(feedbackId: number) {
   }
 }
 
+/** 打开升级弹窗并预填已有目标 / Open escalation dialog and prefill the existing target. */
 function openEscalateDialog(row: FeedbackItem) {
   escalateDialog.visible = true;
   escalateDialog.feedbackId = row.id;
@@ -371,6 +393,7 @@ function openEscalateDialog(row: FeedbackItem) {
   announce(`Escalation dialog opened for feedback ${row.id}.`);
 }
 
+/** 清理升级弹窗状态 / Clear escalation dialog state. */
 function closeEscalateDialog() {
   escalateDialog.visible = false;
   escalateDialog.feedbackId = 0;
@@ -378,6 +401,7 @@ function closeEscalateDialog() {
   escalateDialog.note = "";
 }
 
+/** 校验升级目标并提交高优先级处理请求 / Validate escalation target and submit the high-priority workflow request. */
 async function submitEscalate() {
   const escalateTo = escalateDialog.escalateTo.trim();
   if (!escalateTo) {
@@ -410,6 +434,7 @@ onMounted(load);
 </script>
 
 <style scoped>
+/* 页面容器与详情内容 / Page container and detail content. */
 .feedbacks-container {
   border-radius: var(--ui-radius-lg);
 }
@@ -427,6 +452,7 @@ onMounted(load);
   color: var(--ui-text-default);
 }
 
+/* 表格交互和附件预览 / Table interactions and attachment preview. */
 :deep(.clickable-row) {
   cursor: pointer;
 }
