@@ -20,6 +20,7 @@ import type {
   VehicleDescription
 } from "@/types/api";
 
+/** 收入与仪表盘统计接口 / Revenue and dashboard statistics APIs. */
 /** 获取指定日期范围的收入统计 / Fetch revenue statistics for the selected date range. */
 export async function getRevenueStats(params: { start_date?: string; end_date?: string }) {
   const response = await http.get<ApiEnvelope<RevenueStats>>("/api/v1/admin/revenue", { params });
@@ -44,6 +45,7 @@ export async function getDashboardOverview(params: { start_date?: string; end_da
   return response.data.data;
 }
 
+/** 车辆管理接口 / Scooter management APIs. */
 /** 获取管理端车辆列表，包括客户端隐藏车辆 / Fetch the admin scooter list, including vehicles hidden from the client app. */
 export async function getAdminScooters(params: { status?: string; page?: number; size?: number }) {
   const response = await http.get<{ data: Scooter[]; total: number }>("/api/v1/admin/scooters", { params });
@@ -103,6 +105,7 @@ export async function batchCreateScooters(payload: BatchCreateScooterPayload) {
   return response.data;
 }
 
+/** 用户反馈与高优先级流程接口 / Feedback and high-priority workflow APIs. */
 /** 获取用户反馈列表 / Fetch user feedback records. */
 export async function getFeedbacks(params: {
   resolved?: boolean;
@@ -147,6 +150,7 @@ export async function getFeedbackFileUrl(id: number): Promise<string> {
   return URL.createObjectURL(response.data);
 }
 
+/** 折扣资格审核接口 / Discount verification review APIs. */
 /** 获取折扣认证申请列表 / Fetch discount verification submissions. */
 export async function getDiscountVerifications(params: {
   status?: "PENDING" | "APPROVED" | "REJECTED";
@@ -186,6 +190,7 @@ export async function getDiscountVerificationFileUrl(id: number): Promise<string
   return URL.createObjectURL(response.data);
 }
 
+/** 计费设置与折扣配置接口 / Billing settings and discount configuration APIs. */
 /** 获取计费设置 / Fetch billing settings. */
 export async function fetchBillingSettings() {
   const response = await http.get<ApiEnvelope<BillingSettings>>("/api/v1/admin/billing-settings");
@@ -218,6 +223,7 @@ export async function getPopularRentalDates(params: { start_date?: string; end_d
   return response.data.data;
 }
 
+/** 车辆文案配置接口 / Vehicle content configuration APIs. */
 /** 获取车辆类型描述配置 / Fetch vehicle type description settings. */
 export async function getVehicleDescriptions() {
   const response = await http.get<ApiEnvelope<VehicleDescription[]>>("/api/v1/vehicles");
@@ -239,4 +245,40 @@ export async function updateVehicleDescription(
 ) {
   const response = await http.put<ApiEnvelope<VehicleDescription>>(`/api/v1/vehicles/${type}`, payload);
   return response.data.data;
+}
+
+// --- Announcements ---
+
+export async function getAnnouncements() {
+  const response = await http.get<{ data: any[] }>("/api/v1/admin/announcements");
+  return response.data;
+}
+
+export async function createAnnouncement(data: {
+  title: string;
+  content: string;
+  type?: string;
+  startTime?: string;
+  endTime?: string;
+  enabled?: boolean;
+}) {
+  const response = await http.post<{ data: any }>("/api/v1/admin/announcements", data);
+  return response.data;
+}
+
+export async function updateAnnouncement(id: number, data: {
+  title?: string;
+  content?: string;
+  type?: string;
+  startTime?: string;
+  endTime?: string;
+  enabled?: boolean;
+}) {
+  const response = await http.put<{ data: any }>(`/api/v1/admin/announcements/${id}`, data);
+  return response.data;
+}
+
+export async function deleteAnnouncement(id: number) {
+  const response = await http.delete<{ message: string }>(`/api/v1/admin/announcements/${id}`);
+  return response.data;
 }
