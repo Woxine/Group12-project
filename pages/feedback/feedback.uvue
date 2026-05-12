@@ -12,10 +12,12 @@
 				<view class="form-section">
 					<view class="form-row">
 						<text class="label">Scooter ID</text>
-						<text class="field-help">Required. Example: 1 or SC001.</text>
+						<text v-if="!scooterIdReadonly" class="field-help">Required. Example: 1 or SC001.</text>
+						<text v-else class="field-help">Auto-filled from your booking.</text>
 						<input
 							class="input"
 							v-model="scooterId"
+							:disabled="scooterIdReadonly"
 							placeholder="e.g. 1 or SC001"
 							placeholder-class="input-placeholder"
 						/>
@@ -87,7 +89,7 @@
 <script setup lang="uts">
 // 反馈提交逻辑：表单校验、调用反馈接口提交数据、成功后重置表单
 import { ref, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onLoad } from '@dcloudio/uni-app'
 import { BASE_URL } from '../../common/api.uts'
 import { getAppMessage, getResponseMessage } from '../../common/messages.uts'
 import { showSuccess, showError, showInfo } from '../../common/appToast.uts'
@@ -100,6 +102,8 @@ const isSubmitting = ref(false)
 const submitError = ref('')
 const selectedFilePath = ref('')
 const selectedFileName = ref('')
+const bookingId = ref('')
+const scooterIdReadonly = ref(false)
 const scrollWrapHeight = ref(600)
 const scrollViewHeight = ref(560)
 
@@ -137,6 +141,8 @@ const resetForm = () => {
 	priority.value = 'LOW'
 	selectedFilePath.value = ''
 	selectedFileName.value = ''
+	bookingId.value = ''
+	scooterIdReadonly.value = false
 }
 
 const uploadFeedbackImage = (feedbackId: number, token: string, successMsg: string, failMsg: string, networkMsg: string) => {
@@ -205,6 +211,9 @@ const onSubmit = () => {
 	if (loc.length > 0) {
 		body['location'] = loc
 	}
+	if (bookingId.value.length > 0) {
+		body['booking_id'] = parseInt(bookingId.value)
+	}
 
 	uni.request({
 		url: BASE_URL + '/api/v1/feedbacks',
@@ -238,6 +247,26 @@ const onSubmit = () => {
 		}
 	})
 }
+
+onLoad((options) => {
+    const params = options as UTSJSONObject | null
+    if (params == null) return
+    const queryScooterId = params['scooter_id']
+    if (queryScooterId != null) {
+        const value = ('' + queryScooterId).trim()
+        if (value.length > 0) {
+            scooterId.value = value
+            scooterIdReadonly.value = true
+        }
+    }
+    const queryBookingId = params['booking_id']
+    if (queryBookingId != null) {
+        const value = ('' + queryBookingId).trim()
+        if (value.length > 0) {
+            bookingId.value = value
+        }
+    }
+})
 
 onMounted(() => {
 	setScrollHeight()
