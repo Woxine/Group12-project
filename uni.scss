@@ -122,14 +122,18 @@ $status-default: #9E9E9E;
 /* ===== P2 设计令牌 / P2 Design Tokens ===== */
 
 /* 字体尺寸 / Font Sizes */
-$font-title-lg: 24px;
-$font-title: 22px;
-$font-title-sm: 18px;
-$font-section: 16px;
-$font-body: 14px;
-$font-caption: 13px;
-$font-hint: 12px;
-$font-micro: 11px;
+$font-title-lg: 26px;
+$font-title: 24px;
+$font-title-sm: 20px;
+$font-section: 18px;
+$font-body: 16px;
+$font-caption: 15px;
+$font-hint: 14px;
+$font-micro: 13px;
+
+/* 字重 / Font Weights */
+$fw-normal: 500;
+$fw-bold: 700;
 
 /* 阴影 / Shadows */
 $shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
