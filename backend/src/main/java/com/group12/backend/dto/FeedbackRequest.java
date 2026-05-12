@@ -16,6 +16,8 @@ public class FeedbackRequest {
     
     private String priority;
 
+    private Long booking_id;
+
     // Getters Setters
     public String getScooter_id() { return scooter_id; }
     public void setScooter_id(String scooter_id) { this.scooter_id = scooter_id; }
@@ -25,5 +27,7 @@ public class FeedbackRequest {
     public void setLocation(String location) { this.location = location; }
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
+    public Long getBooking_id() { return booking_id; }
+    public void setBooking_id(Long booking_id) { this.booking_id = booking_id; }
 }
 

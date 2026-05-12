@@ -7,6 +7,7 @@ public class FeedbackResponse {
     private Long id;
     private Long userId;
     private Long scooterId;
+    private Long bookingId;
     private String content;
     private String priority;
     private Boolean resolved;
@@ -16,13 +17,14 @@ public class FeedbackResponse {
     private String imageMimeType;
 
     public FeedbackResponse(Long id, Long userId, Long scooterId, String content, String priority, Boolean resolved) {
-        this(id, userId, scooterId, content, priority, resolved, false, null, null);
+        this(id, userId, scooterId, null, content, priority, resolved, false, null, null);
     }
 
     public FeedbackResponse(
             Long id,
             Long userId,
             Long scooterId,
+            Long bookingId,
             String content,
             String priority,
             Boolean resolved,
@@ -32,6 +34,7 @@ public class FeedbackResponse {
         this.id = id;
         this.userId = userId;
         this.scooterId = scooterId;
+        this.bookingId = bookingId;
         this.content = content;
         this.priority = priority;
         this.resolved = resolved;
@@ -44,6 +47,7 @@ public class FeedbackResponse {
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public Long getScooterId() { return scooterId; }
+    public Long getBookingId() { return bookingId; }
     public String getContent() { return content; }
     public String getPriority() { return priority; }
     public Boolean getResolved() { return resolved; }

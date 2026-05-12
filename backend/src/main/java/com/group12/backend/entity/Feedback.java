@@ -64,6 +64,9 @@ public class Feedback implements Serializable {
     @Column(name = "image_size_bytes")
     private Long imageSizeBytes;
 
+    @Column(name = "booking_id")
+    private Long bookingId;
+
     public Feedback() {}
 
     public Long getId() { return id; }
@@ -110,4 +113,7 @@ public class Feedback implements Serializable {
 
     public Long getImageSizeBytes() { return imageSizeBytes; }
     public void setImageSizeBytes(Long imageSizeBytes) { this.imageSizeBytes = imageSizeBytes; }
+
+    public Long getBookingId() { return bookingId; }
+    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
 }
