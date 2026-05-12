@@ -102,6 +102,7 @@
 							<button v-if="hasAction(booking, 'cancelOrder')" class="cancel-order-btn" @click="cancelOrder(booking)">Cancel Booking</button>
 							<button v-if="hasAction(booking, 'continuePayment')" class="extend-booking-btn" @click="continuePayment(booking)">Continue Payment</button>
 							<button v-if="hasAction(booking, 'viewRoute')" class="view-route-btn" @click="goToRoute(booking)">View Route</button>
+							<button v-if="hasAction(booking, 'submitFeedback')" class="submit-feedback-btn" @click="goToFeedback(booking)">Submit Feedback</button>
 						</view>
 					</view>
 				</view>
@@ -487,11 +488,11 @@ const onPullRefresh = () => {
  *   CONFIRMED  => endRide, cancelOrder, extendBooking
  *   PENDING_PAYMENT => continuePayment, cancelOrder
  *   PENDING    => cancelOrder
- *   COMPLETED  => viewRoute
+ *   COMPLETED  => viewRoute, submitFeedback
  *   CANCELLED  => (none)
  *   Unknown/empty => (none)
  */
-type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking' | 'continuePayment'
+type ActionType = 'endRide' | 'cancelOrder' | 'viewRoute' | 'extendBooking' | 'continuePayment' | 'submitFeedback'
 
 const getOrderActions = (booking: Booking): ActionType[] => {
 	const status = booking.status
@@ -510,7 +511,7 @@ const getOrderActions = (booking: Booking): ActionType[] => {
 	}
 	if (s == 'PENDING_PAYMENT') return ['continuePayment', 'cancelOrder']
 	if (s == 'PENDING') return ['cancelOrder']
-	if (s == 'COMPLETED') return ['viewRoute']
+	if (s == 'COMPLETED') return ['viewRoute', 'submitFeedback']
 	if (s == 'CANCELLED' || s == 'CANCELED') return []
 	return []
 }
@@ -530,6 +531,20 @@ const goToRoute = (booking: Booking) => {
 		return
 	}
 	uni.navigateTo({ url: '/pages/orders/route?bookingId=' + bid })
+}
+
+const goToFeedback = (booking: Booking) => {
+	const sid = booking.scooterId
+	const bid = booking.id
+	if (sid == null || sid.length < 1) {
+		showInfo(bookingMessage('invalidBooking', 'Invalid booking'))
+		return
+	}
+	let url = '/pages/feedback/feedback?scooter_id=' + sid
+	if (bid != null && bid.length > 0) {
+		url = url + '&booking_id=' + bid
+	}
+	uni.navigateTo({ url: url })
 }
 
 const continuePayment = (booking: Booking) => {
@@ -1235,6 +1250,21 @@ onHide(() => {
 	border-width: 1px;
 	border-style: solid;
 	border-color: $status-completed;
+	border-radius: 8px;
+	font-size: $font-body;
+	font-weight: $fw-bold;
+	text-align: center;
+}
+
+.submit-feedback-btn {
+	flex: 1;
+	margin: 0 5px;
+	height: 44px;
+	line-height: 44px;
+	padding: 0;
+	background-color: $color-warning;
+	color: white;
+	border-width: 0;
 	border-radius: 8px;
 	font-size: $font-body;
 	font-weight: $fw-bold;
