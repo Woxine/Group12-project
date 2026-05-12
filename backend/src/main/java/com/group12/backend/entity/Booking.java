@@ -53,6 +53,9 @@ public class Booking implements Serializable {
     @Column(name = "discount_type")
     private String discountType;
 
+    @Column(name = "discount_candidates", columnDefinition = "TEXT")
+    private String discountCandidates;
+
     @Column(nullable = false)
     private String status; // PENDING_PAYMENT, CONFIRMED, COMPLETED, CANCELLED
 
@@ -105,6 +108,9 @@ public class Booking implements Serializable {
 
     public String getDiscountType() { return discountType; }
     public void setDiscountType(String discountType) { this.discountType = discountType; }
+
+    public String getDiscountCandidates() { return discountCandidates; }
+    public void setDiscountCandidates(String discountCandidates) { this.discountCandidates = discountCandidates; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

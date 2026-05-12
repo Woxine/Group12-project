@@ -118,6 +118,34 @@ public class DiscountServiceImpl implements DiscountService {
         return isDiscountEnabled() && isSenior(userId);
     }
 
+    @Override
+    public String buildDiscountCandidatesJson(Long userId) {
+        if (!isDiscountEnabled()) return null;
+
+        BillingRule rule = billingService == null ? null : billingService.getCurrentRule();
+        List<String> applicable = new ArrayList<>();
+        if (isFrequentUser(userId)) applicable.add(DISCOUNT_FREQUENT);
+        if (isStudent(userId))      applicable.add(DISCOUNT_STUDENT);
+        if (isSenior(userId))       applicable.add(DISCOUNT_SENIOR);
+
+        if (applicable.size() <= 1) return null;
+
+        StringBuilder sb = new StringBuilder("{\"applicable\":[");
+        for (int i = 0; i < applicable.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(applicable.get(i)).append("\"");
+        }
+        sb.append("],\"rates\":{");
+        for (int i = 0; i < applicable.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(applicable.get(i)).append("\":").append(resolveRateForType(applicable.get(i), rule));
+        }
+        sb.append("},\"selected\":\"");
+        sb.append(applicable.stream().min(Comparator.comparing(t -> resolveRateForType(t, rule))).orElse(DISCOUNT_NONE));
+        sb.append("\",\"reason\":\"lowest rate\"}");
+        return sb.toString();
+    }
+
     public boolean isFrequentUser(Long userId) {
         if (userId == null || bookingRepository == null) {
             return false;

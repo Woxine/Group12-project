@@ -16,4 +16,6 @@ public interface DiscountService {
     boolean hasStudentDiscount(Long userId);
 
     boolean hasSeniorDiscount(Long userId);
+
+    String buildDiscountCandidatesJson(Long userId);
 }

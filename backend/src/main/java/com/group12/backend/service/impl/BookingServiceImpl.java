@@ -139,6 +139,10 @@ public class BookingServiceImpl implements BookingService {
         booking.setDiscountAmount(discountAmount);
         booking.setDiscountMultiplier(discountMultiplier);
         booking.setDiscountType(discountType);
+        if (discountService != null) {
+            String candidates = discountService.buildDiscountCandidatesJson(userId);
+            booking.setDiscountCandidates(candidates);
+        }
         booking.setStatus("PENDING_PAYMENT");
         booking.setPaymentDeadline(startTime.plusMinutes(resolvePendingPaymentLockMinutes()));
         if (request.getStartLat() != null) booking.setStartLat(request.getStartLat());
