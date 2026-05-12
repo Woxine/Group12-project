@@ -76,6 +76,10 @@ public class FeedbackServiceImpl implements FeedbackService {
         feedback.setEscalated(false);
         feedback.setEscalationStatus("PENDING");
 
+        if (request.getBooking_id() != null) {
+            feedback.setBookingId(request.getBooking_id());
+        }
+
         if (request.getScooter_id() != null && !request.getScooter_id().isEmpty()) {
             try {
                 Long scooterId = Long.valueOf(request.getScooter_id());
@@ -292,6 +296,7 @@ public class FeedbackServiceImpl implements FeedbackService {
             feedback.getId(),
             (feedback.getUser() != null) ? feedback.getUser().getId() : null,
             (feedback.getScooter() != null) ? feedback.getScooter().getId() : null,
+            feedback.getBookingId(),
             feedback.getContent(),
             feedback.getPriority(),
             feedback.getResolved(),
