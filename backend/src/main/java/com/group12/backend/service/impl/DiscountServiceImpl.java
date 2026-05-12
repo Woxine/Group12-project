@@ -6,6 +6,9 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,16 +87,20 @@ public class DiscountServiceImpl implements DiscountService {
         if (!isDiscountEnabled()) {
             return DISCOUNT_NONE;
         }
-        if (isFrequentUser(userId)) {
-            return DISCOUNT_FREQUENT;
-        }
-        if (isStudent(userId)) {
-            return DISCOUNT_STUDENT;
-        }
-        if (isSenior(userId)) {
-            return DISCOUNT_SENIOR;
-        }
-        return DISCOUNT_NONE;
+
+        BillingRule rule = billingService == null ? null : billingService.getCurrentRule();
+
+        List<String> applicable = new ArrayList<>();
+        if (isFrequentUser(userId)) applicable.add(DISCOUNT_FREQUENT);
+        if (isStudent(userId))      applicable.add(DISCOUNT_STUDENT);
+        if (isSenior(userId))       applicable.add(DISCOUNT_SENIOR);
+
+        if (applicable.isEmpty()) return DISCOUNT_NONE;
+        if (applicable.size() == 1) return applicable.get(0);
+
+        return applicable.stream()
+                .min(Comparator.comparing(type -> resolveRateForType(type, rule)))
+                .orElse(DISCOUNT_NONE);
     }
 
     @Override
